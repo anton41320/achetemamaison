@@ -106,6 +106,29 @@ class Confidence(BaseModel):
     details: list[ConfidenceDetail]
 
 
+class HedonicFactor(BaseModel):
+    key: str
+    label: str
+    pct: float
+    detail: str
+    learned: bool = True
+
+
+class HedonicResult(BaseModel):
+    model_version: str
+    value: float
+    low: float
+    high: float
+    price_m2: float
+    reference_value: float
+    reference_label: str
+    factors: list[HedonicFactor]
+    delta_vs_comparables_pct: float
+    agreement: Literal["convergent", "ecart_modere", "divergent"]
+    model_median_ape: Optional[float] = None
+    model_n: int
+
+
 class Estimation(BaseModel):
     method: str = "comparables_dvf_v1"
     created_at: datetime = Field(default_factory=utcnow)
@@ -120,6 +143,7 @@ class Estimation(BaseModel):
     adjustments: list[Adjustment]
     market: list[MarketLevel]
     comparables: list[Comparable]
+    hedonic: Optional[HedonicResult] = None
 
 
 class PropertyDoc(BaseDocument):

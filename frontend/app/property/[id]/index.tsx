@@ -13,7 +13,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { TYPE_LABELS, api, formatEuro, formatInt, formatK, formatPct } from "@/src/api";
 import { ConfidenceBadge, useConfidenceColor } from "@/src/components/ConfidenceBadge";
+import { HedonicCard } from "@/src/components/HedonicCard";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
+import { ShareReportButton } from "@/src/components/ShareReportButton";
+import { TrendCard } from "@/src/components/TrendCard";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
 const HERO_IMAGE =
@@ -236,6 +239,24 @@ export default function PropertyDetailScreen() {
               ))}
             </Animated.View>
 
+            {/* Hedonic — Phase 2 */}
+            {est.hedonic ? (
+              <Animated.View entering={FadeInDown.delay(330).duration(320)}>
+                <HedonicCard hedonic={est.hedonic} comparablesValue={est.value} />
+              </Animated.View>
+            ) : (
+              <View style={styles.notes} testID="hedonic-missing">
+                <Text style={styles.noteText}>
+                  • Analyse « Pourquoi cette estimation ? » indisponible pour cette estimation : appuyez sur « Recalculer » pour l’obtenir.
+                </Text>
+              </View>
+            )}
+
+            {/* Market trend */}
+            <Animated.View entering={FadeInDown.delay(360).duration(320)}>
+              <TrendCard propertyId={id!} typeLabel={TYPE_LABELS[data.property_type]} />
+            </Animated.View>
+
             <Pressable
               testID="view-comparables-button"
               accessibilityRole="button"
@@ -248,6 +269,7 @@ export default function PropertyDetailScreen() {
             </Pressable>
 
             <View style={styles.actions}>
+              <ShareReportButton propertyId={id!} />
               <PrimaryButton
                 title="Recalculer l’estimation"
                 variant="secondary"

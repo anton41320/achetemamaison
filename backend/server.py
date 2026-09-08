@@ -11,12 +11,15 @@ import requests
 from bson import ObjectId
 from dotenv import load_dotenv
 from fastapi import APIRouter, FastAPI, HTTPException, Query
+from fastapi.responses import Response
 from motor.motor_asyncio import AsyncIOMotorClient
 from starlette.middleware.cors import CORSMiddleware
 
 import dvf_ingest
+import hedonic
 from estimator import NoDataError, estimate, run_validation
 from models import PropertyDoc, PropertyIn, utcnow
+from report import build_report
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -50,12 +53,32 @@ def _oid(pid: str) -> ObjectId:
 
 async def _run_estimation(p: PropertyIn | PropertyDoc):
     try:
-        return await estimate(
+        est = await estimate(
             db, lat=p.lat, lon=p.lon, code_commune=p.code_commune, ptype=p.property_type,
             surface=p.surface, condition=p.condition, year_built=p.year_built, land_surface=p.land_surface,
         )
     except NoDataError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
+    model = await hedonic.load_model(db)
+    if model:
+        cond = next((a for a in est.adjustments if a.key == "condition"), None)
+        year = next((a for a in est.adjustments if a.key == "year"), None)
+        try:
+            est.hedonic = hedonic.explain(
+                model, surface=p.surface, rooms=p.rooms, land=p.land_surface, ptype=p.property_type,
+                code_commune=p.code_commune, commune=p.commune, dept=p.code_commune[:2],
+                condition_pct=cond.pct if cond else 0.0, condition_label=cond.label if cond else "État correct",
+                year_pct=year.pct if year else 0.0, year_label=year.label if year else None,
+                comparables_value=est.value,
+            )
+        except Exception:  # noqa: BLE001
+            logger.exception("Hedonic explain failed")
+    return est
+
+
+def _ingest_then_train():
+    dvf_ingest.ingest_all(mongo_url, db_name, DVF_DEPARTMENTS, DVF_YEARS)
+    hedonic.train(mongo_url, db_name)
 
 
 @api.get("/health")
@@ -121,9 +144,76 @@ async def dvf_status():
 async def dvf_ingest_trigger():
     if dvf_ingest.is_running():
         return {"started": False, "message": "Ingestion déjà en cours"}
-    asyncio.get_running_loop().run_in_executor(
-        None, dvf_ingest.ingest_all, mongo_url, db_name, DVF_DEPARTMENTS, DVF_YEARS)
+    asyncio.get_running_loop().run_in_executor(None, _ingest_then_train)
     return {"started": True, "message": "Ingestion lancée en arrière-plan"}
+
+
+@api.get("/models/hedonic")
+async def hedonic_model():
+    model = await hedonic.load_model(db)
+    if not model:
+        return {"available": False, "training": hedonic.is_training()}
+    return {"available": True, "training": hedonic.is_training(), **hedonic.model_summary(model)}
+
+
+@api.post("/models/hedonic/train", status_code=202)
+async def hedonic_train():
+    if hedonic.is_training():
+        return {"started": False, "message": "Entraînement déjà en cours"}
+    asyncio.get_running_loop().run_in_executor(None, hedonic.train, mongo_url, db_name)
+    return {"started": True, "message": "Entraînement lancé en arrière-plan"}
+
+
+@api.get("/properties/{pid}/trend")
+async def property_trend(pid: str):
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Bien introuvable")
+    ptype = doc["property_type"]
+    proj = {"year": 1, "price_m2": 1}
+    commune_rows = await db.dvf_sales.find({"code_commune": doc["code_commune"], "type": ptype}, proj).to_list(20000)
+    near_rows = await db.dvf_sales.find({
+        "type": ptype,
+        "location": {"$geoWithin": {"$centerSphere": [[doc["lon"], doc["lat"]], 1500 / 6371000.0]}},
+    }, proj).to_list(20000)
+
+    def series(rows: list[dict]) -> list[dict]:
+        by_year: dict[int, list[float]] = {}
+        for r in rows:
+            by_year.setdefault(r["year"], []).append(r["price_m2"])
+        out = []
+        for y in DVF_YEARS:
+            vals = sorted(by_year.get(y, []))
+            med = vals[len(vals) // 2] if vals else None
+            out.append({"year": y, "count": len(vals), "median_pm2": round(med / 10) * 10 if med else None})
+        return out
+
+    def change(s: list[dict]) -> Optional[float]:
+        pts = [p for p in s if p["median_pm2"] and p["count"] >= 5]
+        if len(pts) < 2:
+            return None
+        return round((pts[-1]["median_pm2"] - pts[0]["median_pm2"]) / pts[0]["median_pm2"], 4)
+
+    cs, ns = series(commune_rows), series(near_rows)
+    return {
+        "commune": doc["commune"], "property_type": ptype, "years": DVF_YEARS,
+        "commune_series": cs, "quartier_series": ns,
+        "commune_change_pct": change(cs), "quartier_change_pct": change(ns),
+    }
+
+
+@api.get("/properties/{pid}/report.pdf")
+async def property_report(pid: str):
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Bien introuvable")
+    prop = PropertyDoc.from_mongo(doc)
+    if not prop.estimation:
+        raise HTTPException(status_code=422, detail="Aucune estimation disponible")
+    pdf = await asyncio.to_thread(build_report, prop)
+    filename = f"estimo-{pid[-6:]}.pdf"
+    return Response(content=pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": f'inline; filename="{filename}"'})
 
 
 @api.post("/properties", status_code=201)
@@ -196,8 +286,10 @@ async def startup():
     count = await db.dvf_sales.estimated_document_count()
     if count == 0 and not dvf_ingest.is_running():
         logger.info("DVF collection empty: starting background ingestion for %s", DVF_DEPARTMENTS)
-        asyncio.get_running_loop().run_in_executor(
-            None, dvf_ingest.ingest_all, mongo_url, db_name, DVF_DEPARTMENTS, DVF_YEARS)
+        asyncio.get_running_loop().run_in_executor(None, _ingest_then_train)
+    elif not await db.models.find_one({"_id": hedonic.MODEL_NAME}) and not hedonic.is_training():
+        logger.info("Hedonic model missing: training in background")
+        asyncio.get_running_loop().run_in_executor(None, hedonic.train, mongo_url, db_name)
 
 
 @app.on_event("shutdown")

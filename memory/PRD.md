@@ -24,10 +24,12 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 - [x] Règle « jamais un prix seul » + bannière données insuffisantes
 - [x] Historique des biens, ré-estimation, suppression (soft)
 - [x] Validation baseline (back-test sur ventes réelles) : erreur médiane ≈ 17 %, couverture fourchette ≈ 65 %, confiance élevée ≈ 13 % / faible ≈ 30 %
+- [x] Phase 2 — `hedonic.py` : régression log(prix) à effets fixes commune (shrinkage vers le département), validation temporelle (train ≤ 2024 / test 2025 : erreur médiane ≈ 19,8 %, R² log ≈ 0,6). Section « Pourquoi cette estimation ? » : facteurs +/- (localisation, surface, pièces, terrain, déclaratifs état/année) vs bien type, valeur hédonique côte à côte avec les comparables, indicateur convergent / écart modéré / divergent. La fourchette affichée reste celle des comparables (baseline gagnante). Entraînement auto au démarrage, `GET/POST /api/models/hedonic[/train]`.
+- [x] Rapport PDF (`report.py`, reportlab) : `GET /api/properties/{id}/report.pdf` — synthèse, confiance, calcul, marché, facteurs hédoniques, 10 comparables ; partage natif via expo-sharing (ouverture directe sur web).
+- [x] Tendance marché : `GET /api/properties/{id}/trend` — prix/m² médian par année (commune + rayon 1,5 km), variation première→dernière année, graphique barres/points.
 
 ## Backlog priorisé
-- P1 Phase 2 : régression hédonique log(prix), section « Pourquoi cette estimation ? » comparée à la baseline
-- P1 Export / partage PDF de l'estimation
-- P2 Phase 3 : LightGBM + validation temporelle + SHAP (gate vs baseline)
+- P1 Phase 3 : LightGBM + validation temporelle + SHAP (gate : ne remplace la baseline que s'il la bat sur 2025)
+- P1 Pondération finale comparables / hédonique / marché avec poids ajustables (Phase 3)
 - P2 Phase 4 : générateur d'annonce IA · P2 Phase 5 : IA photo · P2 Phase 6 : dossier juridique
 - P2 Ajout de départements / mise à jour trimestrielle planifiée du DVF

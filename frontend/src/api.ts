@@ -63,6 +63,45 @@ export interface Confidence {
   details: ConfidenceDetail[];
 }
 
+export interface HedonicFactor {
+  key: string;
+  label: string;
+  pct: number;
+  detail: string;
+  learned: boolean;
+}
+
+export interface HedonicResult {
+  model_version: string;
+  value: number;
+  low: number;
+  high: number;
+  price_m2: number;
+  reference_value: number;
+  reference_label: string;
+  factors: HedonicFactor[];
+  delta_vs_comparables_pct: number;
+  agreement: "convergent" | "ecart_modere" | "divergent";
+  model_median_ape: number | null;
+  model_n: number;
+}
+
+export interface TrendPoint {
+  year: number;
+  count: number;
+  median_pm2: number | null;
+}
+
+export interface TrendReport {
+  commune: string;
+  property_type: PropertyType;
+  years: number[];
+  commune_series: TrendPoint[];
+  quartier_series: TrendPoint[];
+  commune_change_pct: number | null;
+  quartier_change_pct: number | null;
+}
+
 export interface Estimation {
   method: string;
   created_at: string;
@@ -77,6 +116,7 @@ export interface Estimation {
   adjustments: Adjustment[];
   market: MarketLevel[];
   comparables: Comparable[];
+  hedonic: HedonicResult | null;
 }
 
 export interface PropertyIn {
@@ -175,11 +215,27 @@ export const api = {
   createProperty: (body: PropertyIn) =>
     request<Property>("/properties", { method: "POST", body: JSON.stringify(body) }),
   reestimate: (id: string) => request<Property>(`/properties/${id}/reestimate`, { method: "POST" }),
+  trend: (id: string) => request<TrendReport>(`/properties/${id}/trend`),
+  reportUrl: (id: string) => `${BASE}/properties/${id}/report.pdf`,
   deleteProperty: (id: string) => request<{ deleted: boolean }>(`/properties/${id}`, { method: "DELETE" }),
   dvfStatus: () => request<DvfStatus>("/dvf/status"),
   dvfIngest: () => request<{ started: boolean; message: string }>("/dvf/ingest", { method: "POST" }),
   validation: (n: number) => request<ValidationReport>(`/validation?n=${n}`),
+  hedonicModel: () => request<HedonicModelInfo>("/models/hedonic"),
+  hedonicTrain: () => request<{ started: boolean; message: string }>("/models/hedonic/train", { method: "POST" }),
 };
+
+export interface HedonicModelInfo {
+  available: boolean;
+  training: boolean;
+  name?: string;
+  trained_at?: string | null;
+  n?: number;
+  coefficients?: Record<string, number>;
+  in_sample?: { n: number; mape: number; median_ape: number; within_15pct: number; r2_log: number | null } | null;
+  holdout?: { n: number; mape: number; median_ape: number; within_15pct: number; r2_log: number | null; test_year: number } | null;
+  communes_with_effect?: number;
+}
 
 // ---- Formatting helpers (fr-FR) ----
 const NBSP = "\u202F";

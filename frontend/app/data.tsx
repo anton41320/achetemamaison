@@ -36,6 +36,16 @@ export default function DataScreen() {
 
   const validation = useMutation({ mutationFn: () => api.validation(40) });
 
+  const model = useQuery({
+    queryKey: ["hedonic-model"],
+    queryFn: api.hedonicModel,
+    refetchInterval: (q) => (q.state.data?.training || !q.state.data?.available ? 3000 : false),
+  });
+  const train = useMutation({
+    mutationFn: api.hedonicTrain,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["hedonic-model"] }),
+  });
+
   const s = status.data;
 
   const AggBlock = ({ title, agg, testID }: { title: string; agg: ValidationAgg; testID: string }) => (
@@ -106,6 +116,40 @@ export default function DataScreen() {
                   testID="dvf-ingest-button"
                 />
               ) : null}
+            </View>
+
+            <View style={styles.card} testID="hedonic-model-card">
+              <Text style={styles.h3}>Modèle hédonique (Phase 2)</Text>
+              {model.data?.available && model.data.holdout ? (
+                <>
+                  <Text style={styles.p}>
+                    Régression log(prix) sur {formatInt(model.data.n ?? 0)} ventes · {model.data.communes_with_effect} communes avec
+                    effet propre · validation temporelle sur {model.data.holdout.test_year} (entraîné sur les années précédentes).
+                  </Text>
+                  <View style={styles.aggBlock} testID="hedonic-model-metrics">
+                    <Text style={styles.aggTitle}>Ventes {model.data.holdout.test_year} non vues <Text style={styles.aggN}>({formatInt(model.data.holdout.n)} biens)</Text></Text>
+                    <View style={styles.aggRow}>
+                      <View style={styles.aggCell}><Text style={styles.aggValue}>{pct(model.data.holdout.median_ape)}</Text><Text style={styles.aggLabel}>Erreur médiane</Text></View>
+                      <View style={styles.aggCell}><Text style={styles.aggValue}>{pct(model.data.holdout.within_15pct)}</Text><Text style={styles.aggLabel}>Erreur ≤ 15 %</Text></View>
+                      <View style={styles.aggCell}><Text style={styles.aggValue}>{model.data.holdout.r2_log ?? "—"}</Text><Text style={styles.aggLabel}>R² (log)</Text></View>
+                    </View>
+                  </View>
+                  <Text style={styles.muted}>
+                    Élasticité surface {model.data.coefficients?.log_surface?.toFixed(2)} · terrain (maison) {model.data.coefficients?.log_land_maison?.toFixed(3)} ·
+                    tendance annuelle {pct((model.data.coefficients?.year_rel ?? 0) * 100)}. Le modèle sert à expliquer et à comparer ; la fourchette affichée reste celle des comparables.
+                  </Text>
+                </>
+              ) : (
+                <Text style={styles.p}>{model.data?.training ? "Entraînement en cours…" : "Modèle non entraîné."}</Text>
+              )}
+              <PrimaryButton
+                title="Ré-entraîner le modèle"
+                variant="secondary"
+                onPress={() => train.mutate()}
+                loading={train.isPending || !!model.data?.training}
+                disabled={s.total === 0}
+                testID="hedonic-train-button"
+              />
             </View>
 
             <View style={styles.card} testID="validation-card">

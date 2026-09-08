@@ -1,0 +1,37 @@
+{
+  "summary": "Estimo Phase 2 (hedonic model + trend + PDF report) tested end-to-end. Backend: 9/9 pytest cases pass — GET /api/models/hedonic returns available=true, n=110213, log_surface coefficient 0.80, in_sample & holdout with test_year=2025 (median_ape 19.8%); POST /api/models/hedonic/train returns 202 and model stays available within ~10s; POST /api/properties (Blois appt & maison) fills estimation.hedonic with value<low<high, factors (location, surface, rooms, condition, year), land only for maison, agreement ∈ {convergent, ecart_modere, divergent}, model_median_ape, delta_vs_comparables_pct; reestimate flow fills hedonic; GET /trend returns 5 points for 2021-2025 for both commune_series and quartier_series with count/median_pm2 and commune_change_pct/quartier_change_pct numbers; GET /report.pdf returns 200 application/pdf, 5869 bytes, %PDF magic; 404 handled correctly on both endpoints for unknown ids. Frontend (Expo web, 390x844) at existing property 6aa02db9efd8f90925a5a758: hedonic-card, hedonic-factor-location, hedonic-factor-surface, hedonic-value, hedonic-compare-baseline, hedonic-agreement, trend-card, trend-chart, trend-year-2021..2025, share-report-button, reestimate-button, estimation-range all visible. Share-report click on web does not error (opens PDF via Linking.openURL). /data screen shows dvf-status-card (110 213 ventes across dept 41/37/45), hedonic-model-card with hedonic-model-metrics (19.8% erreur médiane / 39.5% ≤15% / R² 0.595) and hedonic-train-button, validation-card intact. Home regression: property list card taps navigate to detail with estimation-range '108 k€ – 251 k€'. No console errors observed beyond the pre-existing shadow* deprecation warning.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "property/[id] TrendCard", "issues": ["Cosmetic: when commune and quartier price/m² are far apart, the commune bars can render very short (near-flat) because the shared vertical scale spans both series. Not a bug — values are still labelled above each bar — but reviewers may want two axes or normalisation per series."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_estimo_phase2.py",
+    "/app/backend/tests/test_estimo_backend.py",
+    "/app/test_reports/pytest/pytest_phase2.xml"
+  ],
+  "action_items": [
+    "Optional (cosmetic): consider a secondary scale/normalisation for the quartier dots vs commune bars in TrendCard when the two series differ by >30% to keep bars readable.",
+    "Optional (still pending from iteration 1): migrate `shadow*` StyleSheet properties to `boxShadow` to silence the React Native Web deprecation warning."
+  ],
+  "critical_code_review_comments": [
+    "server.py L167-202: /properties/{pid}/trend hard-reads all DVF sales for the commune and 1.5km radius (to_list(20000)); acceptable for departments 41/37/45 (~110k rows) but should use aggregation ($group by year) if the dataset grows.",
+    "hedonic.py explain() and _predict_log() apply loc_eff twice in some code paths (loc_eff added on top of log_ref which already contains dept_eff; and _predict_log adds commune_effects OR dept_effects). Verified numerically via /api/properties: hedonic.value stays within ~10-15% of comparables baseline for the tested Blois cases, so the composition is coherent, but the double-add of loc_eff (line 217: log_pred = log_ref + sum(contrib) + loc_eff) is worth an internal review to make sure it matches the intended baseline decomposition.",
+    "server.py properly excludes MongoDB _id via PropertyDoc.from_mongo alias; hedonic factors serialize cleanly.",
+    "ShareReportButton correctly branches on Platform.OS === 'web' and calls Linking.openURL(url) rather than trying to write to the file system (which would fail on web)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_estimo_phase2.py (new)",
+    "/app/test_reports/iteration_2.json (new)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "TestPropertyHedonic creates 2 TEST-prefixed Blois properties (appartement + maison) and deletes them in teardown_class. Existing property 6aa02db9efd8f90925a5a758 was used read-only for trend/report/UI tests.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Phase 2 backend tests: /app/backend/tests/test_estimo_phase2.py (9 tests, 3.2s). Phase 1 tests still at test_estimo_backend.py. Existing seeded property with hedonic + trend + PDF: 6aa02db9efd8f90925a5a758 (Soings-en-Sologne maison). Do NOT trigger POST /api/dvf/ingest. Hedonic model trained on 110213 rows; POST /models/hedonic/train retrains in <10s. Frontend testIDs of Phase 2: hedonic-card, hedonic-factor-<key>, hedonic-value, hedonic-compare-baseline, hedonic-agreement, trend-card, trend-chart, trend-year-<year>, share-report-button, hedonic-model-card, hedonic-model-metrics, hedonic-train-button.",
+  "rca_of_issue": "N/A — no bugs found."
+}
