@@ -1,0 +1,30 @@
+{
+  "summary": "Estimo Phase 1 full stack tested end-to-end. Backend: 15/15 pytest cases pass — health, DVF status (110 213 sales across 41/37/45), BAN geocoding (Blois covered, Paris uncovered), property CRUD, estimation (appartement Blois returned ~132 k€ with value/low<value<high, price_m2, confidence.score 76 level 'eleve', 3 market levels, comparables ≤30), maison land adjustment present, remote address triggers radius widening / insufficient_data flag, surface=5 -> 422, reestimate updates estimation, soft delete removes from list and returns 404 on GET, unknown id 404, validation report includes n/mape/median_ape/coverage/by_confidence/results. Frontend (Expo web, 390x844): Home shows property cards with range 'k€ – k€' + confidence badge + FAB + home-data-button; /data shows dvf-status-card with dvf-total '110 213 ventes' and dvf-dept-41/37/45 rows, validation-run-button produced validation-results within ~5 s; /new wizard passed all 3 steps (address-input -> address-result-0 -> address-selected -> step-continue-button; type-segment-appartement/maison, surface-input, rooms-stepper-plus, bedrooms-stepper-plus; year-input, condition-segment-bon, summary-card, estimate-submit-button); /property/{id} showed estimation-range, estimation-value, confidence-badge; view-comparables-button navigated to comparable-row-0; reestimate-button and delete flow (delete-button -> delete-confirm-button) returned to home. No console errors beyond a single React Native web deprecation warning about shadow* -> boxShadow.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "property/[id]", "issues": ["Minor: React Native Web console warning 'shadow* style props are deprecated. Use boxShadow.' (non-blocking, cosmetic)"]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_estimo_backend.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Optional: migrate `shadow*` StyleSheet properties to `boxShadow` on the FAB (app/index.tsx) and other shadowed containers to silence the React Native Web deprecation warning.",
+    "Optional: consider adding a 'radius_label' or notes assertion in a UI regression test to confirm the widening message renders on remote addresses."
+  ],
+  "critical_code_review_comments": [
+    "server.py L193: `@app.on_event('startup')` is deprecated in FastAPI 0.109+; consider migrating to lifespan handlers (not blocking).",
+    "estimator.py L44: haversine constant + logic is fine; math well-scoped. No issues.",
+    "server.py properly excludes MongoDB _id via PropertyDoc.from_mongo alias; no ObjectId leaks in responses (verified in test).",
+    "All frontend interactive elements carry testID; env vars used correctly (EXPO_PUBLIC_BACKEND_URL, MONGO_URL)."
+  ],
+  "updated_files": ["/app/backend/tests/test_estimo_backend.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Tests create TEST-prefixed properties and clean them up in teardown. Remote Loiret test case may leave 1 property when the estimation succeeds; auto-cleanup runs at teardown_class.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend tests live at /app/backend/tests/test_estimo_backend.py and can be rerun with `pytest backend/tests/test_estimo_backend.py -v`. DVF ingestion already present (110 213 rows) — do NOT trigger POST /api/dvf/ingest. BAN geocoder occasionally returns empty for very partial queries; use full street-city queries like '1 rue denis papin blois'. Property detail sub-cards (confidence-breakdown, adjustments-card, market-card) fade-in with 180–300 ms delays; wait ~400 ms after navigation before asserting visibility.",
+  "rca_of_issue": "N/A — no bugs found."
+}

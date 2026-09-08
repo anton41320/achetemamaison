@@ -1,0 +1,205 @@
+from __future__ import annotations
+
+import asyncio
+import logging
+import os
+from datetime import timezone
+from pathlib import Path
+from typing import Optional
+
+import requests
+from bson import ObjectId
+from dotenv import load_dotenv
+from fastapi import APIRouter, FastAPI, HTTPException, Query
+from motor.motor_asyncio import AsyncIOMotorClient
+from starlette.middleware.cors import CORSMiddleware
+
+import dvf_ingest
+from estimator import NoDataError, estimate, run_validation
+from models import PropertyDoc, PropertyIn, utcnow
+
+ROOT_DIR = Path(__file__).parent
+load_dotenv(ROOT_DIR / ".env")
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logger = logging.getLogger("estimo")
+
+mongo_url = os.environ["MONGO_URL"]
+db_name = os.environ["DB_NAME"]
+DVF_DEPARTMENTS = [d.strip() for d in os.environ["DVF_DEPARTMENTS"].split(",") if d.strip()]
+DVF_YEARS = [int(y) for y in os.environ["DVF_YEARS"].split(",") if y.strip()]
+BAN_URL = os.environ["BAN_URL"]
+
+client = AsyncIOMotorClient(mongo_url)
+db = client[db_name]
+
+app = FastAPI(title="Estimo API")
+api = APIRouter(prefix="/api")
+
+
+def _prop_response(doc: dict) -> dict:
+    return PropertyDoc.from_mongo(doc).model_dump(mode="json")
+
+
+def _oid(pid: str) -> ObjectId:
+    try:
+        return ObjectId(pid)
+    except Exception:  # noqa: BLE001
+        raise HTTPException(status_code=404, detail="Bien introuvable")
+
+
+async def _run_estimation(p: PropertyIn | PropertyDoc):
+    try:
+        return await estimate(
+            db, lat=p.lat, lon=p.lon, code_commune=p.code_commune, ptype=p.property_type,
+            surface=p.surface, condition=p.condition, year_built=p.year_built, land_surface=p.land_surface,
+        )
+    except NoDataError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+
+@api.get("/health")
+async def health():
+    return {"status": "ok", "app": "Estimo", "departments": DVF_DEPARTMENTS}
+
+
+@api.get("/geocode")
+async def geocode(q: str = Query(min_length=3, max_length=200), limit: int = Query(default=6, le=10)):
+    def _call():
+        return requests.get(BAN_URL, params={"q": q, "limit": limit, "autocomplete": 1}, timeout=8)
+
+    try:
+        r = await asyncio.to_thread(_call)
+        r.raise_for_status()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("BAN error: %s", exc)
+        raise HTTPException(status_code=502, detail="Service d'adresses indisponible")
+    out = []
+    for f in r.json().get("features", []):
+        p = f["properties"]
+        lon, lat = f["geometry"]["coordinates"]
+        dept = p.get("context", "").split(",")[0].strip()
+        out.append({
+            "id": p.get("id"), "label": p.get("label"), "name": p.get("name"), "postcode": p.get("postcode"),
+            "city": p.get("city"), "citycode": p.get("citycode"), "type": p.get("type"),
+            "lat": lat, "lon": lon, "dept": dept, "covered": dept in DVF_DEPARTMENTS,
+        })
+    return {"results": out, "covered_departments": DVF_DEPARTMENTS}
+
+
+@api.get("/dvf/status")
+async def dvf_status():
+    meta = await db.dvf_meta.find_one({"_id": "status"}) or {}
+    per_dept = await db.dvf_sales.aggregate([
+        {"$group": {"_id": {"dept": "$dept", "type": "$type"}, "count": {"$sum": 1},
+                    "min_date": {"$min": "$date"}, "max_date": {"$max": "$date"}}},
+    ]).to_list(50)
+    depts: dict[str, dict] = {}
+    for row in per_dept:
+        d = depts.setdefault(row["_id"]["dept"], {"dept": row["_id"]["dept"], "appartement": 0, "maison": 0, "total": 0,
+                                                 "min_date": None, "max_date": None})
+        d[row["_id"]["type"]] = row["count"]
+        d["total"] += row["count"]
+        for k, fn in (("min_date", min), ("max_date", max)):
+            v = row[k].isoformat() if row[k] else None
+            d[k] = v if d[k] is None or v is None else fn(d[k], v)
+    total = sum(d["total"] for d in depts.values())
+    return {
+        "state": "running" if dvf_ingest.is_running() else meta.get("state", "empty" if total == 0 else "idle"),
+        "progress": meta.get("progress", 0),
+        "error": meta.get("error"),
+        "started_at": meta.get("started_at").isoformat() if meta.get("started_at") else None,
+        "finished_at": meta.get("finished_at").isoformat() if meta.get("finished_at") else None,
+        "configured_departments": DVF_DEPARTMENTS,
+        "years": DVF_YEARS,
+        "total": total,
+        "departments": sorted(depts.values(), key=lambda d: d["dept"]),
+    }
+
+
+@api.post("/dvf/ingest", status_code=202)
+async def dvf_ingest_trigger():
+    if dvf_ingest.is_running():
+        return {"started": False, "message": "Ingestion déjà en cours"}
+    asyncio.get_running_loop().run_in_executor(
+        None, dvf_ingest.ingest_all, mongo_url, db_name, DVF_DEPARTMENTS, DVF_YEARS)
+    return {"started": True, "message": "Ingestion lancée en arrière-plan"}
+
+
+@api.post("/properties", status_code=201)
+async def create_property(payload: PropertyIn):
+    if payload.property_type == "appartement":
+        payload.land_surface = None
+    est = await _run_estimation(payload)
+    doc = PropertyDoc(**payload.model_dump(), estimation=est)
+    res = await db.properties.insert_one(doc.to_mongo())
+    await db.estimations.insert_one({"property_id": res.inserted_id, **est.model_dump()})
+    saved = await db.properties.find_one({"_id": res.inserted_id})
+    return _prop_response(saved)
+
+
+@api.get("/properties")
+async def list_properties():
+    docs = await db.properties.find({"deleted_at": None}).sort("created_at", -1).to_list(200)
+    return [_prop_response(d) for d in docs]
+
+
+@api.get("/properties/{pid}")
+async def get_property(pid: str):
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Bien introuvable")
+    return _prop_response(doc)
+
+
+@api.post("/properties/{pid}/reestimate")
+async def reestimate_property(pid: str):
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Bien introuvable")
+    prop = PropertyDoc.from_mongo(doc)
+    est = await _run_estimation(prop)
+    await db.properties.update_one({"_id": doc["_id"]}, {"$set": {"estimation": est.model_dump(), "updated_at": utcnow()}})
+    await db.estimations.insert_one({"property_id": doc["_id"], **est.model_dump()})
+    saved = await db.properties.find_one({"_id": doc["_id"]})
+    return _prop_response(saved)
+
+
+@api.delete("/properties/{pid}")
+async def delete_property(pid: str):
+    res = await db.properties.update_one({"_id": _oid(pid), "deleted_at": None},
+                                         {"$set": {"deleted_at": utcnow(), "updated_at": utcnow()}})
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Bien introuvable")
+    return {"deleted": True}
+
+
+@api.post("/estimate/preview")
+async def estimate_preview(payload: PropertyIn):
+    est = await _run_estimation(payload)
+    return est.model_dump(mode="json")
+
+
+@api.get("/validation")
+async def validation(n: int = Query(default=40, ge=5, le=150)):
+    report = await run_validation(db, n)
+    return report
+
+
+app.include_router(api)
+app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+
+@app.on_event("startup")
+async def startup():
+    await db.properties.create_index([("deleted_at", 1), ("created_at", -1)])
+    count = await db.dvf_sales.estimated_document_count()
+    if count == 0 and not dvf_ingest.is_running():
+        logger.info("DVF collection empty: starting background ingestion for %s", DVF_DEPARTMENTS)
+        asyncio.get_running_loop().run_in_executor(
+            None, dvf_ingest.ingest_all, mongo_url, db_name, DVF_DEPARTMENTS, DVF_YEARS)
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    client.close()

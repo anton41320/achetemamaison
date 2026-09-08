@@ -1,0 +1,157 @@
+{
+  "app_name": "Estimo",
+  "personality": "1 iOS-Native Clean",
+  "personality_one_liner": "A highly credible, transparent, and grounded real estate estimation tool that builds seller trust through clean typography, data clarity, and warm earthy tones.",
+  "color": {
+    "surface": "#F8F7F5",
+    "onSurface": "#1C1C1E",
+    "surfaceSecondary": "#FFFFFF",
+    "onSurfaceSecondary": "#1C1C1E",
+    "surfaceTertiary": "#EAE9E6",
+    "onSurfaceTertiary": "#3A3A3C",
+    "surfaceInverse": "#1C1C1E",
+    "onSurfaceInverse": "#FFFFFF",
+    "brand": "#2F5041",
+    "onBrand": "#FFFFFF",
+    "brandPrimary": "#2F5041",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#DFE8E3",
+    "onBrandSecondary": "#1D362B",
+    "brandTertiary": "#EEF4F1",
+    "onBrandTertiary": "#2F5041",
+    "success": "#34C759",
+    "onSuccess": "#FFFFFF",
+    "warning": "#FF9500",
+    "onWarning": "#FFFFFF",
+    "error": "#FF3B30",
+    "onError": "#FFFFFF",
+    "info": "#007AFF",
+    "onInfo": "#FFFFFF",
+    "border": "#E5E4E2",
+    "borderStrong": "#CFCFCB",
+    "divider": "#E5E4E2",
+    "muted": "#8E8E93"
+  },
+  "typography": {
+    "displayFontFamily": "Plus Jakarta Sans",
+    "textFontFamily": "Plus Jakarta Sans",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24,
+      "3xl": 32,
+      "4xl": 48
+    }
+  },
+  "spacing": {
+    "rule": "Generous vertical breathing room for forms and results. Padding must be intentional and not cramped. Use safe areas appropriately for fixed CTAs.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": 1,
+  "navigation": "stack_only",
+  "icon_set": "Phosphor",
+  "glassmorphism": {
+    "enabled": true,
+    "do's": [
+      "Use glassmorphism for sticky sticky primary CTA containers at the bottom of scrollable views.",
+      "Use a frosted glass badge on top of the hero image for the 'Confidence Gauge'."
+    ],
+    "dont's": [
+      "Do not use glass for list items, cards, or standard form inputs."
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Home (Mes biens)",
+      "purpose": "List of user's estimated properties with quick glance at values and ranges.",
+      "states": {
+        "loading": "Skeleton list of cards.",
+        "empty": "Clean illustration/photo of modern architecture, short sentence ('Aucune estimation pour le moment'), and a prominent 'Nouvelle estimation' CTA.",
+        "error": "Error message with retry button."
+      },
+      "layout": "Header with 'Mes biens'. Single column list of cards. Each card displays property address, type, price range prominently, and a confidence badge. Floating Action Button (FAB) or fixed bottom CTA for 'Nouvelle estimation'."
+    },
+    {
+      "name": "Nouveau bien (Onboarding)",
+      "purpose": "Frictionless multi-step form to input property details.",
+      "states": {
+        "loading": "Spinner during BAN autocomplete fetching.",
+        "empty": "N/A",
+        "error": "Inline validation errors if inputs are invalid or incomplete."
+      },
+      "layout": "Progress bar at top. Large, clean input fields (Address autocomplete via BAN, Type, Surface, Rooms, etc.). Keyboard-avoiding layout with a sticky CTA 'Continuer' at the bottom. Use segmented controls (pills) for Property Type (Maison/Appartement) and Condition instead of native pickers."
+    },
+    {
+      "name": "Résultat estimation",
+      "purpose": "Present the estimated value, range, confidence level, and context clearly.",
+      "states": {
+        "loading": "Elegant skeleton loader mimicking the final layout, signifying calculation.",
+        "empty": "N/A",
+        "error": "Warning state if insufficient DVF data is available: Expose a wider range and explicitly state 'Données insuffisantes' in a warning banner."
+      },
+      "layout": "Hero section with a blurred/atmospheric interior image overlayed with a top-to-bottom gradient scrim. The estimated price range (e.g., '320k € - 350k €') is the focal point, rendered in large 3xl/4xl typography. Directly underneath, place the Confidence Gauge (glass badge). Below the hero, split cards for metrics (price/m², radius used). Next section: list entry point 'Voir les comparables DVF' and a block showing 'Statut des données DVF'."
+    },
+    {
+      "name": "Détail comparables",
+      "purpose": "List the DVF transaction comparables to justify the estimation.",
+      "states": {
+        "loading": "List skeleton.",
+        "empty": "Empty state 'Aucun comparable exact trouvé'.",
+        "error": "Error fetching comparables with retry."
+      },
+      "layout": "Data-dense but highly readable single column list. Each row contains Date, Distance (e.g., 'à 150m'), Surface, total Price, and Price/m². Use muted typography for secondary metadata (Date/Distance) to let Prices stand out."
+    }
+  ],
+  "images": {
+    "empty_state": {
+      "url": "https://images.unsplash.com/photo-1614595737476-42487331b8a1?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzNTl8MHwxfHNlYXJjaHwxfHxtaW5pbWFsJTIwbW9kZXJuJTIwYXJjaGl0ZWN0dXJlJTIwZmFjYWRlJTIwd2FybSUyMHN1bmxpZ2h0fGVufDB8fHx8MTc4ODg4MTUxMnww&ixlib=rb-4.1.0&q=85",
+      "alt": "Minimal modern architecture facade in warm sunlight"
+    },
+    "result_hero_background": {
+      "url": "https://images.unsplash.com/photo-1649083048770-82e8ffd80431?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTV8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBob3VzZSUyMGludGVyaW9yJTIwYmx1cnJlZCUyMGJyaWdodHxlbnwwfHx8fDE3ODg4ODE1MTJ8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Bright, modern house interior to serve as a blurred background"
+    }
+  },
+  "haptics": {
+    "events": {
+      "primary_button_press": "impactLight",
+      "form_step_continue": "impactMedium",
+      "estimation_success": "notificationSuccess",
+      "tab_change": "selection"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Strict Rule: NEVER display a single dry estimated price. Always emphasize the price RANGE (e.g., '320k € - 350k €') to manage user expectations. Ensure this is visually the largest element on the Result screen.",
+    "Confidence Level Handling: Integrate the confidence score (nb comparables, dispersion, recency) prominently on the Result screen. Use a glassmorphism badge overlaid on the hero section to denote this clearly (e.g., 'Niveau de confiance: Élevé').",
+    "Insufficient Data Rule: If data is low, automatically display an expanded range and insert a warning banner indicating 'Données insuffisantes - Fourchette élargie'.",
+    "Forms: Use sticky CTAs anchored to the bottom of the screen (respecting safe areas) so the user doesn't have to scroll to proceed to the next step.",
+    "Imagery: Apply the `result_hero_background` image with a dark gradient scrim (as per <Imagery_and_Texture>) behind the estimation price on the Result screen to provide high-end, proptech richness.",
+    "Typography: Use `Plus Jakarta Sans` for all text, making sure the price numerical values utilize tabular lining if available, or simply clear, large font weights (500 max) to communicate value."
+  ]
+}
