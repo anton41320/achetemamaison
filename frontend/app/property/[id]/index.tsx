@@ -3,8 +3,8 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  ArrowsOutIcon, CaretLeftIcon, CaretRightIcon, ChartBarIcon, ListBulletsIcon, PencilLineIcon, RulerIcon, TargetIcon,
-  TrashIcon, WarningIcon,
+  ArrowsOutIcon, CaretLeftIcon, CaretRightIcon, ChartBarIcon, ImagesIcon, ListBulletsIcon, PencilLineIcon, RulerIcon,
+  TargetIcon, TrashIcon, WarningIcon,
 } from "phosphor-react-native";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -277,6 +277,17 @@ export default function PropertyDetailScreen() {
             <Animated.View entering={FadeInDown.delay(380).duration(320)}>
               <MarketSignalCard propertyId={id!} />
             </Animated.View>
+
+            <Pressable
+              testID="photos-button"
+              accessibilityRole="button"
+              onPress={() => router.push(`/property/${id}/photos`)}
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.85 }]}
+            >
+              <ImagesIcon size={20} color={colors.onBrandTertiary} />
+              <Text style={styles.linkLabel}>Photos & retouche IA</Text>
+              <CaretRightIcon size={18} color={colors.onBrandTertiary} />
+            </Pressable>
 
             <Pressable
               testID="write-listing-button"

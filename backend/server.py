@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import uuid
 from datetime import timezone
 from pathlib import Path
 from typing import Optional
@@ -10,7 +11,7 @@ from typing import Optional
 import requests
 from bson import ObjectId
 from dotenv import load_dotenv
-from fastapi import APIRouter, FastAPI, HTTPException, Query
+from fastapi import APIRouter, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 from motor.motor_asyncio import AsyncIOMotorClient
 from starlette.middleware.cors import CORSMiddleware
@@ -18,10 +19,12 @@ from starlette.middleware.cors import CORSMiddleware
 import dvf_ingest
 import hedonic
 import ml_model
+import photos as photo_ai
+import storage
 from blend import blend, market_estimate, market_signal
 from estimator import NoDataError, estimate, run_validation
 from listing import generate_listing
-from models import ListingDoc, ListingRequest, PropertyDoc, PropertyIn, Weights, utcnow
+from models import ListingDoc, ListingRequest, PhotoDoc, PropertyDoc, PropertyIn, Weights, utcnow
 from report import build_report
 
 ROOT_DIR = Path(__file__).parent
@@ -268,6 +271,79 @@ async def delete_listing(pid: str, lid: str):
     return {"deleted": True}
 
 
+@api.get("/properties/{pid}/photos")
+async def list_photos(pid: str):
+    docs = await db.photos.find({"property_id": pid, "deleted_at": None}).sort("created_at", -1).to_list(100)
+    return [PhotoDoc.from_mongo(d).model_dump(mode="json") for d in docs]
+
+
+@api.post("/properties/{pid}/photos", status_code=201)
+async def upload_photo(pid: str, file: UploadFile = File(...)):
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Bien introuvable")
+    raw = await file.read()
+    if len(raw) > 15 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Photo trop lourde (15 Mo max)")
+    try:
+        data, mime = await asyncio.to_thread(photo_ai.normalize, raw)
+    except Exception:  # noqa: BLE001
+        raise HTTPException(status_code=422, detail="Fichier image illisible (JPEG, PNG, HEIC attendus)")
+    path = f"{storage.APP_NAME}/properties/{pid}/{uuid.uuid4()}.jpg"
+    try:
+        await asyncio.to_thread(storage.put_object, path, data, mime)
+    except storage.StorageError as exc:
+        raise HTTPException(status_code=exc.status if exc.status in (402, 503) else 502, detail=str(exc))
+    photo = PhotoDoc(property_id=pid, original_path=path, original_mime=mime, original_size=len(data))
+    res = await db.photos.insert_one({**photo.to_mongo(), "deleted_at": None, "retouched_path": None})
+    saved = await db.photos.find_one({"_id": res.inserted_id})
+    return PhotoDoc.from_mongo(saved).model_dump(mode="json")
+
+
+@api.post("/photos/{photo_id}/retouch")
+async def retouch_photo(photo_id: str):
+    doc = await db.photos.find_one({"_id": _oid(photo_id), "deleted_at": None})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Photo introuvable")
+    if doc.get("status") == "processing":
+        raise HTTPException(status_code=409, detail="Retouche déjà en cours")
+    await db.photos.update_one({"_id": doc["_id"]}, {"$set": {"status": "processing", "error": None}})
+    try:
+        original, _ = await asyncio.to_thread(storage.get_object, doc["original_path"])
+        edited, mime = await photo_ai.retouch(original)
+        path = f"{storage.APP_NAME}/properties/{doc['property_id']}/{uuid.uuid4()}-retouche.jpg"
+        await asyncio.to_thread(storage.put_object, path, edited, mime)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Retouch failed")
+        await db.photos.update_one({"_id": doc["_id"]}, {"$set": {"status": "error", "error": str(exc)[:300]}})
+        raise HTTPException(status_code=502, detail=f"Retouche indisponible : {str(exc)[:200]}")
+    await db.photos.update_one({"_id": doc["_id"]}, {"$set": {
+        "status": "done", "retouched_path": path, "retouched_mime": mime, "model": photo_ai.MODEL,
+        "retouched_at": utcnow(), "error": None}})
+    saved = await db.photos.find_one({"_id": doc["_id"]})
+    return PhotoDoc.from_mongo(saved).model_dump(mode="json")
+
+
+@api.delete("/photos/{photo_id}")
+async def delete_photo(photo_id: str):
+    res = await db.photos.update_one({"_id": _oid(photo_id), "deleted_at": None}, {"$set": {"deleted_at": utcnow()}})
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Photo introuvable")
+    return {"deleted": True}
+
+
+@api.get("/files/{path:path}")
+async def get_file(path: str):
+    known = await db.photos.find_one({"$or": [{"original_path": path}, {"retouched_path": path}]}, {"_id": 1})
+    if not known:
+        raise HTTPException(status_code=404, detail="Fichier introuvable")
+    try:
+        data, mime = await asyncio.to_thread(storage.get_object, path)
+    except storage.StorageError as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+    return Response(content=data, media_type=mime, headers={"Cache-Control": "private, max-age=86400"})
+
+
 @api.get("/properties/{pid}/trend")
 async def property_trend(pid: str):
     doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
@@ -387,6 +463,11 @@ app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=["*"], 
 @app.on_event("startup")
 async def startup():
     await db.properties.create_index([("deleted_at", 1), ("created_at", -1)])
+    await db.photos.create_index([("property_id", 1), ("deleted_at", 1)])
+    try:
+        await asyncio.to_thread(storage.init_storage)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Object storage init failed: %s", exc)
     count = await db.dvf_sales.estimated_document_count()
     if count == 0 and not dvf_ingest.is_running():
         logger.info("DVF collection empty: starting background ingestion for %s", DVF_DEPARTMENTS)

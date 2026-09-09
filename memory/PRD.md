@@ -31,9 +31,10 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 - [x] Poids ajustables (`blend.py`) : curseurs comparables / hédonique / marché / ML (désactivé si non promu), réglage global `GET/PUT /api/settings/weights` (défaut 50/30/20/0), `GET /api/properties/{id}/final`, calcul miroir côté client pour réactivité, section dans le PDF. `market_estimate` = prix/m² médian du meilleur rayon × surface + ajustements.
 - [x] Signal « Bon moment pour vendre ? » (`GET /api/properties/{id}/market-signal`) : tendance 12 mois (40), volume vs 2 ans (30), liquidité (30) → score/verdict favorable/neutre/attentiste, calculé au dernier point DVF.
 - [x] Annonce IA (`listing.py`, Claude Sonnet 4.6 via EMERGENT_LLM_KEY) : styles Sobre/Chaleureux/Premium/Familial, faits + précisions vendeur, option fourchette, garde-fou strict (aucune invention, état repris tel quel, pas d'adjectif sur le quartier). CRUD `/api/properties/{id}/listings` (soft delete), écran `property/[id]/listing` avec copie presse-papiers.
+- [x] Phase 5 — IA Photo (retouche uniquement) : `storage.py` (Emergent Object Storage, chemins `estimo/properties/{pid}/{uuid}.jpg`), `photos.py` (normalisation JPEG 1600 px + EXIF strip, retouche Gemini `gemini-3.1-flash-image-preview` avec interdiction d'ajouter des éléments). Endpoints `POST/GET /api/properties/{id}/photos`, `POST /api/photos/{id}/retouch`, `DELETE /api/photos/{id}` (soft), `GET /api/files/{path}`. Écran `property/[id]/photos` : galerie/appareil photo avec flux de permissions (réglages si bloqué), bascule original/retouchée, badge « Visuel retouché par IA · non contractuel ». Permissions déclarées dans app.json.
 
 ## Backlog priorisé
-- P1 Phase 5 : IA photo (retouche + home staging, original conservé, mention « visuel non contractuel ») via Object Storage
 - P1 Phase 6 : checklist de vente dynamique + import documents (OCR) avec validation utilisateur
-- P2 Améliorer le ML pour passer la gate (features quartier IRIS, distance centres, DPE si dispo)
-- P2 Ajout de départements / mise à jour trimestrielle planifiée du DVF
+- P2 Home staging IA (mobilier virtuel dans pièce vide, styles) — différé sur demande utilisateur
+- P2 Photos dans le rapport PDF
+- P2 Améliorer le ML pour passer la gate · ajout de départements / mise à jour trimestrielle DVF

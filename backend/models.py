@@ -201,6 +201,21 @@ class ListingDoc(BaseDocument):
     created_at: datetime = Field(default_factory=utcnow)
 
 
+class PhotoDoc(BaseDocument):
+    property_id: str
+    original_path: str
+    original_mime: str
+    original_size: int
+    retouched_path: Optional[str] = None
+    retouched_mime: Optional[str] = None
+    status: Literal["original", "processing", "done", "error"] = "original"
+    error: Optional[str] = None
+    model: Optional[str] = None
+    created_at: datetime = Field(default_factory=utcnow)
+    retouched_at: Optional[datetime] = None
+    deleted_at: Optional[datetime] = None
+
+
 class PropertyDoc(BaseDocument):
     address_label: str
     lat: float

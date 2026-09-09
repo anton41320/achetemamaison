@@ -329,6 +329,47 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export interface Photo {
+  id: string;
+  property_id: string;
+  original_path: string;
+  original_mime: string;
+  original_size: number;
+  retouched_path: string | null;
+  retouched_mime: string | null;
+  status: "original" | "processing" | "done" | "error";
+  error: string | null;
+  model: string | null;
+  created_at: string;
+  retouched_at: string | null;
+}
+
+export function fileUrl(path: string): string {
+  return `${BASE}/files/${path}`;
+}
+
+export async function uploadPhoto(propertyId: string, uri: string, name: string, type: string): Promise<Photo> {
+  const form = new FormData();
+  if (typeof window !== "undefined" && typeof document !== "undefined") {
+    const blob = await (await fetch(uri)).blob();
+    form.append("file", blob, name);
+  } else {
+    form.append("file", { uri, name, type } as any);
+  }
+  const res = await fetch(`${BASE}/properties/${propertyId}/photos`, { method: "POST", body: form });
+  if (!res.ok) {
+    let message = `Erreur ${res.status}`;
+    try {
+      const body = await res.json();
+      if (typeof body?.detail === "string") message = body.detail;
+    } catch {
+      // keep default
+    }
+    throw new Error(message);
+  }
+  return res.json();
+}
+
 export const api = {
   geocode: (q: string) => request<{ results: GeocodeResult[]; covered_departments: string[] }>(
     `/geocode?q=${encodeURIComponent(q)}`,
@@ -355,6 +396,9 @@ export const api = {
   createListing: (id: string, body: { style: ListingStyle; extra_facts: string | null; include_price: boolean }) =>
     request<Listing>(`/properties/${id}/listings`, { method: "POST", body: JSON.stringify(body) }),
   deleteListing: (id: string, lid: string) => request<{ deleted: boolean }>(`/properties/${id}/listings/${lid}`, { method: "DELETE" }),
+  listPhotos: (id: string) => request<Photo[]>(`/properties/${id}/photos`),
+  retouchPhoto: (photoId: string) => request<Photo>(`/photos/${photoId}/retouch`, { method: "POST" }),
+  deletePhoto: (photoId: string) => request<{ deleted: boolean }>(`/photos/${photoId}`, { method: "DELETE" }),
 };
 
 export interface HedonicModelInfo {

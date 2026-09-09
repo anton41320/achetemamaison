@@ -1,0 +1,34 @@
+{
+  "summary": "Phase 5 (AI photo retouch, retouch-only) validated end-to-end. Backend: 11/11 pytest cases pass — upload (201 with estimo/properties/ path, status 'original', retouched_path null), non-image → 422, unknown property → 404, list, GET /api/files serves image/jpeg bytes, /api/files/unknown → 404, ONE Gemini Nano Banana retouch call succeeded in ~5s (status 'done', model 'gemini-3.1-flash-image-preview', retouched_path served correctly), unknown photo retouch → 404, soft-delete + double-delete → 404. Frontend (390x844): /property/{id} shows estimation-range and photos-button; navigation to /property/{id}/photos loads photos-screen with photos-pick-library, existing demo photo-card-0 renders network image via /api/files, photo-toggle-0-before/after switch works, photo-badge-0 shown only in 'after' mode, image src correctly swaps to '...-retouche.jpg', retouch and delete buttons present (not triggered on demo photo per instructions). Regression OK (estimation-range, listing screen).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "props.pointerEvents", "issue": "Console warning 'props.pointerEvents is deprecated. Use style.pointerEvents' emitted on web. Likely from a dependency (react-native-reanimated / gesture-handler / expo-image). Non-blocking but should be tracked."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_estimo_phase5.py",
+    "/app/test_reports/pytest/pytest_phase5.xml"
+  ],
+  "action_items": [
+    "None blocking. Optional: silence 'props.pointerEvents is deprecated' warning by updating whichever dependency emits it (or upgrade RN/Expo).",
+    "Note: on web, expo-image-picker creates its <input type=file> dynamically and removes it, so Playwright set_input_files cannot easily be used to upload. Backend upload path is already fully covered by pytest — the frontend upload flow can only be exercised via a real device/browser click."
+  ],
+  "critical_code_review_comments": [
+    "server.py upload_photo mixes StorageError status handling: only 402/503 are surfaced verbatim, other storage errors mapped to 502 — reasonable.",
+    "photos.py retouch does not enforce a hard 'one call per photo' cap server-side (client can spam POST /photos/{id}/retouch after 'done'). Not asked by spec but worth considering to protect LLM credits.",
+    "storage.py init_storage caches the storage key at module level; on retry-after-503 it resets and re-inits — OK. All URLs come from env."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_estimo_phase5.py (new)"
+  ],
+  "success_rate": { "backend": "100% (11/11)", "frontend": "100% of tested flows" },
+  "seed_data_creation": "Created 1 leftover photo during initial fixture run — cleaned up via DELETE /api/photos/{id}. Fixture updated to teardown its upload. Demo photo (id 6aa10ee21f38608802dce39f, status=done) preserved as instructed.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Demo photo on property 6aa02db9efd8f90925a5a758 has status=done with retouched_path b87e998a-bb61-4baf-9dfc-a11612849fd0-retouche.jpg. DO NOT delete it. Retouch tests consume Gemini credits — keep them minimal (one call per iteration).",
+  "rca_of_issue": "n/a — no blocking bugs."
+}
