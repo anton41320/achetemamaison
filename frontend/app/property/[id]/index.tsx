@@ -3,8 +3,8 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  ArrowsOutIcon, CaretLeftIcon, CaretRightIcon, ChartBarIcon, ImagesIcon, ListBulletsIcon, PencilLineIcon, RulerIcon,
-  TargetIcon, TrashIcon, WarningIcon,
+  ArrowsOutIcon, CaretLeftIcon, CaretRightIcon, ChartBarIcon, FolderOpenIcon, ImagesIcon, ListBulletsIcon, PencilLineIcon,
+  RulerIcon, TargetIcon, TrashIcon, WarningIcon,
 } from "phosphor-react-native";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -277,6 +277,17 @@ export default function PropertyDetailScreen() {
             <Animated.View entering={FadeInDown.delay(380).duration(320)}>
               <MarketSignalCard propertyId={id!} />
             </Animated.View>
+
+            <Pressable
+              testID="dossier-button"
+              accessibilityRole="button"
+              onPress={() => router.push(`/property/${id}/dossier`)}
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.85 }]}
+            >
+              <FolderOpenIcon size={20} color={colors.onBrandTertiary} />
+              <Text style={styles.linkLabel}>Dossier de vente (documents & diagnostics)</Text>
+              <CaretRightIcon size={18} color={colors.onBrandTertiary} />
+            </Pressable>
 
             <Pressable
               testID="photos-button"

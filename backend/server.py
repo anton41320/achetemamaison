@@ -4,18 +4,19 @@ import asyncio
 import logging
 import os
 import uuid
-from datetime import timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
 import requests
 from bson import ObjectId
 from dotenv import load_dotenv
-from fastapi import APIRouter, FastAPI, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 from motor.motor_asyncio import AsyncIOMotorClient
 from starlette.middleware.cors import CORSMiddleware
 
+import dossier as dossier_mod
 import dvf_ingest
 import hedonic
 import ml_model
@@ -24,7 +25,8 @@ import storage
 from blend import blend, market_estimate, market_signal
 from estimator import NoDataError, estimate, run_validation
 from listing import generate_listing
-from models import ListingDoc, ListingRequest, PhotoDoc, PropertyDoc, PropertyIn, Weights, utcnow
+from models import (ChecklistOverride, DocumentDoc, DocumentValidate, ListingDoc, ListingRequest, PhotoDoc,
+                    PropertyDoc, PropertyIn, Weights, utcnow)
 from report import build_report
 
 ROOT_DIR = Path(__file__).parent
@@ -336,12 +338,170 @@ async def delete_photo(photo_id: str):
 async def get_file(path: str):
     known = await db.photos.find_one({"$or": [{"original_path": path}, {"retouched_path": path}]}, {"_id": 1})
     if not known:
+        known = await db.documents.find_one({"file_path": path}, {"_id": 1})
+    if not known:
         raise HTTPException(status_code=404, detail="Fichier introuvable")
     try:
         data, mime = await asyncio.to_thread(storage.get_object, path)
     except storage.StorageError as exc:
         raise HTTPException(status_code=502, detail=str(exc))
     return Response(content=data, media_type=mime, headers={"Cache-Control": "private, max-age=86400"})
+
+
+# ---------------- Phase 6 — dossier de vente ----------------
+
+def _doc_status(d: dict) -> str:
+    if d.get("validated"):
+        exp = d.get("expiry_date")
+        if exp and exp < datetime.now(timezone.utc).date().isoformat():
+            return "expire"
+        return "valide"
+    if d.get("ocr_status") == "error":
+        return "erreur_ocr"
+    return "a_verifier"
+
+
+def _doc_out(d: dict) -> dict:
+    out = DocumentDoc.from_mongo(d).model_dump(mode="json")
+    out["status"] = _doc_status(d)
+    return out
+
+
+async def _dossier(pid: str) -> dict:
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Bien introuvable")
+    prop = PropertyDoc.from_mongo(doc)
+    items = dossier_mod.build_checklist(prop)
+    docs = await db.documents.find({"property_id": pid, "deleted_at": None}).sort("created_at", -1).to_list(300)
+    overrides = {o["item_key"]: o for o in await db.checklist_state.find({"property_id": pid}).to_list(100)}
+    by_item: dict[str, list[dict]] = {}
+    for d in docs:
+        by_item.setdefault(d["item_key"], []).append(_doc_out(d))
+    done = total_required = 0
+    for it in items:
+        it["documents"] = by_item.get(it["key"], [])
+        ov = overrides.get(it["key"], {})
+        it["note"] = ov.get("note")
+        if ov.get("status_override") == "non_applicable":
+            it["status"] = "non_applicable"
+        elif any(d["status"] == "valide" for d in it["documents"]):
+            it["status"] = "valide"
+        elif any(d["status"] == "expire" for d in it["documents"]):
+            it["status"] = "expire"
+        elif it["documents"]:
+            it["status"] = "a_verifier"
+        else:
+            it["status"] = "manquant"
+        if it["required"] and it["status"] != "non_applicable":
+            total_required += 1
+            if it["status"] == "valide":
+                done += 1
+    unassigned = by_item.get("autre", [])
+    return {"property_id": pid, "items": items, "unassigned": unassigned,
+            "progress": {"done": done, "total_required": total_required,
+                         "pct": round(done / total_required * 100) if total_required else 100}}
+
+
+@api.get("/properties/{pid}/dossier")
+async def get_dossier(pid: str):
+    return await _dossier(pid)
+
+
+@api.put("/properties/{pid}/dossier/{item_key}")
+async def override_item(pid: str, item_key: str, body: ChecklistOverride):
+    if item_key not in dossier_mod.ITEMS:
+        raise HTTPException(status_code=404, detail="Élément de checklist inconnu")
+    await db.checklist_state.replace_one(
+        {"property_id": pid, "item_key": item_key},
+        {"property_id": pid, "item_key": item_key, "status_override": body.status_override, "note": body.note,
+         "updated_at": utcnow()}, upsert=True)
+    return await _dossier(pid)
+
+
+@api.post("/properties/{pid}/documents", status_code=201)
+async def upload_document(pid: str, file: UploadFile = File(...), item_key: str = Form(...)):
+    if item_key not in dossier_mod.ITEMS and item_key != "autre":
+        raise HTTPException(status_code=422, detail="Élément de checklist inconnu")
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Bien introuvable")
+    raw = await file.read()
+    if len(raw) > 20 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Fichier trop lourd (20 Mo max)")
+    is_pdf = raw[:5] == b"%PDF-" or (file.content_type == "application/pdf")
+    if is_pdf:
+        data, mime, ext = raw, "application/pdf", "pdf"
+    else:
+        try:
+            data, mime = await asyncio.to_thread(photo_ai.normalize, raw)
+            ext = "jpg"
+        except Exception:  # noqa: BLE001
+            raise HTTPException(status_code=422, detail="Fichier illisible : PDF ou image attendu")
+    path = f"{storage.APP_NAME}/documents/{pid}/{uuid.uuid4()}.{ext}"
+    try:
+        await asyncio.to_thread(storage.put_object, path, data, mime)
+    except storage.StorageError as exc:
+        raise HTTPException(status_code=exc.status if exc.status in (402, 503) else 502, detail=str(exc))
+    document = DocumentDoc(property_id=pid, item_key=item_key, file_path=path, mime=mime,
+                           filename=file.filename or f"document.{ext}", size=len(data))
+    res = await db.documents.insert_one({**document.to_mongo(), "deleted_at": None, "ocr": None, "validated_fields": None,
+                                         "expiry_date": None})
+    try:
+        ocr = await dossier_mod.ocr_document(data, mime, item_key)
+        expiry = ocr.get("validity_date") or dossier_mod.expiry_for(item_key, ocr.get("document_date"))
+        await db.documents.update_one({"_id": res.inserted_id}, {"$set": {"ocr_status": "done", "ocr": ocr, "expiry_date": expiry}})
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("OCR failed")
+        await db.documents.update_one({"_id": res.inserted_id}, {"$set": {"ocr_status": "error", "ocr_error": str(exc)[:300]}})
+    saved = await db.documents.find_one({"_id": res.inserted_id})
+    return _doc_out(saved)
+
+
+@api.get("/documents/{did}")
+async def get_document(did: str):
+    d = await db.documents.find_one({"_id": _oid(did), "deleted_at": None})
+    if not d:
+        raise HTTPException(status_code=404, detail="Document introuvable")
+    return _doc_out(d)
+
+
+@api.post("/documents/{did}/reocr")
+async def reocr_document(did: str):
+    d = await db.documents.find_one({"_id": _oid(did), "deleted_at": None})
+    if not d:
+        raise HTTPException(status_code=404, detail="Document introuvable")
+    try:
+        data, mime = await asyncio.to_thread(storage.get_object, d["file_path"])
+        ocr = await dossier_mod.ocr_document(data, mime, d["item_key"])
+        expiry = ocr.get("validity_date") or dossier_mod.expiry_for(d["item_key"], ocr.get("document_date"))
+        await db.documents.update_one({"_id": d["_id"]}, {"$set": {"ocr_status": "done", "ocr": ocr, "ocr_error": None, "expiry_date": expiry}})
+    except Exception as exc:  # noqa: BLE001
+        await db.documents.update_one({"_id": d["_id"]}, {"$set": {"ocr_status": "error", "ocr_error": str(exc)[:300]}})
+        raise HTTPException(status_code=502, detail=f"Lecture indisponible : {str(exc)[:200]}")
+    return _doc_out(await db.documents.find_one({"_id": d["_id"]}))
+
+
+@api.put("/documents/{did}/validate")
+async def validate_document(did: str, body: DocumentValidate):
+    d = await db.documents.find_one({"_id": _oid(did), "deleted_at": None})
+    if not d:
+        raise HTTPException(status_code=404, detail="Document introuvable")
+    fields = body.fields.model_dump()
+    item_key = fields["document_type"] if fields["document_type"] in dossier_mod.ITEMS else d["item_key"]
+    expiry = fields.get("validity_date") or dossier_mod.expiry_for(item_key, fields.get("document_date"))
+    await db.documents.update_one({"_id": d["_id"]}, {"$set": {
+        "validated": body.validated, "validated_fields": fields, "item_key": item_key, "expiry_date": expiry,
+        "validated_at": utcnow() if body.validated else None}})
+    return _doc_out(await db.documents.find_one({"_id": d["_id"]}))
+
+
+@api.delete("/documents/{did}")
+async def delete_document(did: str):
+    res = await db.documents.update_one({"_id": _oid(did), "deleted_at": None}, {"$set": {"deleted_at": utcnow()}})
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Document introuvable")
+    return {"deleted": True}
 
 
 @api.get("/properties/{pid}/trend")

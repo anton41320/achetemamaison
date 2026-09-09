@@ -239,3 +239,45 @@ class PropertyDoc(BaseDocument):
     created_at: datetime = Field(default_factory=utcnow)
     updated_at: datetime = Field(default_factory=utcnow)
     deleted_at: Optional[datetime] = None
+
+
+
+class OcrResult(BaseModel):
+    document_type: str
+    title: str
+    issuer: Optional[str] = None
+    document_date: Optional[str] = None
+    validity_date: Optional[str] = None
+    address_found: Optional[str] = None
+    key_fields: list[dict] = []
+    warnings: list[str] = []
+    summary: str = ""
+    confidence: float = 0.0
+
+
+class DocumentDoc(BaseDocument):
+    property_id: str
+    item_key: str
+    file_path: str
+    mime: str
+    filename: str
+    size: int
+    ocr_status: Literal["pending", "done", "error"] = "pending"
+    ocr: Optional[OcrResult] = None
+    ocr_error: Optional[str] = None
+    validated: bool = False
+    validated_fields: Optional[OcrResult] = None
+    expiry_date: Optional[str] = None
+    created_at: datetime = Field(default_factory=utcnow)
+    validated_at: Optional[datetime] = None
+    deleted_at: Optional[datetime] = None
+
+
+class DocumentValidate(BaseModel):
+    fields: OcrResult
+    validated: bool = True
+
+
+class ChecklistOverride(BaseModel):
+    status_override: Optional[Literal["non_applicable"]] = None
+    note: Optional[str] = Field(default=None, max_length=300)

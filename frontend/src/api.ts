@@ -370,6 +370,83 @@ export async function uploadPhoto(propertyId: string, uri: string, name: string,
   return res.json();
 }
 
+export type DocStatus = "a_verifier" | "valide" | "expire" | "erreur_ocr";
+export type ItemStatus = "manquant" | "a_verifier" | "valide" | "expire" | "non_applicable";
+
+export interface OcrResult {
+  document_type: string;
+  title: string;
+  issuer: string | null;
+  document_date: string | null;
+  validity_date: string | null;
+  address_found: string | null;
+  key_fields: { label: string; value: string }[];
+  warnings: string[];
+  summary: string;
+  confidence: number;
+}
+
+export interface SaleDocument {
+  id: string;
+  property_id: string;
+  item_key: string;
+  file_path: string;
+  mime: string;
+  filename: string;
+  size: number;
+  ocr_status: "pending" | "done" | "error";
+  ocr: OcrResult | null;
+  ocr_error: string | null;
+  validated: boolean;
+  validated_fields: OcrResult | null;
+  expiry_date: string | null;
+  created_at: string;
+  status: DocStatus;
+}
+
+export interface ChecklistItem {
+  key: string;
+  label: string;
+  description: string;
+  category: "obligatoire" | "conditionnel" | "copropriete" | "recommande";
+  validity_months: number | null;
+  required: boolean;
+  reason: string;
+  status: ItemStatus;
+  note: string | null;
+  documents: SaleDocument[];
+}
+
+export interface Dossier {
+  property_id: string;
+  items: ChecklistItem[];
+  unassigned: SaleDocument[];
+  progress: { done: number; total_required: number; pct: number };
+}
+
+export async function uploadDocument(propertyId: string, itemKey: string, uri: string, name: string, type: string): Promise<SaleDocument> {
+  const form = new FormData();
+  if (typeof window !== "undefined" && typeof document !== "undefined") {
+    const blob = await (await fetch(uri)).blob();
+    form.append("file", blob, name);
+  } else {
+    form.append("file", { uri, name, type } as any);
+  }
+  form.append("item_key", itemKey);
+  const res = await fetch(`${BASE}/properties/${propertyId}/documents`, { method: "POST", body: form });
+  if (!res.ok) {
+    let message = `Erreur ${res.status}`;
+    try {
+      const body = await res.json();
+      if (typeof body?.detail === "string") message = body.detail;
+    } catch {
+      // keep default
+    }
+    throw new Error(message);
+  }
+  return res.json();
+}
+
 export const api = {
   geocode: (q: string) => request<{ results: GeocodeResult[]; covered_departments: string[] }>(
     `/geocode?q=${encodeURIComponent(q)}`,
@@ -399,6 +476,14 @@ export const api = {
   listPhotos: (id: string) => request<Photo[]>(`/properties/${id}/photos`),
   retouchPhoto: (photoId: string) => request<Photo>(`/photos/${photoId}/retouch`, { method: "POST" }),
   deletePhoto: (photoId: string) => request<{ deleted: boolean }>(`/photos/${photoId}`, { method: "DELETE" }),
+  dossier: (id: string) => request<Dossier>(`/properties/${id}/dossier`),
+  overrideItem: (id: string, key: string, body: { status_override: "non_applicable" | null; note?: string | null }) =>
+    request<Dossier>(`/properties/${id}/dossier/${key}`, { method: "PUT", body: JSON.stringify(body) }),
+  getDocument: (did: string) => request<SaleDocument>(`/documents/${did}`),
+  reocrDocument: (did: string) => request<SaleDocument>(`/documents/${did}/reocr`, { method: "POST" }),
+  validateDocument: (did: string, fields: OcrResult, validated = true) =>
+    request<SaleDocument>(`/documents/${did}/validate`, { method: "PUT", body: JSON.stringify({ fields, validated }) }),
+  deleteDocument: (did: string) => request<{ deleted: boolean }>(`/documents/${did}`, { method: "DELETE" }),
 };
 
 export interface HedonicModelInfo {

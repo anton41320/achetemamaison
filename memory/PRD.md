@@ -33,8 +33,10 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 - [x] Annonce IA (`listing.py`, Claude Sonnet 4.6 via EMERGENT_LLM_KEY) : styles Sobre/Chaleureux/Premium/Familial, faits + précisions vendeur, option fourchette, garde-fou strict (aucune invention, état repris tel quel, pas d'adjectif sur le quartier). CRUD `/api/properties/{id}/listings` (soft delete), écran `property/[id]/listing` avec copie presse-papiers.
 - [x] Phase 5 — IA Photo (retouche uniquement) : `storage.py` (Emergent Object Storage, chemins `estimo/properties/{pid}/{uuid}.jpg`), `photos.py` (normalisation JPEG 1600 px + EXIF strip, retouche Gemini `gemini-3.1-flash-image-preview` avec interdiction d'ajouter des éléments). Endpoints `POST/GET /api/properties/{id}/photos`, `POST /api/photos/{id}/retouch`, `DELETE /api/photos/{id}` (soft), `GET /api/files/{path}`. Écran `property/[id]/photos` : galerie/appareil photo avec flux de permissions (réglages si bloqué), bascule original/retouchée, badge « Visuel retouché par IA · non contractuel ». Permissions déclarées dans app.json.
 
+- [x] Phase 6 — Dossier de vente (`dossier.py`) : checklist dynamique (19 éléments : obligatoires, conditionnels, copropriété, recommandés) adaptée au type, à l'année de construction, au terrain et au DPE ; import photo/galerie/fichier PDF → Object Storage (`estimo/documents/{pid}/…`) ; OCR Gemini 3 Flash (`gemini-3-flash-preview`, FileContentWithMimeType) → champs structurés (type, émetteur, dates, champs clés, alertes) ; validation obligatoire par le vendeur (champs éditables) ; expiration calculée par type (DPE 10 ans, élec/gaz 3 ans, ERP 6 mois…) ; statuts manquant / à vérifier / validé / expiré / non applicable ; progression. Endpoints `GET /api/properties/{id}/dossier`, `PUT …/dossier/{item_key}`, `POST /api/properties/{id}/documents`, `GET/PUT(validate)/POST(reocr)/DELETE /api/documents/{id}`. Écrans `property/[id]/dossier` et `property/[id]/document/[docId]`.
+
 ## Backlog priorisé
-- P1 Phase 6 : checklist de vente dynamique + import documents (OCR) avec validation utilisateur
 - P2 Home staging IA (mobilier virtuel dans pièce vide, styles) — différé sur demande utilisateur
-- P2 Photos dans le rapport PDF
+- P2 Photos et dossier dans le rapport PDF · export du dossier de vente (ZIP/PDF) pour le notaire
+- P2 Rappels d'expiration des diagnostics
 - P2 Améliorer le ML pour passer la gate · ajout de départements / mise à jour trimestrielle DVF

@@ -1,0 +1,38 @@
+{
+  "summary": "Phase 6 (Dossier de vente) validated end-to-end. Backend 9/9 pytest pass on /app/backend/tests/test_estimo_phase6.py: dossier for maison built 1990 exposes required titre_propriete/dpe/erp/amiante + electricite/gaz/termites/assainissement/geotechnique/taxe_fonciere and NO carrez/pv_ag; created appartement (Blois 41018, 1975, 65 m²) exposes required carrez/reglement_copro/pv_ag/pre_etat_date. POST /api/properties/{id}/documents with a synthesised 'AVIS DE TAXE FONCIERE 2025 1 250 €' JPEG + item_key=taxe_fonciere returned 201 in ~7s with ocr_status='done', ocr.document_type present, status 'a_verifier'; invalid item_key → 422; unknown property → 404. GET /api/documents/{did} and GET /api/files/{file_path} both serve correctly, DELETE + subsequent GET → 404. PUT validate with document_type='taxe_fonciere' + validated=true → status 'valide' and dossier item taxe_fonciere flips to 'valide'. PUT validate on demo DPE with document_date='2024-03-12' and null validity_date → expiry_date '2034-03-11' (~10 years). PUT /api/properties/{id}/dossier/gaz status_override='non_applicable' switches gaz to non_applicable; null restores; unknown item_key → 404. Frontend (390×844): /property/6aa02db9efd8f90925a5a758 shows estimation-range + photos-button + write-listing-button + dossier-button; navigation to /property/{id}/dossier renders dossier-screen with dossier-progress showing 0/5, sections Obligatoire / Selon votre situation / Recommandé, checklist-item-dpe present; checklist-toggle-dpe expands showing description, document-row-dpe-0, document-add-library-dpe, document-add-file-dpe, checklist-na-dpe; checklist-na-gaz toggles gaz to 'Non applicable' and back. Tapping document-row-dpe-0 loads document-review-screen with image preview, document-ocr-banner (100% confidence), doc-field-title/issuer/date/validity/address, document-validate-button; tapping validate returns to dossier and dpe item shows 'Validé' chip with progress incrementing to 1/5. Regression OK (estimation-range, photos-button, write-listing-button).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "props.pointerEvents", "issue": "Recurring console warning 'props.pointerEvents is deprecated. Use style.pointerEvents' on web preview. Emitted from a dependency (react-native-reanimated / gesture-handler / expo-image family). Non-blocking, already flagged in iteration_4."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_estimo_phase6.py",
+    "/app/test_reports/pytest/pytest_phase6.xml"
+  ],
+  "action_items": [
+    "None blocking. Optional: track the persistent 'props.pointerEvents is deprecated' warning from a transitive dep.",
+    "Nice-to-have: document review screen renders a spinner for ~1-2 s while fetching the document; the current screen already handles it, but a testID like 'document-review-loading' on the spinner would help future automation."
+  ],
+  "critical_code_review_comments": [
+    "dossier.py OCR uses gemini-3-flash-preview via emergentintegrations with the shared EMERGENT_LLM_KEY — no auth, matches spec.",
+    "server.py upload_document duplicates PDF vs image branching logic — small but readable; keeps 20 MB cap and reuses photo_ai.normalize for images. Safe.",
+    "server.py validate_document takes document_type from the submitted OcrResult and rewrites document.item_key if valid — enables cross-checklist reassignment on validation as intended.",
+    "_dossier() computes progress only over items with required=True and status ≠ 'non_applicable'. Matches spec.",
+    "server.py get_file also serves document.file_path — correct, tested end-to-end.",
+    "expiry_for uses 30.44 days/month approximation → 120 months yields 2034-03-11 for a 2024-03-12 DPE. Slightly under a full 10 calendar years but acceptable and matches spec's ≈ 2034-03 target.",
+    "dossier.tsx uses Pressable + testIDs consistently and is only ~290 LOC — well within the 700 LOC guideline."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_estimo_phase6.py (new)"
+  ],
+  "success_rate": { "backend": "100% (9/9)", "frontend": "100% of tested flows" },
+  "seed_data_creation": "Uploaded 1 taxe_fonciere JPEG via POST /api/properties/{id}/documents (used the one Gemini OCR call allowed by spec), then soft-deleted it inside the test. Created + soft-deleted 1 appartement property in Blois for the copro checklist test. Demo DPE document (6aa14d4e4e0e34732207382f) preserved: pytest validated it to check the 10-year expiry, then it was reset via /validate {validated:false} so the frontend flow could exercise the review→validate path again; final state after frontend test = validated=True (status 'valide', progress 1/5 on the dossier). If you want it back in a_verifier, PUT /api/documents/6aa14d4e4e0e34732207382f/validate with validated:false and empty fields.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Demo DPE document id 6aa14d4e4e0e34732207382f on property 6aa02db9efd8f90925a5a758 was validated at the end of this iteration (status 'valide'). To re-run the UI validate flow, first PUT /api/documents/6aa14d4e4e0e34732207382f/validate with body {\"fields\":{\"document_type\":\"dpe\",\"title\":\"DPE\",\"issuer\":null,\"document_date\":null,\"validity_date\":null,\"address_found\":null,\"key_fields\":[],\"warnings\":[],\"summary\":\"\",\"confidence\":0.0},\"validated\":false}. OCR calls are ~7 s and consume Gemini credits — keep to ≤1 upload per iteration. On web, expo-image-picker + expo-document-picker create hidden <input type=file> nodes dynamically, so backend upload is the reliable coverage path (pytest already covers it). document-review-screen shows a brief spinner (~1-2 s) before doc-field-title appears — wait_for_selector on doc-field-title with 15 s timeout.",
+  "rca_of_issue": "n/a — no blocking bugs."
+}
