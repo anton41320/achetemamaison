@@ -45,6 +45,15 @@ export default function DataScreen() {
     mutationFn: api.hedonicTrain,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["hedonic-model"] }),
   });
+  const ml = useQuery({
+    queryKey: ["ml-model"],
+    queryFn: api.mlModel,
+    refetchInterval: (q) => (q.state.data?.training || !q.state.data?.available ? 4000 : false),
+  });
+  const mlTrain = useMutation({
+    mutationFn: api.mlTrain,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ml-model"] }),
+  });
 
   const s = status.data;
 
@@ -149,6 +158,63 @@ export default function DataScreen() {
                 loading={train.isPending || !!model.data?.training}
                 disabled={s.total === 0}
                 testID="hedonic-train-button"
+              />
+            </View>
+
+            <View style={styles.card} testID="ml-model-card">
+              <View style={styles.cardHeader}>
+                <Text style={styles.h3}>Machine learning (Phase 3)</Text>
+                {ml.data?.available ? (
+                  <View style={[styles.pill, { backgroundColor: ml.data.promoted ? colors.successSoft : colors.warningSoft }]} testID="ml-gate-badge">
+                    <Text style={[styles.pillText, { color: ml.data.promoted ? colors.success : colors.warning }]}>
+                      {ml.data.promoted ? "Promu" : "Non promu"}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+              {ml.data?.available && ml.data.holdout && ml.data.gate ? (
+                <>
+                  <Text style={styles.p}>
+                    LightGBM entraîné sur {formatInt(ml.data.n_train ?? 0)} ventes 2021–{ml.data.holdout.test_year - 1}, testé sur{" "}
+                    {formatInt(ml.data.n_test ?? 0)} ventes {ml.data.holdout.test_year}. Explicabilité SHAP.
+                  </Text>
+                  <View style={styles.aggBlock} testID="ml-model-metrics">
+                    <Text style={styles.aggTitle}>Validation temporelle {ml.data.holdout.test_year}</Text>
+                    <View style={styles.aggRow}>
+                      <View style={styles.aggCell}><Text style={styles.aggValue}>{pct(ml.data.holdout.median_ape)}</Text><Text style={styles.aggLabel}>Erreur médiane</Text></View>
+                      <View style={styles.aggCell}><Text style={styles.aggValue}>{pct(ml.data.holdout.mape)}</Text><Text style={styles.aggLabel}>MAPE</Text></View>
+                      <View style={styles.aggCell}><Text style={styles.aggValue}>{pct(ml.data.holdout.within_15pct)}</Text><Text style={styles.aggLabel}>Erreur ≤ 15 %</Text></View>
+                    </View>
+                  </View>
+                  <View style={styles.aggBlock} testID="ml-gate-metrics">
+                    <Text style={styles.aggTitle}>Gate vs comparables <Text style={styles.aggN}>({ml.data.gate.n} mêmes ventes 2025)</Text></Text>
+                    <View style={styles.aggRow}>
+                      <View style={styles.aggCell}><Text style={styles.aggValue}>{ml.data.gate.ml_median_ape !== null ? pct(ml.data.gate.ml_median_ape) : "—"}</Text><Text style={styles.aggLabel}>ML · erreur médiane</Text></View>
+                      <View style={styles.aggCell}><Text style={styles.aggValue}>{ml.data.gate.baseline_median_ape !== null ? pct(ml.data.gate.baseline_median_ape) : "—"}</Text><Text style={styles.aggLabel}>Comparables · erreur médiane</Text></View>
+                    </View>
+                    <Text style={styles.muted}>
+                      {ml.data.promoted
+                        ? "Le ML bat la baseline : il est disponible dans la pondération finale."
+                        : "Le ML ne bat pas la baseline : il reste visible à titre informatif et n’entre pas dans la valeur finale."}
+                    </Text>
+                  </View>
+                  {ml.data.by_dept ? (
+                    <Text style={styles.muted}>
+                      Erreur médiane par département : {Object.entries(ml.data.by_dept).map(([d, m]) => `${d} ${pct(m.median_ape)}`).join(" · ")}
+                      {ml.data.by_type ? ` · ${Object.entries(ml.data.by_type).map(([t, m]) => `${t}s ${pct(m.median_ape)}`).join(" · ")}` : ""}
+                    </Text>
+                  ) : null}
+                </>
+              ) : (
+                <Text style={styles.p}>{ml.data?.training ? "Entraînement en cours (≈ 1 min)…" : "Modèle non entraîné."}</Text>
+              )}
+              <PrimaryButton
+                title="Ré-entraîner le ML"
+                variant="secondary"
+                onPress={() => mlTrain.mutate()}
+                loading={mlTrain.isPending || !!ml.data?.training}
+                disabled={s.total === 0}
+                testID="ml-train-button"
               />
             </View>
 

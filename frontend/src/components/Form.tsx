@@ -69,7 +69,7 @@ export function Segmented<T extends string>({ label, options, value, onChange, t
         accessibilityRole="button"
         accessibilityState={{ selected: active }}
         onPress={() => select(o.value)}
-        style={[styles.chip, active && styles.chipActive, scroll && styles.chipFixed]}
+        style={[styles.chip, scroll ? styles.chipFixed : styles.chipFill, active && styles.chipActive]}
       >
         {o.icon}
         <Text style={[styles.chipLabel, active && styles.chipLabelActive]}>{o.label}</Text>
@@ -165,7 +165,6 @@ const useStyles = makeStyles((colors) => ({
   chipScroller: { height: 56, marginHorizontal: -spacing.lg },
   chipRowScroll: { gap: spacing.sm, paddingHorizontal: spacing.lg, alignItems: "center" },
   chip: {
-    flex: 1,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
@@ -177,7 +176,8 @@ const useStyles = makeStyles((colors) => ({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  chipFixed: { flex: 0, flexShrink: 0, height: 36, borderRadius: radius.pill },
+  chipFill: { flex: 1 },
+  chipFixed: { flexGrow: 0, flexShrink: 0, flexBasis: "auto", width: "auto", height: 36, borderRadius: radius.pill },
   chipActive: { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
   chipLabel: { fontFamily: fonts.medium, fontSize: 14, color: colors.onSurfaceSecondary },
   chipLabelActive: { color: colors.onBrandPrimary },

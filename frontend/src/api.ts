@@ -102,6 +102,127 @@ export interface TrendReport {
   quartier_change_pct: number | null;
 }
 
+export interface MlFactor {
+  key: string;
+  label: string;
+  pct: number;
+}
+
+export interface MlResult {
+  model_version: string;
+  promoted: boolean;
+  value: number;
+  low: number;
+  high: number;
+  price_m2: number;
+  reference_value: number;
+  factors: MlFactor[];
+  model_median_ape: number | null;
+  baseline_median_ape: number | null;
+}
+
+export interface MarketEstimate {
+  value: number;
+  low: number;
+  high: number;
+  price_m2: number;
+  label: string;
+  count: number;
+}
+
+export interface Weights {
+  comparables: number;
+  hedonic: number;
+  market: number;
+  ml: number;
+}
+
+export const DEFAULT_WEIGHTS: Weights = { comparables: 50, hedonic: 30, market: 20, ml: 0 };
+
+export interface BlendComponent {
+  key: keyof Weights;
+  label: string;
+  value: number | null;
+  low: number | null;
+  high: number | null;
+  weight: number;
+  available: boolean;
+  effective_weight: number;
+}
+
+export interface BlendResult {
+  value: number;
+  low: number;
+  high: number;
+  components: BlendComponent[];
+}
+
+/** Mirrors backend blend.py so sliders update instantly. */
+export function blendEstimation(est: Estimation, weights: Weights): BlendResult {
+  const components: BlendComponent[] = [
+    { key: "comparables", label: "Comparables DVF", value: est.value, low: est.low, high: est.high, weight: weights.comparables, available: true, effective_weight: 0 },
+    { key: "hedonic", label: "Modèle hédonique", value: est.hedonic?.value ?? null, low: est.hedonic?.low ?? null, high: est.hedonic?.high ?? null, weight: weights.hedonic, available: !!est.hedonic, effective_weight: 0 },
+    { key: "market", label: est.market_estimate?.label ?? "Marché local", value: est.market_estimate?.value ?? null, low: est.market_estimate?.low ?? null, high: est.market_estimate?.high ?? null, weight: weights.market, available: !!est.market_estimate, effective_weight: 0 },
+    { key: "ml", label: "Machine learning (LightGBM)", value: est.ml?.value ?? null, low: est.ml?.low ?? null, high: est.ml?.high ?? null, weight: weights.ml, available: !!est.ml?.promoted, effective_weight: 0 },
+  ];
+  let active = components.filter((c) => c.available && c.weight > 0);
+  if (active.length === 0) active = [components[0]];
+  const total = active.reduce((s, c) => s + c.weight, 0) || 1;
+  const sum = (k: "value" | "low" | "high") => active.reduce((s, c) => s + (c[k] ?? 0) * c.weight, 0) / total;
+  for (const c of components) c.effective_weight = active.includes(c) ? c.weight / total : 0;
+  const r = (v: number) => Math.round(v / 1000) * 1000;
+  return { value: r(sum("value")), low: r(sum("low")), high: r(sum("high")), components };
+}
+
+export interface MarketSignal {
+  available: boolean;
+  score?: number;
+  verdict?: "favorable" | "neutre" | "attentiste";
+  scope?: string;
+  as_of?: string;
+  trend_pct?: number | null;
+  volume_ratio?: number | null;
+  days_since_last?: number | null;
+  recent_count?: number;
+  reasons?: { key: string; label: string; text: string; score: number; max_score: number }[];
+}
+
+export type ListingStyle = "sobre" | "chaleureux" | "premium" | "familial";
+export const LISTING_STYLES: { value: ListingStyle; label: string }[] = [
+  { value: "sobre", label: "Sobre" },
+  { value: "chaleureux", label: "Chaleureux" },
+  { value: "premium", label: "Premium" },
+  { value: "familial", label: "Familial" },
+];
+
+export interface Listing {
+  id: string;
+  property_id: string;
+  style: ListingStyle;
+  title: string;
+  hook: string;
+  description: string;
+  highlights: string[];
+  extra_facts: string | null;
+  model: string;
+  created_at: string;
+}
+
+export interface MlModelInfo {
+  available: boolean;
+  training: boolean;
+  n?: number;
+  n_train?: number;
+  n_test?: number;
+  holdout?: { n: number; mape: number; median_ape: number; within_15pct: number; rmse_log: number; test_year: number };
+  by_type?: Record<string, { n: number; median_ape: number; mape: number }>;
+  by_dept?: Record<string, { n: number; median_ape: number; mape: number }>;
+  gate?: { n: number; ml_median_ape: number | null; baseline_median_ape: number | null; ml_mape: number | null; baseline_mape: number | null };
+  promoted?: boolean;
+  feature_importance?: Record<string, number>;
+  trained_at?: string;
+}
+
 export interface Estimation {
   method: string;
   created_at: string;
@@ -117,6 +238,8 @@ export interface Estimation {
   market: MarketLevel[];
   comparables: Comparable[];
   hedonic: HedonicResult | null;
+  ml: MlResult | null;
+  market_estimate: MarketEstimate | null;
 }
 
 export interface PropertyIn {
@@ -223,6 +346,15 @@ export const api = {
   validation: (n: number) => request<ValidationReport>(`/validation?n=${n}`),
   hedonicModel: () => request<HedonicModelInfo>("/models/hedonic"),
   hedonicTrain: () => request<{ started: boolean; message: string }>("/models/hedonic/train", { method: "POST" }),
+  mlModel: () => request<MlModelInfo>("/models/ml"),
+  mlTrain: () => request<{ started: boolean; message: string }>("/models/ml/train", { method: "POST" }),
+  getWeights: () => request<Weights>("/settings/weights"),
+  putWeights: (w: Weights) => request<Weights>("/settings/weights", { method: "PUT", body: JSON.stringify(w) }),
+  marketSignal: (id: string) => request<MarketSignal>(`/properties/${id}/market-signal`),
+  listListings: (id: string) => request<Listing[]>(`/properties/${id}/listings`),
+  createListing: (id: string, body: { style: ListingStyle; extra_facts: string | null; include_price: boolean }) =>
+    request<Listing>(`/properties/${id}/listings`, { method: "POST", body: JSON.stringify(body) }),
+  deleteListing: (id: string, lid: string) => request<{ deleted: boolean }>(`/properties/${id}/listings/${lid}`, { method: "DELETE" }),
 };
 
 export interface HedonicModelInfo {

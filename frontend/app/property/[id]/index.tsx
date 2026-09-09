@@ -3,8 +3,8 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  ArrowsOutIcon, CaretLeftIcon, CaretRightIcon, ChartBarIcon, ListBulletsIcon, RulerIcon, TargetIcon, TrashIcon,
-  WarningIcon,
+  ArrowsOutIcon, CaretLeftIcon, CaretRightIcon, ChartBarIcon, ListBulletsIcon, PencilLineIcon, RulerIcon, TargetIcon,
+  TrashIcon, WarningIcon,
 } from "phosphor-react-native";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -13,7 +13,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { TYPE_LABELS, api, formatEuro, formatInt, formatK, formatPct } from "@/src/api";
 import { ConfidenceBadge, useConfidenceColor } from "@/src/components/ConfidenceBadge";
+import { FinalEstimateCard } from "@/src/components/FinalEstimateCard";
 import { HedonicCard } from "@/src/components/HedonicCard";
+import { MarketSignalCard } from "@/src/components/MarketSignalCard";
+import { MlCard } from "@/src/components/MlCard";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { ShareReportButton } from "@/src/components/ShareReportButton";
 import { TrendCard } from "@/src/components/TrendCard";
@@ -247,15 +250,44 @@ export default function PropertyDetailScreen() {
             ) : (
               <View style={styles.notes} testID="hedonic-missing">
                 <Text style={styles.noteText}>
-                  • Analyse « Pourquoi cette estimation ? » indisponible pour cette estimation : appuyez sur « Recalculer » pour l’obtenir.
+                  • Analyses « Pourquoi cette estimation ? », ML et pondération indisponibles pour cette estimation : appuyez sur « Recalculer » pour les obtenir.
                 </Text>
               </View>
             )}
+
+            {/* ML — Phase 3 */}
+            {est.ml ? (
+              <Animated.View entering={FadeInDown.delay(345).duration(320)}>
+                <MlCard ml={est.ml} />
+              </Animated.View>
+            ) : null}
+
+            {/* Blended final estimate */}
+            {est.hedonic || est.market_estimate ? (
+              <Animated.View entering={FadeInDown.delay(350).duration(320)}>
+                <FinalEstimateCard estimation={est} />
+              </Animated.View>
+            ) : null}
 
             {/* Market trend */}
             <Animated.View entering={FadeInDown.delay(360).duration(320)}>
               <TrendCard propertyId={id!} typeLabel={TYPE_LABELS[data.property_type]} />
             </Animated.View>
+
+            <Animated.View entering={FadeInDown.delay(380).duration(320)}>
+              <MarketSignalCard propertyId={id!} />
+            </Animated.View>
+
+            <Pressable
+              testID="write-listing-button"
+              accessibilityRole="button"
+              onPress={() => router.push(`/property/${id}/listing`)}
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.85 }]}
+            >
+              <PencilLineIcon size={20} color={colors.onBrandTertiary} />
+              <Text style={styles.linkLabel}>Rédiger l’annonce avec l’IA</Text>
+              <CaretRightIcon size={18} color={colors.onBrandTertiary} />
+            </Pressable>
 
             <Pressable
               testID="view-comparables-button"

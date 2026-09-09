@@ -27,9 +27,13 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 - [x] Phase 2 — `hedonic.py` : régression log(prix) à effets fixes commune (shrinkage vers le département), validation temporelle (train ≤ 2024 / test 2025 : erreur médiane ≈ 19,8 %, R² log ≈ 0,6). Section « Pourquoi cette estimation ? » : facteurs +/- (localisation, surface, pièces, terrain, déclaratifs état/année) vs bien type, valeur hédonique côte à côte avec les comparables, indicateur convergent / écart modéré / divergent. La fourchette affichée reste celle des comparables (baseline gagnante). Entraînement auto au démarrage, `GET/POST /api/models/hedonic[/train]`.
 - [x] Rapport PDF (`report.py`, reportlab) : `GET /api/properties/{id}/report.pdf` — synthèse, confiance, calcul, marché, facteurs hédoniques, 10 comparables ; partage natif via expo-sharing (ouverture directe sur web).
 - [x] Tendance marché : `GET /api/properties/{id}/trend` — prix/m² médian par année (commune + rayon 1,5 km), variation première→dernière année, graphique barres/points.
+- [x] Phase 3 — `ml_model.py` : LightGBM (features surface, pièces, terrain, type, lat/lon, encodage cible commune/département, période), validation temporelle train ≤ 2024 / test 2025 (erreur médiane ≈ 19,3 %), SHAP TreeExplainer groupé par facteur. **Gate** : sur 300 mêmes ventes 2025, ML 21,7 % vs comparables 18,1 % → **non promu** (visible, poids 0). `GET/POST /api/models/ml[/train]`. Ré-entraînement possible depuis l'écran Données.
+- [x] Poids ajustables (`blend.py`) : curseurs comparables / hédonique / marché / ML (désactivé si non promu), réglage global `GET/PUT /api/settings/weights` (défaut 50/30/20/0), `GET /api/properties/{id}/final`, calcul miroir côté client pour réactivité, section dans le PDF. `market_estimate` = prix/m² médian du meilleur rayon × surface + ajustements.
+- [x] Signal « Bon moment pour vendre ? » (`GET /api/properties/{id}/market-signal`) : tendance 12 mois (40), volume vs 2 ans (30), liquidité (30) → score/verdict favorable/neutre/attentiste, calculé au dernier point DVF.
+- [x] Annonce IA (`listing.py`, Claude Sonnet 4.6 via EMERGENT_LLM_KEY) : styles Sobre/Chaleureux/Premium/Familial, faits + précisions vendeur, option fourchette, garde-fou strict (aucune invention, état repris tel quel, pas d'adjectif sur le quartier). CRUD `/api/properties/{id}/listings` (soft delete), écran `property/[id]/listing` avec copie presse-papiers.
 
 ## Backlog priorisé
-- P1 Phase 3 : LightGBM + validation temporelle + SHAP (gate : ne remplace la baseline que s'il la bat sur 2025)
-- P1 Pondération finale comparables / hédonique / marché avec poids ajustables (Phase 3)
-- P2 Phase 4 : générateur d'annonce IA · P2 Phase 5 : IA photo · P2 Phase 6 : dossier juridique
+- P1 Phase 5 : IA photo (retouche + home staging, original conservé, mention « visuel non contractuel ») via Object Storage
+- P1 Phase 6 : checklist de vente dynamique + import documents (OCR) avec validation utilisateur
+- P2 Améliorer le ML pour passer la gate (features quartier IRIS, distance centres, DPE si dispo)
 - P2 Ajout de départements / mise à jour trimestrielle planifiée du DVF

@@ -1,0 +1,35 @@
+{
+  "summary": "Estimo Phase 3 (LightGBM ML + SHAP, adjustable weights, market signal, IA listing via Claude Sonnet 4.6) tested end-to-end. Backend: 14/14 pytest cases pass. GET /api/models/ml → available=true, promoted=false, holdout{median_ape 19.3%, test_year 2025}, gate{n=300, ml_median_ape 21.7, baseline_median_ape 18.1} with feature_importance (dict of features → gain, e.g., log_surface:7724, rooms:1977…). POST /reestimate on 6aa02db9efd8f90925a5a758 fills estimation.ml (promoted=false, low<value<high, factors location+surface+…) and estimation.market_estimate (label 'Prix/m² médian quartier', count>0). Weights CRUD: GET returns {comparables,hedonic,market,ml}; PUT {60,20,20,0} persists; all-zero and out-of-range (150) → 422; restored to 50/30/20/0. GET /final returns value/low/high + 4 components with effective_weight, ml effective_weight=0.0 (not promoted), effective weights sum to 1, weighted value inside components low/high envelope. GET /market-signal returns available=true, score 28/100, verdict 'attentiste', reasons[3] (trend/volume/liquidity) with as_of ISO date. POST /listings with style='sobre', extra_facts='garage attenant' returned 201 in ~10s with title/hook/description/highlights (French, non-empty) and model 'claude-sonnet-4-6'; invalid style → 422; unknown property → 404; GET lists it; DELETE removes it. GET /report.pdf still 200 application/pdf. Frontend (Expo web, 390x844) at /property/6aa02db9efd8f90925a5a758: ml-card ('Machine learning (LightGBM + SHAP)' · 'Non promu' badge · ml-value '128 000 €'); final-estimate-card with final-range '116 k€ – 213 k€', final-value 'Valeur centrale 164 000 €', weight-row-comparables/hedonic/market/ml (ml row shows 'non promu (ne bat pas la baseline)', slider disabled), sliders weight-slider-comparables/hedonic/market. Mouse-dragging comparables slider from 50 → 0 updated final-value 164 000 € → 148 000 €, then dragging back restored to 164 000 €. market-signal-card with score 28, verdict 'Marché attentiste', 3 reasons (trend/volume/liquidity). write-listing-button navigates to /property/{id}/listing. Listing screen: 4 style pills (sobre/chaleureux/premium/familial) render as horizontal chips at y=119 with distinct x boxes (no overlap: x=16/99/217/319), listing-extra-input accepts text, listing-include-price switch present, listing-generate-button generates a new listing, listing-card-0 with listing-title-0 visible, listing-copy-0 shows 'Copié' after click, listing-delete-0 removes the card. /data screen shows ml-model-card ('Non promu' via ml-gate-badge), ml-model-metrics (19,3% erreur médiane / 28,9% MAPE / 39,6% ≤15%), ml-gate-metrics (21.7% ML vs 18.1% baseline), ml-train-button (NOT clicked per instructions). No red-screen, no console errors observed. No deprecated Expo packages found in package.json.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_estimo_phase3.py",
+    "/app/backend/tests/test_estimo_phase2.py",
+    "/app/backend/tests/test_estimo_backend.py",
+    "/app/test_reports/pytest/pytest_phase3.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py L189-198: GET /api/models/ml drops _id via meta.pop, converts trained_at/data_until to ISO — no ObjectId leaks.",
+    "blend.py: ML component is only marked 'available' if promoted=True, so with ml weight >0 the UI/backend correctly ignores ML for the blended value; ml effective_weight stays 0.0 as verified in /final.",
+    "listing.py enforces a strict no-invention SYSTEM prompt; passes only structured facts (type, commune, surface, rooms/bedrooms, condition, year_built, land_surface for maison, price range only if include_price); returns 502 with detail on LLM failure — good UX pattern.",
+    "Weights validator: PUT rejects all-zero (422) and out-of-range (422 by Pydantic Field ge=0, le=100). Idempotent replace_one({_id:'weights'}) upsert is safe.",
+    "server.py L165-170 /dvf/ingest still uses background executor (not triggered here per instructions).",
+    "Frontend @react-native-community/slider on web renders as a mouse-draggable native <input type=range> variant; keyboard arrows don't fire onValueChange (a well-known slider-web limitation). Not a blocker but worth noting for a11y — users on web must drag with mouse."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_estimo_phase3.py (new)",
+    "/app/test_reports/iteration_3.json (new)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "None. Used existing property 6aa02db9efd8f90925a5a758 read-only (except a reestimate call). Created 1 listing then deleted it in the same test (LLM credits used: 1 generation).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Phase 3 backend tests: /app/backend/tests/test_estimo_phase3.py (14 tests, ~13s incl. LLM listing). Phase 1&2 still in test_estimo_backend.py + test_estimo_phase2.py. Seed property with full ml+final+market_signal+listings: 6aa02db9efd8f90925a5a758. ML model is 'Non promu' (21.7% vs 18.1% baseline) — do NOT expect ML in blended value while it stays non-promoted. Frontend Phase 3 testIDs: ml-card, ml-promoted-badge, ml-value, final-estimate-card, final-range, final-value, weight-row-{comparables,hedonic,market,ml}, weight-slider-{comparables,hedonic,market}, market-signal-card, market-signal-score, market-signal-verdict, market-signal-reason-{trend,volume,liquidity}, write-listing-button; listing screen: listing-style-{sobre,chaleureux,premium,familial}, listing-extra-input, listing-include-price, listing-generate-button, listing-card-{i}, listing-title-{i}, listing-copy-{i}, listing-delete-{i}; /data: ml-model-card, ml-gate-badge, ml-model-metrics, ml-gate-metrics, ml-train-button. Do NOT click ml-train-button (~1 min) or dvf-ingest. Sliders only respond to mouse-drag on web, not keyboard.",
+  "rca_of_issue": "N/A — no bugs found. Feature_importance shape is a dict {feature_name: gain} rather than a list; adjusted the test to accept both dict and list."
+}

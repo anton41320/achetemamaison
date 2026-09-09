@@ -129,6 +129,34 @@ class HedonicResult(BaseModel):
     model_n: int
 
 
+class MlFactor(BaseModel):
+    key: str
+    label: str
+    pct: float
+
+
+class MlResult(BaseModel):
+    model_version: str
+    promoted: bool
+    value: float
+    low: float
+    high: float
+    price_m2: float
+    reference_value: float
+    factors: list[MlFactor]
+    model_median_ape: Optional[float] = None
+    baseline_median_ape: Optional[float] = None
+
+
+class MarketEstimate(BaseModel):
+    value: float
+    low: float
+    high: float
+    price_m2: float
+    label: str
+    count: int
+
+
 class Estimation(BaseModel):
     method: str = "comparables_dvf_v1"
     created_at: datetime = Field(default_factory=utcnow)
@@ -144,6 +172,33 @@ class Estimation(BaseModel):
     market: list[MarketLevel]
     comparables: list[Comparable]
     hedonic: Optional[HedonicResult] = None
+    ml: Optional[MlResult] = None
+    market_estimate: Optional[MarketEstimate] = None
+
+
+class Weights(BaseModel):
+    comparables: float = Field(default=50, ge=0, le=100)
+    hedonic: float = Field(default=30, ge=0, le=100)
+    market: float = Field(default=20, ge=0, le=100)
+    ml: float = Field(default=0, ge=0, le=100)
+
+
+class ListingRequest(BaseModel):
+    style: Literal["sobre", "chaleureux", "premium", "familial"] = "sobre"
+    extra_facts: Optional[str] = Field(default=None, max_length=1200)
+    include_price: bool = True
+
+
+class ListingDoc(BaseDocument):
+    property_id: str
+    style: str
+    title: str
+    hook: str
+    description: str
+    highlights: list[str]
+    extra_facts: Optional[str] = None
+    model: str
+    created_at: datetime = Field(default_factory=utcnow)
 
 
 class PropertyDoc(BaseDocument):

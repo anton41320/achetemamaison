@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from io import BytesIO
+from typing import Optional
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_LEFT
@@ -35,7 +36,7 @@ def pct(p: float, digits: int = 1) -> str:
     return f"{s}\u202f%"
 
 
-def build_report(prop: PropertyDoc) -> bytes:
+def build_report(prop: PropertyDoc, final: Optional[dict] = None) -> bytes:
     est = prop.estimation
     assert est is not None
     buf = BytesIO()
@@ -105,6 +106,15 @@ def build_report(prop: PropertyDoc) -> bytes:
     rows = [["Périmètre", "Ventes", "Prix/m² médian"]] + [
         [m.label, str(m.count), f"{eur(m.median_pm2)}/m²" if m.median_pm2 else "—"] for m in est.market]
     story.append(_table(rows, [80 * mm, 40 * mm, 54 * mm], body))
+
+    # Blended final value
+    if final and len([c for c in final["components"] if c["effective_weight"] > 0]) > 1:
+        story.append(Paragraph("Estimation finale pondérée", h2))
+        rows = [["Signal", "Valeur", "Poids"]] + [
+            [c["label"], eur(c["value"]) if c["value"] else "—", f"{c['effective_weight'] * 100:.0f} %" if c["effective_weight"] else "—"]
+            for c in final["components"]]
+        rows.append(["Valeur finale", f"{eur(final['value'])}  ({eur(final['low'])} – {eur(final['high'])})", "100 %"])
+        story.append(_table(rows, [70 * mm, 74 * mm, 30 * mm], body, bold_last=True))
 
     # Hedonic
     if est.hedonic:

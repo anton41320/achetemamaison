@@ -17,8 +17,11 @@ from starlette.middleware.cors import CORSMiddleware
 
 import dvf_ingest
 import hedonic
+import ml_model
+from blend import blend, market_estimate, market_signal
 from estimator import NoDataError, estimate, run_validation
-from models import PropertyDoc, PropertyIn, utcnow
+from listing import generate_listing
+from models import ListingDoc, ListingRequest, PropertyDoc, PropertyIn, Weights, utcnow
 from report import build_report
 
 ROOT_DIR = Path(__file__).parent
@@ -73,12 +76,31 @@ async def _run_estimation(p: PropertyIn | PropertyDoc):
             )
         except Exception:  # noqa: BLE001
             logger.exception("Hedonic explain failed")
+    est.market_estimate = market_estimate(est, p.surface)
+    ml_meta = await ml_model.load_meta(db)
+    if ml_meta:
+        cond = next((a for a in est.adjustments if a.key == "condition"), None)
+        year = next((a for a in est.adjustments if a.key == "year"), None)
+        try:
+            est.ml = await asyncio.to_thread(
+                ml_model.predict, ml_meta, surface=p.surface, rooms=p.rooms, land=p.land_surface,
+                ptype=p.property_type, code_commune=p.code_commune, lat=p.lat, lon=p.lon,
+                condition_pct=cond.pct if cond else 0.0, year_pct=year.pct if year else 0.0)
+        except Exception:  # noqa: BLE001
+            logger.exception("ML predict failed")
     return est
+
+
+async def _get_weights() -> Weights:
+    doc = await db.settings.find_one({"_id": "weights"}) or {}
+    doc.pop("_id", None)
+    return Weights(**doc)
 
 
 def _ingest_then_train():
     dvf_ingest.ingest_all(mongo_url, db_name, DVF_DEPARTMENTS, DVF_YEARS)
     hedonic.train(mongo_url, db_name)
+    ml_model.train(mongo_url, db_name)
 
 
 @api.get("/health")
@@ -164,6 +186,88 @@ async def hedonic_train():
     return {"started": True, "message": "Entraînement lancé en arrière-plan"}
 
 
+@api.get("/models/ml")
+async def ml_meta_route():
+    meta = await ml_model.load_meta(db)
+    if not meta:
+        return {"available": False, "training": ml_model.is_training()}
+    meta.pop("_id", None)
+    for k in ("trained_at", "data_until"):
+        if meta.get(k):
+            meta[k] = meta[k].isoformat()
+    return {"available": True, "training": ml_model.is_training(), **meta}
+
+
+@api.post("/models/ml/train", status_code=202)
+async def ml_train():
+    if ml_model.is_training():
+        return {"started": False, "message": "Entraînement déjà en cours"}
+    asyncio.get_running_loop().run_in_executor(None, ml_model.train, mongo_url, db_name)
+    return {"started": True, "message": "Entraînement ML lancé en arrière-plan (≈ 1 min)"}
+
+
+@api.get("/settings/weights")
+async def get_weights():
+    return (await _get_weights()).model_dump()
+
+
+@api.put("/settings/weights")
+async def put_weights(w: Weights):
+    if w.comparables + w.hedonic + w.market + w.ml <= 0:
+        raise HTTPException(status_code=422, detail="Au moins un poids doit être supérieur à 0")
+    await db.settings.replace_one({"_id": "weights"}, {"_id": "weights", **w.model_dump()}, upsert=True)
+    return w.model_dump()
+
+
+@api.get("/properties/{pid}/final")
+async def property_final(pid: str):
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    if not doc or not doc.get("estimation"):
+        raise HTTPException(status_code=404, detail="Bien introuvable")
+    prop = PropertyDoc.from_mongo(doc)
+    return blend(prop.estimation, await _get_weights())
+
+
+@api.get("/properties/{pid}/market-signal")
+async def property_market_signal(pid: str):
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Bien introuvable")
+    return await market_signal(db, lat=doc["lat"], lon=doc["lon"], code_commune=doc["code_commune"],
+                               commune=doc["commune"], ptype=doc["property_type"])
+
+
+@api.get("/properties/{pid}/listings")
+async def list_listings(pid: str):
+    docs = await db.listings.find({"property_id": pid, "deleted_at": None}).sort("created_at", -1).to_list(50)
+    return [ListingDoc.from_mongo(d).model_dump(mode="json") for d in docs]
+
+
+@api.post("/properties/{pid}/listings", status_code=201)
+async def create_listing(pid: str, req: ListingRequest):
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Bien introuvable")
+    prop = PropertyDoc.from_mongo(doc)
+    try:
+        result = await generate_listing(prop, req.style, req.extra_facts, req.include_price)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Listing generation failed")
+        raise HTTPException(status_code=502, detail=f"Génération indisponible : {exc}")
+    listing = ListingDoc(property_id=pid, style=req.style, extra_facts=req.extra_facts, **result)
+    res = await db.listings.insert_one({**listing.to_mongo(), "deleted_at": None})
+    saved = await db.listings.find_one({"_id": res.inserted_id})
+    return ListingDoc.from_mongo(saved).model_dump(mode="json")
+
+
+@api.delete("/properties/{pid}/listings/{lid}")
+async def delete_listing(pid: str, lid: str):
+    res = await db.listings.update_one({"_id": _oid(lid), "property_id": pid}, {"$set": {"deleted_at": utcnow()}})
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Annonce introuvable")
+    return {"deleted": True}
+
+
 @api.get("/properties/{pid}/trend")
 async def property_trend(pid: str):
     doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
@@ -210,7 +314,7 @@ async def property_report(pid: str):
     prop = PropertyDoc.from_mongo(doc)
     if not prop.estimation:
         raise HTTPException(status_code=422, detail="Aucune estimation disponible")
-    pdf = await asyncio.to_thread(build_report, prop)
+    pdf = await asyncio.to_thread(build_report, prop, blend(prop.estimation, await _get_weights()))
     filename = f"estimo-{pid[-6:]}.pdf"
     return Response(content=pdf, media_type="application/pdf",
                     headers={"Content-Disposition": f'inline; filename="{filename}"'})
@@ -290,6 +394,9 @@ async def startup():
     elif not await db.models.find_one({"_id": hedonic.MODEL_NAME}) and not hedonic.is_training():
         logger.info("Hedonic model missing: training in background")
         asyncio.get_running_loop().run_in_executor(None, hedonic.train, mongo_url, db_name)
+    if count > 0 and not await db.models.find_one({"_id": ml_model.MODEL_NAME}) and not ml_model.is_training():
+        logger.info("ML model missing: training in background")
+        asyncio.get_running_loop().run_in_executor(None, ml_model.train, mongo_url, db_name)
 
 
 @app.on_event("shutdown")
