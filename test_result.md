@@ -101,3 +101,7 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+## Iteration 7 — Prix cible, Export notaire, Rappels diagnostics (main agent, 2026-06)
+- Backend: target.py (GET/PUT /api/properties/{id}/target), notaire.py (GET /api/properties/{id}/notaire.pdf, pypdf merge), GET /api/alerts.
+- Frontend: TargetPriceCard (fiche bien), notaire export button (dossier screen), AlertsBanner (home).
+- Test data: property 6aa02db9efd8f90925a5a758 has target 250000, validated DPE (expires 2026-10-20 → alert) and validated ERP PDF.

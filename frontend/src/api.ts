@@ -242,6 +242,47 @@ export interface Estimation {
   market_estimate: MarketEstimate | null;
 }
 
+export interface Features {
+  pool: "aucune" | "hors_sol" | "enterree" | null;
+  fenced: boolean | null;
+  motorized_gate: boolean | null;
+  terrace: boolean | null;
+  garage: "aucun" | "un" | "deux_plus" | null;
+  outbuilding: boolean | null;
+  orientation: "nord" | "est" | "sud" | "ouest" | "sud_ouest" | "sud_est" | "nord_est" | "nord_ouest" | null;
+  single_storey: boolean | null;
+  basement: boolean | null;
+  convertible_attic: boolean | null;
+  bathrooms: number | null;
+  heating: "pompe_a_chaleur" | "gaz" | "electrique" | "fioul" | "bois" | "autre" | null;
+  dpe: "A" | "B" | "C" | "D" | "E" | "F" | "G" | null;
+  double_glazing: boolean | null;
+  air_conditioning: boolean | null;
+  solar_panels: boolean | null;
+  floor: number | null;
+  elevator: boolean | null;
+  balcony: boolean | null;
+  parking: boolean | null;
+  cellar: boolean | null;
+}
+
+export const EMPTY_FEATURES: Features = {
+  pool: null, fenced: null, motorized_gate: null, terrace: null, garage: null, outbuilding: null, orientation: null,
+  single_storey: null, basement: null, convertible_attic: null, bathrooms: null, heating: null, dpe: null,
+  double_glazing: null, air_conditioning: null, solar_panels: null, floor: null, elevator: null, balcony: null,
+  parking: null, cellar: null,
+};
+
+export interface PropertyUpdate {
+  surface?: number;
+  rooms?: number;
+  bedrooms?: number;
+  year_built?: number | null;
+  condition?: Condition;
+  land_surface?: number | null;
+  features?: Features;
+}
+
 export interface PropertyIn {
   address_label: string;
   lat: number;
@@ -256,10 +297,12 @@ export interface PropertyIn {
   year_built: number | null;
   condition: Condition;
   land_surface: number | null;
+  features: Features;
 }
 
 export interface Property extends PropertyIn {
   id: string;
+  features: Features;
   estimation: Estimation | null;
   created_at: string;
   updated_at: string;
@@ -424,6 +467,50 @@ export interface Dossier {
   progress: { done: number; total_required: number; pct: number };
 }
 
+export type TargetZone = "sous_fourchette" | "bas" | "central" | "haut" | "au_dessus";
+
+export interface TargetAnalysis {
+  target_price: number;
+  target_price_m2: number;
+  low: number;
+  high: number;
+  value: number;
+  position: number;
+  delta_pct: number;
+  zone: TargetZone;
+  label: string;
+  advice: string;
+  net_after_negotiation: number;
+  negotiation_pct: number;
+  vs_market_pm2_pct: number | null;
+  market_verdict: "favorable" | "neutre" | "attentiste" | null;
+  tips: string[];
+}
+
+export interface TargetResponse {
+  target_price: number | null;
+  analysis: TargetAnalysis | null;
+}
+
+export type AlertLevel = "expire" | "urgent" | "bientot";
+
+export interface ExpiryAlert {
+  property_id: string;
+  address_label: string;
+  document_id: string;
+  item_key: string;
+  label: string;
+  expiry_date: string;
+  days_left: number;
+  level: AlertLevel;
+}
+
+export interface AlertsResponse {
+  as_of: string;
+  horizon_days: number;
+  alerts: ExpiryAlert[];
+}
+
 export async function uploadDocument(propertyId: string, itemKey: string, uri: string, name: string, type: string): Promise<SaleDocument> {
   const form = new FormData();
   if (typeof window !== "undefined" && typeof document !== "undefined") {
@@ -456,6 +543,8 @@ export const api = {
   createProperty: (body: PropertyIn) =>
     request<Property>("/properties", { method: "POST", body: JSON.stringify(body) }),
   reestimate: (id: string) => request<Property>(`/properties/${id}/reestimate`, { method: "POST" }),
+  updateProperty: (id: string, body: PropertyUpdate) =>
+    request<Property>(`/properties/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   trend: (id: string) => request<TrendReport>(`/properties/${id}/trend`),
   reportUrl: (id: string) => `${BASE}/properties/${id}/report.pdf`,
   deleteProperty: (id: string) => request<{ deleted: boolean }>(`/properties/${id}`, { method: "DELETE" }),
@@ -484,6 +573,11 @@ export const api = {
   validateDocument: (did: string, fields: OcrResult, validated = true) =>
     request<SaleDocument>(`/documents/${did}/validate`, { method: "PUT", body: JSON.stringify({ fields, validated }) }),
   deleteDocument: (did: string) => request<{ deleted: boolean }>(`/documents/${did}`, { method: "DELETE" }),
+  getTarget: (id: string) => request<TargetResponse>(`/properties/${id}/target`),
+  putTarget: (id: string, target_price: number | null) =>
+    request<TargetResponse>(`/properties/${id}/target`, { method: "PUT", body: JSON.stringify({ target_price }) }),
+  notaireUrl: (id: string) => `${BASE}/properties/${id}/notaire.pdf`,
+  alerts: () => request<AlertsResponse>("/alerts"),
 };
 
 export interface HedonicModelInfo {

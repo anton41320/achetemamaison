@@ -39,6 +39,34 @@ PropertyType = Literal["appartement", "maison"]
 Condition = Literal["a_renover", "travaux", "correct", "bon", "neuf_renove"]
 
 
+class Features(BaseModel):
+    # Extérieur
+    pool: Optional[Literal["aucune", "hors_sol", "enterree"]] = None
+    fenced: Optional[bool] = None
+    motorized_gate: Optional[bool] = None
+    terrace: Optional[bool] = None
+    garage: Optional[Literal["aucun", "un", "deux_plus"]] = None
+    outbuilding: Optional[bool] = None
+    orientation: Optional[Literal["nord", "est", "sud", "ouest", "sud_ouest", "sud_est", "nord_est", "nord_ouest"]] = None
+    # Configuration
+    single_storey: Optional[bool] = None
+    basement: Optional[bool] = None
+    convertible_attic: Optional[bool] = None
+    bathrooms: Optional[int] = Field(default=None, ge=0, le=10)
+    # Confort / énergie
+    heating: Optional[Literal["pompe_a_chaleur", "gaz", "electrique", "fioul", "bois", "autre"]] = None
+    dpe: Optional[Literal["A", "B", "C", "D", "E", "F", "G"]] = None
+    double_glazing: Optional[bool] = None
+    air_conditioning: Optional[bool] = None
+    solar_panels: Optional[bool] = None
+    # Appartement
+    floor: Optional[int] = Field(default=None, ge=0, le=60)
+    elevator: Optional[bool] = None
+    balcony: Optional[bool] = None
+    parking: Optional[bool] = None
+    cellar: Optional[bool] = None
+
+
 class PropertyIn(BaseModel):
     address_label: str
     lat: float
@@ -53,12 +81,23 @@ class PropertyIn(BaseModel):
     year_built: Optional[int] = Field(default=None, ge=1500, le=2030)
     condition: Condition = "correct"
     land_surface: Optional[float] = Field(default=None, ge=0, le=100000)
-    # Phase 2 foundations (hedonic features) — stored, not yet used by the engine
+    features: Features = Field(default_factory=Features)
+    # Legacy Phase 2 fields (kept for stored documents)
     floor: Optional[int] = None
     has_elevator: Optional[bool] = None
     has_parking: Optional[bool] = None
     has_outdoor: Optional[bool] = None
     dpe: Optional[str] = None
+
+
+class PropertyUpdate(BaseModel):
+    surface: Optional[float] = Field(default=None, gt=8, lt=1000)
+    rooms: Optional[int] = Field(default=None, ge=1, le=30)
+    bedrooms: Optional[int] = Field(default=None, ge=0, le=20)
+    year_built: Optional[int] = Field(default=None, ge=1500, le=2030)
+    condition: Optional[Condition] = None
+    land_surface: Optional[float] = Field(default=None, ge=0, le=100000)
+    features: Optional[Features] = None
 
 
 class Adjustment(BaseModel):
@@ -230,11 +269,13 @@ class PropertyDoc(BaseDocument):
     year_built: Optional[int] = None
     condition: Condition
     land_surface: Optional[float] = None
+    features: Features = Field(default_factory=Features)
     floor: Optional[int] = None
     has_elevator: Optional[bool] = None
     has_parking: Optional[bool] = None
     has_outdoor: Optional[bool] = None
     dpe: Optional[str] = None
+    target_price: Optional[float] = None
     estimation: Optional[Estimation] = None
     created_at: datetime = Field(default_factory=utcnow)
     updated_at: datetime = Field(default_factory=utcnow)
@@ -281,3 +322,7 @@ class DocumentValidate(BaseModel):
 class ChecklistOverride(BaseModel):
     status_override: Optional[Literal["non_applicable"]] = None
     note: Optional[str] = Field(default=None, max_length=300)
+
+
+class TargetPriceIn(BaseModel):
+    target_price: Optional[float] = Field(default=None, ge=10_000, le=20_000_000)

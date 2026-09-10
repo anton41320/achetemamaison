@@ -184,7 +184,7 @@ def model_summary(model: dict) -> dict:
 
 def explain(model: dict, *, surface: float, rooms: int, land: Optional[float], ptype: str, code_commune: str,
             commune: str, dept: str, condition_pct: float, condition_label: str, year_pct: float,
-            year_label: Optional[str], comparables_value: float) -> HedonicResult:
+            year_label: Optional[str], comparables_value: float, features_pct: float = 0.0) -> HedonicResult:
     beta = np.array(model["beta"])
     x = _features(surface, rooms, land, ptype, REF_YEAR)
     ref = model["refs"].get(ptype) or {"surface": surface, "rooms": rooms, "land": land or 0}
@@ -213,9 +213,12 @@ def explain(model: dict, *, surface: float, rooms: int, land: Optional[float], p
     add("condition", condition_label, math.log1p(condition_pct), "Ajustement déclaré (non présent dans DVF)", learned=False)
     if year_label:
         add("year", year_label, math.log1p(year_pct), "Ajustement déclaré (non présent dans DVF)", learned=False)
+    if abs(features_pct) > 0.0005:
+        add("features", "Équipements & confort déclarés", math.log1p(features_pct),
+            "Somme des ajustements déclarés (piscine, chauffage, DPE, garage…)", learned=False)
 
     log_pred = log_ref + float(np.sum(contrib)) + loc_eff
-    value = math.exp(log_pred) * (1 + condition_pct) * (1 + year_pct)
+    value = math.exp(log_pred) * (1 + condition_pct) * (1 + year_pct) * (1 + features_pct)
     holdout = model.get("holdout") or model.get("in_sample") or {}
     # Robust interval: typical (median) error of the model on held-out sales
     half = (holdout.get("median_ape") or 20.0) / 100.0

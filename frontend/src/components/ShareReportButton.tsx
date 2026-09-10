@@ -9,9 +9,15 @@ import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
 interface Props {
   propertyId: string;
+  /** Defaults to the estimation report. */
+  url?: string;
+  label?: string;
+  fileName?: string;
+  dialogTitle?: string;
+  testID?: string;
 }
 
-export function ShareReportButton({ propertyId }: Props) {
+export function ShareReportButton({ propertyId, url, label = "Partager le rapport PDF", fileName, dialogTitle = "Partager le rapport Estimo", testID = "share-report-button" }: Props) {
   const styles = useStyles();
   const { colors } = useTheme();
   const [busy, setBusy] = useState(false);
@@ -19,22 +25,22 @@ export function ShareReportButton({ propertyId }: Props) {
 
   const share = async () => {
     setError(null);
-    const url = api.reportUrl(propertyId);
+    const target = url ?? api.reportUrl(propertyId);
     if (Platform.OS === "web") {
-      Linking.openURL(url);
+      Linking.openURL(target);
       return;
     }
     setBusy(true);
     try {
-      const target = new File(Paths.cache, `estimo-${propertyId.slice(-6)}.pdf`);
-      const file = await File.downloadFileAsync(url, target, { idempotent: true });
+      const dest = new File(Paths.cache, fileName ?? `estimo-${propertyId.slice(-6)}.pdf`);
+      const file = await File.downloadFileAsync(target, dest, { idempotent: true });
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(file.uri, { mimeType: "application/pdf", UTI: "com.adobe.pdf", dialogTitle: "Partager le rapport Estimo" });
+        await Sharing.shareAsync(file.uri, { mimeType: "application/pdf", UTI: "com.adobe.pdf", dialogTitle });
       } else {
-        await Linking.openURL(url);
+        await Linking.openURL(target);
       }
     } catch (e) {
-      setError((e as Error).message || "Impossible de générer le rapport");
+      setError((e as Error).message || "Impossible de générer le document");
     } finally {
       setBusy(false);
     }
@@ -43,16 +49,16 @@ export function ShareReportButton({ propertyId }: Props) {
   return (
     <>
       <Pressable
-        testID="share-report-button"
+        testID={testID}
         accessibilityRole="button"
         onPress={share}
         disabled={busy}
         style={({ pressed }) => [styles.btn, pressed && { opacity: 0.85 }]}
       >
         {busy ? <ActivityIndicator color={colors.onBrandPrimary} /> : <FilePdfIcon size={20} color={colors.onBrandPrimary} weight="fill" />}
-        <Text style={styles.label}>Partager le rapport PDF</Text>
+        <Text style={styles.label}>{label}</Text>
       </Pressable>
-      {error ? <Text style={styles.error} testID="share-report-error">{error}</Text> : null}
+      {error ? <Text style={styles.error} testID={`${testID}-error`}>{error}</Text> : null}
     </>
   );
 }

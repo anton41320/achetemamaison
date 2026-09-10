@@ -19,6 +19,7 @@ import { MarketSignalCard } from "@/src/components/MarketSignalCard";
 import { MlCard } from "@/src/components/MlCard";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { ShareReportButton } from "@/src/components/ShareReportButton";
+import { TargetPriceCard } from "@/src/components/TargetPriceCard";
 import { TrendCard } from "@/src/components/TrendCard";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
@@ -278,6 +279,10 @@ export default function PropertyDetailScreen() {
               <MarketSignalCard propertyId={id!} />
             </Animated.View>
 
+            <Animated.View entering={FadeInDown.delay(400).duration(320)}>
+              <TargetPriceCard propertyId={id!} suggestedValue={est.value} />
+            </Animated.View>
+
             <Pressable
               testID="dossier-button"
               accessibilityRole="button"
@@ -324,6 +329,12 @@ export default function PropertyDetailScreen() {
 
             <View style={styles.actions}>
               <ShareReportButton propertyId={id!} />
+              <PrimaryButton
+                title="Modifier les caractéristiques"
+                variant="secondary"
+                onPress={() => router.push(`/property/${id}/edit`)}
+                testID="edit-property-button"
+              />
               <PrimaryButton
                 title="Recalculer l’estimation"
                 variant="secondary"

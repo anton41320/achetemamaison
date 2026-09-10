@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ChecklistItem, ItemStatus, SaleDocument, api, formatMonth, uploadDocument } from "@/src/api";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { ScreenHeader } from "@/src/components/ScreenHeader";
+import { ShareReportButton } from "@/src/components/ShareReportButton";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
 const CATEGORY_LABELS = {
@@ -153,6 +154,23 @@ export default function DossierScreen() {
                 </View>
               );
             })}
+
+            <View style={styles.exportCard} testID="notaire-export-card">
+              <Text style={styles.exportTitle}>Export pour le notaire</Text>
+              <Text style={styles.hint}>
+                Un seul PDF : synthèse du bien et de l’estimation, état de la checklist et les{" "}
+                {d.items.reduce((n, it) => n + it.documents.filter((doc) => doc.validated).length, 0)} document(s) validé(s) fusionnés à la
+                suite, dans l’ordre de la checklist.
+              </Text>
+              <ShareReportButton
+                propertyId={id!}
+                url={api.notaireUrl(id!)}
+                label="Exporter le dossier (PDF)"
+                fileName={`estimo-dossier-notaire-${id!.slice(-6)}.pdf`}
+                dialogTitle="Envoyer le dossier de vente"
+                testID="notaire-export-button"
+              />
+            </View>
             <Text style={styles.hint}>
               Liste indicative fondée sur la réglementation française (dossier de diagnostic technique, loi ALUR). Votre
               notaire reste l’interlocuteur de référence.
@@ -289,4 +307,6 @@ const useStyles = makeStyles((colors) => ({
   naLabel: { fontFamily: fonts.medium, fontSize: 12, color: colors.muted },
   chip: { flexDirection: "row", alignItems: "center", gap: 4, height: 24, paddingHorizontal: spacing.sm, borderRadius: radius.pill, flexShrink: 0 },
   chipText: { fontFamily: fonts.semibold, fontSize: 11 },
+  exportCard: { backgroundColor: colors.surfaceSecondary, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.lg, gap: spacing.md, marginTop: spacing.sm },
+  exportTitle: { fontFamily: fonts.semibold, fontSize: 16, color: colors.onSurfaceSecondary },
 }));

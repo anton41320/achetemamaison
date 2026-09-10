@@ -20,14 +20,16 @@ import dossier as dossier_mod
 import dvf_ingest
 import hedonic
 import ml_model
+import notaire
 import photos as photo_ai
 import storage
 from blend import blend, market_estimate, market_signal
 from estimator import NoDataError, estimate, run_validation
 from listing import generate_listing
-from models import (ChecklistOverride, DocumentDoc, DocumentValidate, ListingDoc, ListingRequest, PhotoDoc,
-                    PropertyDoc, PropertyIn, Weights, utcnow)
+from models import (ChecklistOverride, DocumentDoc, DocumentValidate, Features, ListingDoc, ListingRequest, PhotoDoc,
+                    PropertyDoc, PropertyIn, PropertyUpdate, TargetPriceIn, Weights, utcnow)
 from report import build_report
+from target import analyze_target
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -64,9 +66,11 @@ async def _run_estimation(p: PropertyIn | PropertyDoc):
         est = await estimate(
             db, lat=p.lat, lon=p.lon, code_commune=p.code_commune, ptype=p.property_type,
             surface=p.surface, condition=p.condition, year_built=p.year_built, land_surface=p.land_surface,
+            features=p.features,
         )
     except NoDataError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
+    features_pct = sum(a.pct for a in est.adjustments if a.key.startswith("feat_"))
     model = await hedonic.load_model(db)
     if model:
         cond = next((a for a in est.adjustments if a.key == "condition"), None)
@@ -77,7 +81,7 @@ async def _run_estimation(p: PropertyIn | PropertyDoc):
                 code_commune=p.code_commune, commune=p.commune, dept=p.code_commune[:2],
                 condition_pct=cond.pct if cond else 0.0, condition_label=cond.label if cond else "État correct",
                 year_pct=year.pct if year else 0.0, year_label=year.label if year else None,
-                comparables_value=est.value,
+                comparables_value=est.value, features_pct=features_pct,
             )
         except Exception:  # noqa: BLE001
             logger.exception("Hedonic explain failed")
@@ -90,7 +94,7 @@ async def _run_estimation(p: PropertyIn | PropertyDoc):
             est.ml = await asyncio.to_thread(
                 ml_model.predict, ml_meta, surface=p.surface, rooms=p.rooms, land=p.land_surface,
                 ptype=p.property_type, code_commune=p.code_commune, lat=p.lat, lon=p.lon,
-                condition_pct=cond.pct if cond else 0.0, year_pct=year.pct if year else 0.0)
+                condition_pct=cond.pct if cond else 0.0, year_pct=(year.pct if year else 0.0) + features_pct)
         except Exception:  # noqa: BLE001
             logger.exception("ML predict failed")
     return est
@@ -240,6 +244,70 @@ async def property_market_signal(pid: str):
         raise HTTPException(status_code=404, detail="Bien introuvable")
     return await market_signal(db, lat=doc["lat"], lon=doc["lon"], code_commune=doc["code_commune"],
                                commune=doc["commune"], ptype=doc["property_type"])
+
+
+# ---------------- Prix cible ----------------
+
+async def _target_payload(doc: dict) -> dict:
+    prop = PropertyDoc.from_mongo(doc)
+    if prop.target_price is None or not prop.estimation:
+        return {"target_price": prop.target_price, "analysis": None}
+    final = blend(prop.estimation, await _get_weights())
+    try:
+        signal = await market_signal(db, lat=prop.lat, lon=prop.lon, code_commune=prop.code_commune,
+                                     commune=prop.commune, ptype=prop.property_type)
+    except Exception:  # noqa: BLE001
+        signal = None
+    return {"target_price": prop.target_price,
+            "analysis": analyze_target(prop.target_price, prop.surface, prop.estimation, final, signal)}
+
+
+@api.get("/properties/{pid}/target")
+async def get_target(pid: str):
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Bien introuvable")
+    return await _target_payload(doc)
+
+
+@api.put("/properties/{pid}/target")
+async def put_target(pid: str, body: TargetPriceIn):
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Bien introuvable")
+    await db.properties.update_one({"_id": doc["_id"]}, {"$set": {"target_price": body.target_price, "updated_at": utcnow()}})
+    return await _target_payload(await db.properties.find_one({"_id": doc["_id"]}))
+
+
+# ---------------- Rappels diagnostics ----------------
+
+@api.get("/alerts")
+async def alerts(horizon_days: int = Query(default=90, ge=1, le=365)):
+    """Expiry reminders: for each (property, checklist item) the most recent validated document with an expiry date."""
+    props = {str(p["_id"]): p for p in await db.properties.find({"deleted_at": None}, {"address_label": 1}).to_list(500)}
+    docs = await db.documents.find({"deleted_at": None, "validated": True, "expiry_date": {"$ne": None},
+                                    "property_id": {"$in": list(props)}}).to_list(2000)
+    latest: dict[tuple[str, str], dict] = {}
+    for d in docs:
+        k = (d["property_id"], d["item_key"])
+        if k not in latest or d["expiry_date"] > latest[k]["expiry_date"]:
+            latest[k] = d
+    today = datetime.now(timezone.utc).date()
+    out = []
+    for (pid, item_key), d in latest.items():
+        try:
+            exp = datetime.strptime(d["expiry_date"][:10], "%Y-%m-%d").date()
+        except ValueError:
+            continue
+        days_left = (exp - today).days
+        if days_left > horizon_days:
+            continue
+        level = "expire" if days_left < 0 else "urgent" if days_left <= 30 else "bientot"
+        out.append({"property_id": pid, "address_label": props[pid]["address_label"], "document_id": str(d["_id"]),
+                    "item_key": item_key, "label": dossier_mod.ITEMS.get(item_key, {}).get("label", item_key),
+                    "expiry_date": d["expiry_date"], "days_left": days_left, "level": level})
+    out.sort(key=lambda a: a["days_left"])
+    return {"as_of": today.isoformat(), "horizon_days": horizon_days, "alerts": out}
 
 
 @api.get("/properties/{pid}/listings")
@@ -406,6 +474,31 @@ async def _dossier(pid: str) -> dict:
 @api.get("/properties/{pid}/dossier")
 async def get_dossier(pid: str):
     return await _dossier(pid)
+
+
+@api.get("/properties/{pid}/notaire.pdf")
+async def notaire_export(pid: str):
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Bien introuvable")
+    prop = PropertyDoc.from_mongo(doc)
+    dossier = await _dossier(pid)
+    attachments = notaire.attached_documents(dossier)
+    final = blend(prop.estimation, await _get_weights()) if prop.estimation else None
+    target = (await _target_payload(doc))["analysis"]
+
+    def _fetch(path: str):
+        try:
+            return storage.get_object(path)
+        except Exception:  # noqa: BLE001
+            logger.exception("Attachment fetch failed: %s", path)
+            return None
+
+    files = await asyncio.gather(*(asyncio.to_thread(_fetch, a["file_path"]) for a in attachments))
+    pdf = await asyncio.to_thread(notaire.build_notaire_pdf, prop, final, dossier, attachments, list(files), target)
+    filename = f"estimo-dossier-notaire-{pid[-6:]}.pdf"
+    return Response(content=pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": f'inline; filename="{filename}"'})
 
 
 @api.put("/properties/{pid}/dossier/{item_key}")
@@ -580,6 +673,25 @@ async def get_property(pid: str):
     if not doc:
         raise HTTPException(status_code=404, detail="Bien introuvable")
     return _prop_response(doc)
+
+
+@api.put("/properties/{pid}")
+async def update_property(pid: str, body: PropertyUpdate):
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Bien introuvable")
+    prop = PropertyDoc.from_mongo(doc)
+    changes = body.model_dump(exclude_unset=True)
+    for k, v in changes.items():
+        setattr(prop, k, Features(**v) if k == "features" and v is not None else v)
+    if prop.property_type == "appartement":
+        prop.land_surface = None
+    est = await _run_estimation(prop)
+    await db.properties.update_one({"_id": doc["_id"]}, {"$set": {
+        **{k: (v if k != "features" else prop.features.model_dump()) for k, v in changes.items()},
+        "land_surface": prop.land_surface, "estimation": est.model_dump(), "updated_at": utcnow()}})
+    await db.estimations.insert_one({"property_id": doc["_id"], **est.model_dump()})
+    return _prop_response(await db.properties.find_one({"_id": doc["_id"]}))
 
 
 @api.post("/properties/{pid}/reestimate")

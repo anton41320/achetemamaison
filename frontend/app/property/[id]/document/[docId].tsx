@@ -38,6 +38,7 @@ export default function DocumentReviewScreen() {
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["document", docId] });
     queryClient.invalidateQueries({ queryKey: ["dossier", id] });
+    queryClient.invalidateQueries({ queryKey: ["alerts"] });
   };
 
   const validate = useMutation({

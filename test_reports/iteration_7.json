@@ -1,0 +1,20 @@
+{
+  "summary": "Phase 7 (Prix cible, Rappels diagnostics, Export Notaire) validated end-to-end. Backend: 16/16 pytest passed — GET/PUT /api/properties/{pid}/target returns full analysis (zone/label/advice/tips/position/delta_pct/net_after_negotiation/low/high/value), PUT null clears (analysis=null), PUT 500 → 422, unknown pid → 404, estimation.value is unchanged by target PUT, property doc includes target_price. GET /api/alerts returns as_of/horizon_days/alerts with all required fields (property_id, address_label, document_id, item_key, label, expiry_date, days_left, level in {expire,urgent,bientot}); DPE alert 6aa14d4e4e0e34732207382f present at ~40 days; horizon_days=10 correctly excludes the DPE. GET /api/properties/6aa02db9efd8f90925a5a758/notaire.pdf → 200 application/pdf, ≥3 pages, page 1 contains 'Dossier de vente' and 'Pièces jointes' and mentions 'Prix cible'; unknown pid → 404; also 200 for another property (cover-only PDF). Regression: property detail, /final, /dossier still OK. Frontend (390x844): home shows alerts-banner with alert-dpe-6aa02db9efd8f90925a5a758 and tapping it navigates to /property/6aa02db9efd8f90925a5a758/document/6aa14d4e4e0e34732207382f. Property detail shows target-price-card with target-zone, target-value, target-range-bar, target-advice, target-clear-button, target-edit-button; edit → target-input → save 170000 → zone 'Au prix du marché'; target-clear-button re-shows target-form; entering 500 → target-error 'Saisissez un prix en euros (10 000 € minimum).'; restored to 250000 (zone 'Au-dessus de la fourchette'). Dossier screen renders 13 checklist items and shows notaire-export-card + notaire-export-button. Hero estimation-value, final-estimate-card, market-signal-card regressions still render.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_estimo_phase7.py", "/app/test_reports/pytest/phase7.xml"],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Test property 6aa02db9efd8f90925a5a758 was toggled through target_price null / 170000 / 500 (rejected) / and finally restored to 250000 as required.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Phase 7 verified. Backend URL https://estimate-home.preview.emergentagent.com. Property 6aa02db9efd8f90925a5a758 has target_price=250000. Pytest file: /app/backend/tests/test_estimo_phase7.py. Server clock 2026-09-10; DPE doc 6aa14d4e4e0e34732207382f expires 2026-10-20 (≈40 days). Only a benign deprecation warning noted in web console ('shadow*' style props deprecated — RN Web migration to boxShadow, cosmetic only).",
+  "rca_of_issue": ""
+}

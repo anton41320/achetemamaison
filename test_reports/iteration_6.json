@@ -1,0 +1,24 @@
+{
+  "summary": "Phase 6 (declared equipment features) validated end-to-end. Backend: 7/7 pytest passed — PUT with features {pool:enterree, single_storey:true, heating:fioul, dpe:F, garage:un} produces feat_pool +0.06, feat_single_storey +0.03, feat_heating -0.04, feat_dpe -0.09, feat_garage +0.03, features persist, hedonic.factors contains 'features'; clearing features removes feat_* adjustments; surface=5 returns 422; unknown id 404; POST for appartement Blois with {floor:4, elevator:false, balcony:true, parking:true, fenced:true} yields feat_floor -0.04, feat_balcony +0.03, feat_parking +0.04, fenced ignored (maison-only); report.pdf still 200. Frontend: wizard /new has 4 steps (Adresse, Le bien, Détails, Équipements) with FeaturesForm rendered on step 4; feat-heating-*, feat-dpe-C, feat-bathrooms-plus, feat-balcony-oui, feat-parking-oui, feat-floor-plus present; estimate-submit-button creates the property and adjustments-card shows the expected labels; edit-property-button opens /property/{id}/edit prefilled (surface=120, rooms=5), toggling feat-fenced-oui and feat-gate-oui and tapping edit-save-button persists 'Terrain clos' and 'Portail motorisé' adjustments; home list and hedonic-card / final-estimate-card render.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Edit screen deep-link reload", "issue": "After edit-save-button, router.back() logs 'The action GO_BACK was not handled by any navigator' when the edit page was opened directly (deep link / reload) without a preceding detail-screen entry. Not user-facing in normal navigation (Home → Detail → Edit works), but the save should probably fall back to router.replace(`/property/${id}`) when there is no history. Reference: /app/frontend/app/property/[id]/edit.tsx:65", "affected_testIDs": ["edit-save-button"]}
+    ],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_estimo_phase6_features.py", "/app/test_reports/pytest/phase6_features.xml"],
+  "action_items": [
+    "Optional UX polish: in /app/frontend/app/property/[id]/edit.tsx onSuccess, use router.canGoBack() ? router.back() : router.replace(`/property/${id}`) to avoid the GO_BACK dev warning on deep-linked reloads."
+  ],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Wizard test created a Blois appartement then deleted it via delete-button flow. Existing property 6aa02db9efd8f90925a5a758 was mutated by tests (features cleared then set fenced+motorized_gate=True) and remains in that state.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Phase 6 verified. Backend URL https://estimate-home.preview.emergentagent.com. Existing property 6aa02db9efd8f90925a5a758 now has features {fenced:true, motorized_gate:true}. Pytest suite for features at backend/tests/test_estimo_phase6_features.py.",
+  "rca_of_issue": ""
+}

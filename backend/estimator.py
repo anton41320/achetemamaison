@@ -36,6 +36,76 @@ CONDITION_ADJ = {
 
 LAND_PRICE_PER_M2 = 12.0
 
+# Declared feature adjustments (transparent, bounded). DVF has none of these, so they are
+# applied as explicit multiplicative corrections and listed one by one.
+FEATURE_MAX_TOTAL = 0.25
+
+
+def feature_adjustments(ptype: str, f, value_base: float) -> list[Adjustment]:
+    out: list[tuple[str, str, float]] = []
+    if f is None:
+        return []
+    maison = ptype == "maison"
+    if f.pool == "hors_sol":
+        out.append(("feat_pool", "Piscine hors-sol", 0.01))
+    elif f.pool == "enterree":
+        out.append(("feat_pool", "Piscine enterrée", 0.06))
+    if maison and f.fenced:
+        out.append(("feat_fenced", "Terrain clos", 0.015))
+    if maison and f.motorized_gate:
+        out.append(("feat_gate", "Portail motorisé", 0.01))
+    if f.terrace:
+        out.append(("feat_terrace", "Terrasse", 0.015))
+    if f.garage == "un":
+        out.append(("feat_garage", "Garage", 0.03))
+    elif f.garage == "deux_plus":
+        out.append(("feat_garage", "Double garage ou plus", 0.05))
+    if maison and f.outbuilding:
+        out.append(("feat_outbuilding", "Dépendance / abri", 0.02))
+    if f.orientation in ("sud", "sud_ouest", "sud_est"):
+        out.append(("feat_orientation", "Exposition sud", 0.02))
+    elif f.orientation == "nord":
+        out.append(("feat_orientation", "Exposition nord", -0.02))
+    if maison and f.single_storey:
+        out.append(("feat_single_storey", "Plain-pied", 0.03))
+    if maison and f.basement:
+        out.append(("feat_basement", "Sous-sol / cave", 0.015))
+    if maison and f.convertible_attic:
+        out.append(("feat_attic", "Combles aménageables", 0.02))
+    if f.bathrooms is not None and f.bathrooms >= 2:
+        out.append(("feat_bathrooms", f"{f.bathrooms} salles de bain", 0.015))
+    heating = {"pompe_a_chaleur": ("Pompe à chaleur", 0.03), "electrique": ("Chauffage électrique", -0.02),
+               "fioul": ("Chauffage au fioul", -0.04)}
+    if f.heating in heating:
+        label, pct = heating[f.heating]
+        out.append(("feat_heating", label, pct))
+    dpe = {"A": 0.06, "B": 0.06, "C": 0.03, "D": 0.0, "E": -0.04, "F": -0.09, "G": -0.14}
+    if f.dpe in dpe and dpe[f.dpe] != 0:
+        out.append(("feat_dpe", f"DPE {f.dpe}", dpe[f.dpe]))
+    if f.double_glazing:
+        out.append(("feat_glazing", "Double vitrage", 0.01))
+    if f.air_conditioning:
+        out.append(("feat_ac", "Climatisation", 0.015))
+    if f.solar_panels:
+        out.append(("feat_solar", "Panneaux solaires", 0.02))
+    if not maison:
+        if f.floor is not None:
+            if f.floor == 0:
+                out.append(("feat_floor", "Rez-de-chaussée", -0.03))
+            elif f.floor >= 3 and f.elevator is False:
+                out.append(("feat_floor", f"{f.floor}e étage sans ascenseur", -0.04))
+            elif f.floor >= 2 and f.elevator:
+                out.append(("feat_floor", f"{f.floor}e étage avec ascenseur", 0.02))
+        if f.balcony:
+            out.append(("feat_balcony", "Balcon / terrasse", 0.03))
+        if f.parking:
+            out.append(("feat_parking", "Parking / box", 0.04))
+        if f.cellar:
+            out.append(("feat_cellar", "Cave", 0.01))
+    total = sum(p for _, _, p in out)
+    scale = min(1.0, FEATURE_MAX_TOTAL / abs(total)) if abs(total) > FEATURE_MAX_TOTAL else 1.0
+    return [Adjustment(key=k, label=lbl, pct=round(p * scale, 4), amount=value_base * p * scale) for k, lbl, p in out]
+
 
 class NoDataError(Exception):
     pass
@@ -144,7 +214,7 @@ def _market(cands: list[dict], code_commune: str) -> list[MarketLevel]:
 
 def estimate_from_candidates(cands: list[dict], *, surface: float, ptype: str, condition: str,
                              year_built: Optional[int], land_surface: Optional[float],
-                             code_commune: str) -> Estimation:
+                             code_commune: str, features=None) -> Estimation:
     notes: list[str] = []
     selected: list[dict] = []
     level_label = LEVELS[-1][0]
@@ -197,6 +267,8 @@ def estimate_from_candidates(cands: list[dict], *, surface: float, ptype: str, c
         else:
             y_pct, y_label = 0.05, "Construction récente (2005+)"
         adjustments.append(Adjustment(key="year", label=y_label, pct=y_pct, amount=value_base * y_pct))
+
+    adjustments.extend(feature_adjustments(ptype, features, value_base))
 
     land_amount = 0.0
     if ptype == "maison" and land_surface is not None:
@@ -277,12 +349,13 @@ def estimate_from_candidates(cands: list[dict], *, surface: float, ptype: str, c
 
 async def estimate(db, *, lat: float, lon: float, code_commune: str, ptype: str, surface: float,
                    condition: str, year_built: Optional[int], land_surface: Optional[float],
-                   exclude_mutation_id: Optional[str] = None) -> Estimation:
+                   exclude_mutation_id: Optional[str] = None, features=None) -> Estimation:
     cands = await fetch_candidates(db, lat, lon, code_commune, ptype, exclude_mutation_id)
     if not cands:
         raise NoDataError("Aucune vente DVF de ce type de bien dans la zone couverte (rayon 5 km).")
     return estimate_from_candidates(cands, surface=surface, ptype=ptype, condition=condition,
-                                    year_built=year_built, land_surface=land_surface, code_commune=code_commune)
+                                    year_built=year_built, land_surface=land_surface, code_commune=code_commune,
+                                    features=features)
 
 
 async def run_validation(db, n: int = 40) -> dict:

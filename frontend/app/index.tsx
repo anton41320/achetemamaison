@@ -7,6 +7,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api } from "@/src/api";
+import { AlertsBanner } from "@/src/components/AlertsBanner";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { PropertyCard } from "@/src/components/PropertyCard";
 import { ScreenHeader } from "@/src/components/ScreenHeader";
@@ -72,6 +73,7 @@ export default function HomeScreen() {
           data={data}
           keyExtractor={(p) => p.id}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 96 }]}
+          ListHeaderComponent={<AlertsBanner />}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.brandPrimary} />}
           renderItem={({ item, index }) => (
             <Animated.View entering={FadeInDown.delay(Math.min(index, 6) * 60).duration(320)}>

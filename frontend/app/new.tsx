@@ -8,13 +8,15 @@ import { KeyboardAwareScrollView, KeyboardStickyView } from "react-native-keyboa
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { CONDITION_LABELS, Condition, GeocodeResult, PropertyIn, PropertyType, api } from "@/src/api";
+import { CONDITION_LABELS, Condition, EMPTY_FEATURES, Features, GeocodeResult, PropertyIn, PropertyType, api } from "@/src/api";
+import { FeaturesForm } from "@/src/components/FeaturesForm";
 import { Field, Segmented, Stepper } from "@/src/components/Form";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { ScreenHeader } from "@/src/components/ScreenHeader";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
-const STEPS = ["Adresse", "Le bien", "Détails"] as const;
+const STEPS = ["Adresse", "Le bien", "Détails", "Équipements"] as const;
+const LAST = STEPS.length - 1;
 const CTA_HEIGHT = 92;
 
 function useDebounced(value: string, delay = 350) {
@@ -43,6 +45,7 @@ export default function NewPropertyScreen() {
   const [yearBuilt, setYearBuilt] = useState("");
   const [condition, setCondition] = useState<Condition>("correct");
   const [landSurface, setLandSurface] = useState("");
+  const [features, setFeatures] = useState<Features>(EMPTY_FEATURES);
   const [touched, setTouched] = useState(false);
 
   const debounced = useDebounced(query);
@@ -76,14 +79,15 @@ export default function NewPropertyScreen() {
   const canContinue = useMemo(() => {
     if (step === 0) return !!address && address.covered;
     if (step === 1) return !!surface && !Number.isNaN(surfaceNum) && surfaceNum >= 9 && surfaceNum <= 999;
-    return !yearError && !landError;
+    if (step === 2) return !yearError && !landError;
+    return true;
   }, [step, address, surface, surfaceNum, yearError, landError]);
 
   const next = () => {
     setTouched(true);
     if (!canContinue) return;
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    if (step < 2) {
+    if (step < LAST) {
       setStep(step + 1);
       setTouched(false);
       return;
@@ -103,6 +107,7 @@ export default function NewPropertyScreen() {
       year_built: yearNum,
       condition,
       land_surface: propertyType === "maison" && landNum !== null ? landNum : null,
+      features,
     });
   };
 
@@ -113,7 +118,7 @@ export default function NewPropertyScreen() {
 
   return (
     <View style={styles.screen} testID="new-property-screen">
-      <ScreenHeader title="Nouvelle estimation" subtitle={`Étape ${step + 1} sur 3 · ${STEPS[step]}`} onBack={back} />
+      <ScreenHeader title="Nouvelle estimation" subtitle={`Étape ${step + 1} sur ${STEPS.length} · ${STEPS[step]}`} onBack={back} />
       <View style={styles.progress}>
         {STEPS.map((s, i) => (
           <View key={s} style={[styles.progressSeg, i <= step && styles.progressSegActive]} />
@@ -289,16 +294,31 @@ export default function NewPropertyScreen() {
             ) : null}
           </Animated.View>
         ) : null}
+        {step === 3 ? (
+          <Animated.View entering={FadeIn.duration(250)} style={styles.section}>
+            <Text style={styles.h2}>Équipements & confort</Text>
+            <Text style={styles.p}>
+              Tout est optionnel. Chaque critère renseigné devient un ajustement affiché en % et en € dans le résultat.
+            </Text>
+            <FeaturesForm propertyType={propertyType} value={features} onChange={setFeatures} />
+            {create.isError ? (
+              <View style={styles.warnBanner} testID="create-error">
+                <WarningIcon size={18} color={colors.error} weight="fill" />
+                <Text style={[styles.warnText, { color: colors.error }]}>{(create.error as Error).message}</Text>
+              </View>
+            ) : null}
+          </Animated.View>
+        ) : null}
       </KeyboardAwareScrollView>
 
       <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
         <View style={[styles.cta, { paddingBottom: insets.bottom + spacing.lg }]}>
           <PrimaryButton
-            title={step < 2 ? "Continuer" : "Estimer ce bien"}
+            title={step < LAST ? "Continuer" : "Estimer ce bien"}
             onPress={next}
             disabled={!canContinue && touched}
             loading={create.isPending}
-            testID={step < 2 ? "step-continue-button" : "estimate-submit-button"}
+            testID={step < LAST ? "step-continue-button" : "estimate-submit-button"}
           />
         </View>
       </KeyboardStickyView>
