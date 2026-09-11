@@ -222,7 +222,9 @@ export default function PropertyDetailScreen() {
               </View>
               <Text style={styles.detailHint}>
                 Les prix/m² des ventes sont d’abord ramenés à votre surface (le prix/m² baisse quand la taille
-                augmente), puis pondérés par récence, distance et similarité. La fourchette encadre la valeur centrale
+                augmente), puis pondérés par récence, distance, similarité de surface et taille de commune. Le rayon
+                s’élargit jusqu’à 10 km, en ne retenant hors de votre commune que des communes de taille comparable,
+                tant que cela rend la valeur centrale plus robuste. La fourchette encadre la valeur centrale
                 (incertitude de la médiane + spécificités non renseignées) et non l’écart entre ventes individuelles,
                 indiqué par la dispersion. Elle est plafonnée à ±15 % (±20 % si confiance faible) : le niveau de
                 confiance porte le risque résiduel.

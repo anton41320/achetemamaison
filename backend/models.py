@@ -123,6 +123,7 @@ class Comparable(BaseModel):
     price_m2: float
     land_surface: Optional[float] = None
     commune: str
+    population: Optional[int] = None
     property_type: str
     weight: float
 

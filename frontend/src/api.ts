@@ -41,6 +41,7 @@ export interface Comparable {
   price_m2: number;
   land_surface: number | null;
   commune: string;
+  population: number | null;
   property_type: string;
   weight: number;
 }

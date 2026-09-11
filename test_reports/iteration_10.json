@@ -1,0 +1,21 @@
+{
+  "summary": "Phase 10 validated end-to-end. Backend 12/12 pytest passed (/app/backend/tests/test_estimo_phase10.py, xml at /app/test_reports/pytest/phase10.xml). GET /api/dvf/status returns communes_with_population=864 (>800). POST /api/estimate/preview for the Mur-de-Sologne hamlet (200 m² maison) returns method='comparables_dvf_v4', confidence.radius_label='10 km, communes similaires', insufficient_data=false, half-width ≈0.10 (≤0.20); notes include 'Rayon élargi à 10 km en ne retenant que les communes de taille comparable à la vôtre (1 546 hab.) : base de ventes plus robuste.' — NOTE: target commune 41156 (Mur-de-Sologne) has population 1546 in the DB, not 508 as stated in the review request; every comparable carries an int `population`, and every comparable from another commune sits within 0.4×1546..2.5×1546 (test enforces the ratio against the actual target population). Villefranche 140 m² returns method v4, value ~176k€ (between 150k and 200k), half-width ≈0.14 (≤0.15), proximity hint contains 'distance médiane pondérée', market list has 4 levels including '5 km, communes similaires'. Blois 65 m² appartement stays local: radius_label='Quartier (1,5 km)' and all comparables commune='Blois'. GET /api/properties/{pid} auto-refreshes every seed to method 'comparables_dvf_v4' with population ints on comparables. GET /api/validation?n=30 completes in <5s. Regressions /final, /target, /report.pdf, /next-steps and /api/alerts all 200. Frontend (390x844) on /property/6aa02db9efd8f90925a5a758: adjustments-card explanation contains 'communes de taille comparable' and 'jusqu’à 10 km'; confidence-breakdown proximity hint contains 'distance médiane pondérée 3,5 km'; tapping view-comparables-button navigates to comparables screen where rows show 'Soings-en-Sologne (1 546 hab.)' etc., and the footer mentions 'taille de commune'. No red screen, no console errors (only a deprecated pointerEvents warning from RN Web).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": [], "react_native_issues": []},
+  "test_report_links": ["/app/backend/tests/test_estimo_phase10.py", "/app/test_reports/pytest/phase10.xml"],
+  "action_items": [
+    "Review request stated Mur-de-Sologne population is 508; the DB stores 1546. The behaviour (widening to '10 km, communes similaires' + note mentioning the correct population + population ratio band) is correct. If 508 was expected, verify the geo.api.gouv.fr snapshot for code_commune 41156."
+  ],
+  "critical_code_review_comments": [
+    "estimator.py:307 — insufficient-data fallback uses _in_scope(c, SEARCH_RADIUS_M, code_commune) with the default similar_only=False, which is correct, but the extra 'or c[\"code_commune\"] == code_commune' clause is redundant (radius=10000 m already covers the commune). No functional issue.",
+    "estimator.py:317-323 — note about 'autres communes dans les ventes retenues' formats populations with `{pops[0]:,} à {pops[-1]:,}` and replaces ',' with '\\u202f'. Fine, but if pops has a single entry the string still reads 'X à X hab.' — cosmetic only.",
+    "communes.py — refresh_populations() clears the in-memory _cache but only in the process that called it; the FastAPI worker keeps its own _cache and needs a restart to pick up new populations. Consider bumping a version key or exposing an invalidate endpoint."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "None. No properties/documents/photos/listings/target were created, modified or deleted.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Phase 10 (similar-size-commune widening → comparables_dvf_v4) verified end-to-end. Backend URL https://estimate-home.preview.emergentagent.com. Seed PIDs: Soings 6aa02db9efd8f90925a5a758, Blois 6aa02db9efd8f90925a5a756 / 6aa02c492f09d3116cfaf507 / 6aa02c392f09d3116cfaf505. Regression pytest: /app/backend/tests/test_estimo_phase10.py. POST /api/estimate/preview returns the estimation flatly (top-level keys method/value/...); /api/properties returns a list (not {properties:[…]}); /api/alerts is a global endpoint (not nested under /properties/{pid}). Target commune 41156 population in DB = 1546.",
+  "rca_of_issue": "N/A — no bug found."
+}

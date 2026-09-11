@@ -36,7 +36,7 @@ export default function ComparablesScreen() {
         </Text>
       </View>
       <View style={styles.rowBottom}>
-        <Text style={styles.muted}>{formatMonth(item.date)} · à {formatDistance(item.distance_m)} · {item.commune}</Text>
+        <Text style={styles.muted}>{formatMonth(item.date)} · à {formatDistance(item.distance_m)} · {item.commune}{item.population ? ` (${formatInt(item.population)} hab.)` : ""}</Text>
         <View style={styles.weightBar}>
           <View style={[styles.weightFill, { width: `${Math.max(8, Math.round((item.weight / maxWeight) * 100))}%` }]} />
         </View>
@@ -73,7 +73,7 @@ export default function ComparablesScreen() {
           ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
           ListHeaderComponent={
             <Text style={styles.intro}>
-              Triées par poids dans l’estimation (récence, distance, similarité de surface). La barre indique le poids relatif.
+              Triées par poids dans l’estimation (récence, distance, similarité de surface et de taille de commune). Les ventes hors de votre commune ne sont retenues que dans des communes de taille comparable (0,4× à 2,5× votre population), jusqu’à 10 km. La barre indique le poids relatif.
             </Text>
           }
         />

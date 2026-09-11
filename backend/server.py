@@ -16,6 +16,7 @@ from fastapi.responses import Response
 from motor.motor_asyncio import AsyncIOMotorClient
 from starlette.middleware.cors import CORSMiddleware
 
+import communes
 import dossier as dossier_mod
 import dvf_ingest
 import hedonic
@@ -108,6 +109,7 @@ async def _get_weights() -> Weights:
 
 
 def _ingest_then_train():
+    communes.refresh_populations(mongo_url, db_name, DVF_DEPARTMENTS)
     dvf_ingest.ingest_all(mongo_url, db_name, DVF_DEPARTMENTS, DVF_YEARS)
     hedonic.train(mongo_url, db_name)
     ml_model.train(mongo_url, db_name)
@@ -168,6 +170,7 @@ async def dvf_status():
         "configured_departments": DVF_DEPARTMENTS,
         "years": DVF_YEARS,
         "total": total,
+        "communes_with_population": await db.communes.estimated_document_count(),
         "departments": sorted(depts.values(), key=lambda d: d["dept"]),
     }
 
@@ -811,6 +814,9 @@ async def startup():
     except Exception as exc:  # noqa: BLE001
         logger.warning("Object storage init failed: %s", exc)
     count = await db.dvf_sales.estimated_document_count()
+    if await db.communes.estimated_document_count() == 0:
+        logger.info("Commune populations missing: fetching from geo.api.gouv.fr")
+        asyncio.get_running_loop().run_in_executor(None, communes.refresh_populations, mongo_url, db_name, DVF_DEPARTMENTS)
     if count == 0 and not dvf_ingest.is_running():
         logger.info("DVF collection empty: starting background ingestion for %s", DVF_DEPARTMENTS)
         asyncio.get_running_loop().run_in_executor(None, _ingest_then_train)

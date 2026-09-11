@@ -11,24 +11,29 @@ import math
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+import communes
 from models import (Adjustment, Comparable, Confidence, ConfidenceDetail, Estimation,
                     MarketLevel)
 
-MIN_COMPS = 8
+MIN_COMPS = 12
 MIN_VIABLE = 3
 LOOKBACK_YEARS = 5
 MARKET_YEARS = 3
+SEARCH_RADIUS_M = 10000
+SIZE_RATIO = (0.4, 2.5)  # a commune is "of similar size" when its population is within 0,4× – 2,5× the target's
 TIGHT_TOL = 0.15  # surface tolerance tried first at each radius (less price/m² dispersion)
 IRREDUCIBLE = 0.07  # unobserved specifics of the property after declared adjustments
 SIZE_ELASTICITY = 0.20  # price/m² ∝ surface^-0.20 (hedonic log-surface coefficient ≈ 0.80)
 MAX_HALF = 0.15  # widest range shown when data is viable; the confidence score carries the residual risk
-METHOD_VERSION = "comparables_dvf_v3"  # bump when the range/selection/hedonic logic changes: stored estimations auto-refresh
+METHOD_VERSION = "comparables_dvf_v4"  # bump when the range/selection/hedonic logic changes: stored estimations auto-refresh
 
+# (label, radius_m or None = same commune, surface tolerance, restrict to communes of similar size)
 LEVELS = [
-    ("À 500 m", 500, 0.30),
-    ("Quartier (1,5 km)", 1500, 0.30),
-    ("Commune", None, 0.35),
-    ("Secteur (5 km)", 5000, 0.35),
+    ("À 500 m", 500, 0.30, False),
+    ("Quartier (1,5 km)", 1500, 0.30, False),
+    ("Commune", None, 0.35, False),
+    ("5 km, communes similaires", 5000, 0.35, True),
+    ("10 km, communes similaires", 10000, 0.35, True),
 ]
 
 CONDITION_ADJ = {
@@ -166,8 +171,8 @@ async def fetch_candidates(db, lat: float, lon: float, code_commune: str, ptype:
     if exclude_mutation_id:
         base["mutation_id"] = {"$ne": exclude_mutation_id}
     near_q = {**base, "location": {"$nearSphere": {
-        "$geometry": {"type": "Point", "coordinates": [lon, lat]}, "$maxDistance": 5000}}}
-    near = await db.dvf_sales.find(near_q, proj).to_list(3000)
+        "$geometry": {"type": "Point", "coordinates": [lon, lat]}, "$maxDistance": SEARCH_RADIUS_M}}}
+    near = await db.dvf_sales.find(near_q, proj).to_list(6000)
     commune = await db.dvf_sales.find({**base, "code_commune": code_commune}, proj).to_list(3000)
     seen: dict = {}
     for c in near + commune:
@@ -183,17 +188,20 @@ async def fetch_candidates(db, lat: float, lon: float, code_commune: str, ptype:
     return out
 
 
-def _in_scope(c: dict, radius: Optional[int], code_commune: str) -> bool:
+def _in_scope(c: dict, radius: Optional[int], code_commune: str, similar_only: bool = False) -> bool:
     if radius is None:
         return c["code_commune"] == code_commune
-    return c["distance_m"] <= radius
+    if c["distance_m"] > radius:
+        return False
+    return c.get("similar_size", True) if similar_only else True
 
 
 def _weight(c: dict, surface: float) -> float:
     w_time = 0.5 ** (c["age_years"] / 2.0)
-    w_dist = 1.0 / (1.0 + c["distance_m"] / 500.0)
+    w_dist = 1.0 / (1.0 + c["distance_m"] / 1000.0)
     w_surf = math.exp(-((math.log(c["surface"] / surface)) / 0.25) ** 2)
-    return w_time * w_dist * max(w_surf, 0.05)
+    w_size = c.get("size_weight", 1.0)
+    return w_time * w_dist * max(w_surf, 0.05) * w_size
 
 
 def _trim_outliers(comps: list[dict]) -> list[dict]:
@@ -223,20 +231,36 @@ def _se_median(comps: list[dict], weights: list[float]) -> float:
 def _market(cands: list[dict], code_commune: str) -> list[MarketLevel]:
     recent = [c for c in cands if c["age_years"] <= MARKET_YEARS]
     out = []
-    for label, radius, _ in LEVELS[:3]:
-        sel = [c["price_m2"] for c in recent if _in_scope(c, radius, code_commune)]
+    for label, radius, _, similar in LEVELS[:4]:
+        sel = [c["price_m2"] for c in recent if _in_scope(c, radius, code_commune, similar)]
         out.append(MarketLevel(label=label, radius_m=radius, count=len(sel),
                                median_pm2=round_to(median(sel), 10) if sel else None))
     return out
 
 
+def _tag_commune_size(cands: list[dict], code_commune: str, populations: dict) -> Optional[int]:
+    """Mark each sale as coming from a commune of similar size (population ratio band) and set a soft weight."""
+    target = (populations.get(code_commune) or {}).get("population")
+    for c in cands:
+        pop = (populations.get(c["code_commune"]) or {}).get("population")
+        c["population"] = pop
+        if c["code_commune"] == code_commune or not target or not pop:
+            c["similar_size"], c["size_weight"] = True, 1.0
+            continue
+        ratio = pop / target
+        c["similar_size"] = SIZE_RATIO[0] <= ratio <= SIZE_RATIO[1]
+        c["size_weight"] = max(0.3, math.exp(-((math.log(ratio)) / 0.8) ** 2))
+    return target
+
+
 def estimate_from_candidates(cands: list[dict], *, surface: float, ptype: str, condition: str,
                              year_built: Optional[int], land_surface: Optional[float],
-                             code_commune: str, features=None) -> Estimation:
+                             code_commune: str, features=None, populations: Optional[dict] = None) -> Estimation:
     notes: list[str] = []
     selected: list[dict] = []
     level_label = LEVELS[-1][0]
     tight_used = False
+    target_pop = _tag_commune_size(cands, code_commune, populations or {})
 
     # Size-adjusted price/m²: every sale is brought to the target surface (price/m² falls with size).
     for c in cands:
@@ -248,36 +272,55 @@ def estimate_from_candidates(cands: list[dict], *, surface: float, ptype: str, c
         w_ = [_weight(c, surface) for c in comps_]
         return comps_, w_, _se_median(comps_, w_)
 
-    for idx, (label, radius, tol) in enumerate(LEVELS):
-        in_scope = [c for c in cands if _in_scope(c, radius, code_commune)]
+    # Walk the radii outward; once a level is viable, keep widening only while it pins the central value better
+    # (weighted-median standard error at least 5 % lower): far sales in similar-sized communes add robustness
+    # without drowning local information thanks to distance / size weighting.
+    best: Optional[tuple[float, int, list[dict], bool]] = None
+    for idx, (label, radius, tol, similar) in enumerate(LEVELS):
+        in_scope = [c for c in cands if _in_scope(c, radius, code_commune, similar)]
         tight = [c for c in in_scope if (1 - TIGHT_TOL) * surface <= c["surface"] <= (1 + TIGHT_TOL) * surface]
         wide = [c for c in in_scope if (1 - tol) * surface <= c["surface"] <= (1 + tol) * surface]
-        sel = wide
-        if len(tight) >= MIN_COMPS and len(wide) >= MIN_COMPS:
-            # Keep whichever set pins the central value best (fewer but closer sales vs more but noisier).
-            if _prepared(tight)[2] < _prepared(wide)[2]:
-                sel = tight
-        if len(sel) >= MIN_COMPS or idx == len(LEVELS) - 1:
-            selected, level_label = sel, label
-            tight_used = sel is tight
-            if idx > 0 and len(sel) >= MIN_COMPS:
+        sel, is_tight = wide, False
+        if len(tight) >= MIN_COMPS and len(wide) >= MIN_COMPS and _prepared(tight)[2] < _prepared(wide)[2]:
+            sel, is_tight = tight, True
+        if len(sel) < MIN_COMPS:
+            if idx == len(LEVELS) - 1 and best is None:
+                selected, level_label = sel, label
+            continue
+        se = _prepared(sel)[2]
+        if best is None or se < best[0] * 0.95:
+            best = (se, idx, sel, is_tight)
+    if best is not None:
+        _, idx, selected, tight_used = best
+        label, radius, _, similar = LEVELS[idx]
+        level_label = label
+        if idx > 0:
+            if similar and target_pop:
+                notes.append(f"Rayon élargi à {radius // 1000} km en ne retenant que les communes de taille comparable "
+                             f"à la vôtre ({target_pop:,} hab.) : base de ventes plus robuste.".replace(",", "\u202f"))
+            else:
                 notes.append(f"Peu de ventes comparables à 500 m : rayon élargi ({label.lower()}).")
-            break
 
     insufficient = False
     if len(selected) < MIN_VIABLE:
-        # Drop the surface filter: use every sale of this type in the sector / commune.
-        selected = [c for c in cands if _in_scope(c, 5000, code_commune) or c["code_commune"] == code_commune]
+        # Drop the surface and size filters: use every sale of this type within 10 km / the commune.
+        selected = [c for c in cands if _in_scope(c, SEARCH_RADIUS_M, code_commune) or c["code_commune"] == code_commune]
         insufficient = True
-        level_label = "Secteur (5 km) — toutes surfaces"
+        level_label = "10 km — toutes surfaces"
         notes.append("Données insuffisantes : très peu de ventes comparables. Fourchette élargie.")
         if not selected:
-            raise NoDataError("Aucune vente DVF de ce type de bien dans un rayon de 5 km.")
+            raise NoDataError("Aucune vente DVF de ce type de bien dans un rayon de 10 km.")
 
     comps, weights, se_median = _prepared(selected)
     base_pm2 = weighted_median([c["pm2_adj"] for c in comps], weights)
     if tight_used:
         notes.append(f"Ventes de surface très proche (±{TIGHT_TOL * 100:.0f} %) retenues pour limiter la dispersion.")
+    other_communes = sorted({c["code_commune"] for c in comps if c["code_commune"] != code_commune})
+    if other_communes and populations:
+        pops = sorted(p["population"] for p in (populations.get(k) for k in other_communes) if p)
+        if pops:
+            notes.append(f"{len(other_communes)} autre{'s' if len(other_communes) > 1 else ''} commune{'s' if len(other_communes) > 1 else ''} "
+                         f"dans les ventes retenues ({pops[0]:,} à {pops[-1]:,} hab.).".replace(",", "\u202f"))
 
     adjustments: list[Adjustment] = []
     value_base = base_pm2 * surface
@@ -319,8 +362,8 @@ def estimate_from_candidates(cands: list[dict], *, surface: float, ptype: str, c
     n_score = min(n, 20) / 20 * 40
     disp_score = 30 * clamp(1 - (rel_iqr - 0.15) / 0.45, 0, 1)
     rec_score = 20 * clamp(1 - (med_age - 1) / 3, 0, 1)
-    prox_map = {LEVELS[0][0]: 10, LEVELS[1][0]: 7, LEVELS[2][0]: 4}
-    prox_score = prox_map.get(level_label, 2)
+    w_dist_med = weighted_median([c["distance_m"] for c in comps], weights) if comps else 0.0
+    prox_score = 10 if w_dist_med <= 500 else 8 if w_dist_med <= 1500 else 6 if w_dist_med <= 3000 else 4 if w_dist_med <= 5000 else 2
     score = int(round(n_score + disp_score + rec_score + prox_score))
     if insufficient:
         score = min(score, 35)
@@ -334,7 +377,7 @@ def estimate_from_candidates(cands: list[dict], *, surface: float, ptype: str, c
         ConfidenceDetail(key="recency", label="Récence des ventes", score=round(rec_score, 1), max_score=20,
                          hint=f"Âge médian des ventes : {med_age * 12:.0f} mois"),
         ConfidenceDetail(key="proximity", label="Proximité", score=prox_score, max_score=10,
-                         hint=f"Périmètre retenu : {level_label}"),
+                         hint=f"Périmètre retenu : {level_label} · distance médiane pondérée {w_dist_med / 1000:.1f} km".replace(".", ",")),
     ]
 
     # Range half-width = uncertainty on the *central value*, not the spread of individual sales.
@@ -355,7 +398,7 @@ def estimate_from_candidates(cands: list[dict], *, surface: float, ptype: str, c
     comparables = [Comparable(
         date=c["date"].strftime("%Y-%m-%d"), distance_m=int(c["distance_m"]), surface=c["surface"],
         rooms=c.get("rooms"), price=c["price"], price_m2=round(c["price_m2"]), land_surface=c.get("land_surface"),
-        commune=c["commune"], property_type=c["type"], weight=round(w, 4)) for c, w in top]
+        commune=c["commune"], population=c.get("population"), property_type=c["type"], weight=round(w, 4)) for c, w in top]
 
     value_r = round_to(value, 1000)
     return Estimation(
@@ -381,10 +424,11 @@ async def estimate(db, *, lat: float, lon: float, code_commune: str, ptype: str,
                    exclude_mutation_id: Optional[str] = None, features=None) -> Estimation:
     cands = await fetch_candidates(db, lat, lon, code_commune, ptype, exclude_mutation_id)
     if not cands:
-        raise NoDataError("Aucune vente DVF de ce type de bien dans la zone couverte (rayon 5 km).")
+        raise NoDataError("Aucune vente DVF de ce type de bien dans la zone couverte (rayon 10 km).")
+    populations = await communes.load_populations(db)
     return estimate_from_candidates(cands, surface=surface, ptype=ptype, condition=condition,
                                     year_built=year_built, land_surface=land_surface, code_commune=code_commune,
-                                    features=features)
+                                    features=features, populations=populations)
 
 
 async def run_validation(db, n: int = 40) -> dict:
