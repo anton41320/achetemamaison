@@ -24,7 +24,7 @@ import notaire
 import photos as photo_ai
 import storage
 from blend import blend, market_estimate, market_signal
-from estimator import NoDataError, estimate, run_validation
+from estimator import METHOD_VERSION, NoDataError, estimate, run_validation
 from listing import generate_listing
 from models import (ChecklistOverride, DocumentDoc, DocumentValidate, Features, ListingDoc, ListingRequest, PhotoDoc,
                     PropertyDoc, PropertyIn, PropertyUpdate, TargetPriceIn, Weights, utcnow)
@@ -672,6 +672,16 @@ async def get_property(pid: str):
     doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
     if not doc:
         raise HTTPException(status_code=404, detail="Bien introuvable")
+    if (doc.get("estimation") or {}).get("method") != METHOD_VERSION:
+        # Estimation engine changed since this bien was estimated: refresh transparently.
+        try:
+            est = await _run_estimation(PropertyDoc.from_mongo(doc))
+        except HTTPException:
+            est = None
+        if est:
+            await db.properties.update_one({"_id": doc["_id"]}, {"$set": {"estimation": est.model_dump(), "updated_at": utcnow()}})
+            await db.estimations.insert_one({"property_id": doc["_id"], **est.model_dump()})
+            doc = await db.properties.find_one({"_id": doc["_id"]})
     return _prop_response(doc)
 
 

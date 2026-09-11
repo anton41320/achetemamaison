@@ -1,0 +1,36 @@
+{
+  "summary": "Phase 8 (estimation range width fix, comparables_dvf_v2) validated end-to-end. Backend pytest 12/12 passed. POST /api/estimate/preview for 15 Rue de l'Aubier 41200 Villefranche-sur-Cher (maison 140 m², 6 p., 4 ch., condition correct, land 800 m²) returns method='comparables_dvf_v2', value=177000€, low=152000€, high=201000€ → half-width 13.84% (≤15%), confidence 'moyen' score 66, insufficient_data=false, notes is a list — exact bug case is fixed (was 142k–332k / ±40%). Additional cases: appartement 65 m² Blois (value=125000, hw=10.00%, conf 'eleve'); maison 120 m² Soings year 1990 land 1200 (hw≤15%, conf 'moyen'); maison 90 m² 'a_renover' (hw=15.19%, conf 'moyen' — right at the cap plus 1000€ rounding). GET /api/properties/{pid} auto-refreshes every stored estimation to comparables_dvf_v2 on read; all 4 seed properties returned method='comparables_dvf_v2' with half-width within caps. POST /api/properties/{pid}/reestimate also returns v2. GET /api/validation?n=40 returns 200 with n, mape, median_ape, coverage under 120 s. Regression: /final, /target, /report.pdf, /notaire.pdf for 6aa02db9efd8f90925a5a758 all 200. Frontend (390x844): /property/6aa02db9efd8f90925a5a758 → estimation-range shows '158 k€ – 213 k€', estimation-value '185 000 €' → width 55k / central 185k = 29.7% (≤30%); adjustments-card contains 'ramené à 120 m²' and 'plafonnée à ±15'; confidence-breakdown dispersion hint contains 'ramenés à'. Wizard /new: created maison 140 m² 6 p. 4 ch. Villefranche → range 154 k€ – 204 k€ (central 179 000 €), width 27.93% of central (half-width ≈14%); test property 6aa3bbfadd33d0647f8ff7ca deleted via delete-button → delete-confirm-button. Only cosmetic console warning noted: React Native Web 'shadow*' / 'props.pointerEvents' deprecations.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/estimate/preview", "issue": "Cap edge case: for maison 90 m² 'a_renover' at Soings, observed half-width is 15.19% (> the documented 15% cap for confidence in {eleve, moyen}). Root cause: estimator clamps internal `half` to MAX_HALF=0.15 exactly, then rounds low/high to the nearest 1000 in models.Estimation — for a 135 000€ central value this can push the observed half-width up by ~0.2 %. Cosmetic; consider rounding low downwards and high upwards *within* the cap or tightening MAX_HALF to 0.148 to guarantee ≤15% after rounding."},
+      {"endpoint": "POST /api/estimate/preview", "issue": "price_m2 is computed from the *unrounded* value before value itself is rounded to 1000, so `price_m2 != round(returned_value / surface, 10)` in edge cases (e.g. Blois appartement 65 m²: returned value=125000, price_m2=1930, but round(125000/65,10)=1920). Difference is ≤10€/m²; slightly inconsistent with the API contract."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "React Native Web (multiple screens)", "issue": "Console warnings: 'shadow*' style props deprecated, 'props.pointerEvents is deprecated. Use style.pointerEvents'. Cosmetic only; migrate to boxShadow / style.pointerEvents when convenient."}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_estimo_phase8.py", "/app/test_reports/pytest/phase8.xml"],
+  "action_items": [
+    "OPTIONAL/COSMETIC: tighten internal MAX_HALF or round low downwards / high upwards so the ≤15%/≤20% half-width guarantee still holds after 1000€ rounding (maison 90 m² a_renover Soings observed 15.19%).",
+    "OPTIONAL/COSMETIC: compute Estimation.price_m2 from the *rounded* value (or expose the exact base_price_m2 * multiplier) so the invariant price_m2 = round(value/surface, 10) is exact.",
+    "OPTIONAL: migrate remaining shadow* / props.pointerEvents usages to boxShadow / style.pointerEvents to silence RN Web deprecation warnings."
+  ],
+  "critical_code_review_comments": [
+    "estimator.py: half-width cap is applied before the ±1000€ rounding, so the returned range can breach the advertised ≤15% cap by ~0.4% on small central values. Consider tightening the cap constant or asymmetric rounding.",
+    "estimator.py:365 — price_m2 uses the pre-rounded value; harmless but inconsistent with the spec.",
+    "server.py:675 — auto-refresh on GET /properties/{pid} correctly upgrades every v1 doc to comparables_dvf_v2, verified on all 4 seed properties."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Created and then deleted test property 6aa3bbfadd33d0647f8ff7ca (15 Rue de l'Aubier Villefranche-sur-Cher, maison 140 m² 6 p. 4 ch.) via the wizard. An earlier accidental appartement 6aa3bbaedd33d0647f8ff7c8 was also created and deleted via DELETE /api/properties. Final DB state: 4 original seed properties untouched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Phase 8 verified. Bug 'fourchette trop large' is fixed: Villefranche maison 140 m² now 152k–201k around 177k (hw 13.84%) instead of 142k–332k. comparables_dvf_v2 auto-refresh on GET /properties/{pid} works for every seed. Only cosmetic issues remain (small rounding overshoot of the ±15% cap on one edge case, and price_m2 vs rounded value drift ≤10€/m²). Backend URL: https://estimate-home.preview.emergentagent.com. Pytest file: /app/backend/tests/test_estimo_phase8.py.",
+  "rca_of_issue": "Bug RCA (already fixed by main agent): the v1 range half-width was driven by raw price/m² dispersion in the neighborhood mixed with a surface tolerance too wide, so for a 140 m² house comparables spanned 40–250 m² and their price/m² spread mechanically produced ±40%. Fix in /app/backend/estimator.py: (1) each comparable's price/m² is size-adjusted to the target surface via a hedonic elasticity of 0.20; (2) at each radius the estimator tries a tight surface tolerance (±15%) first and switches to a wider one only if it yields a lower weighted-median sampling error; (3) IQR outlier trim is stricter (k=1.0 when ≥12 comps); (4) the reported half-width is now sqrt(SE_median² + irreducible²) capped at ±15% (±20% if confidence 'faible', ≥25% only if insufficient_data). Estimation.method bumped to comparables_dvf_v2 and stored v1 estimations are auto-refreshed on GET /properties/{pid}. Verified: Villefranche 140 m² → 152 k–201 k (±13.84%) instead of the reported 142 k–332 k."
+}

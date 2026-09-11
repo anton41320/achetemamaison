@@ -201,7 +201,7 @@ export default function PropertyDetailScreen() {
             <Animated.View entering={FadeInDown.delay(240).duration(320)} style={styles.card} testID="adjustments-card">
               <Text style={styles.h3}>Comment est calculée la fourchette ?</Text>
               <View style={styles.lineRow}>
-                <Text style={styles.lineLabel}>Prix/m² médian pondéré des comparables</Text>
+                <Text style={styles.lineLabel}>Prix/m² médian pondéré des comparables (ramené à {data.surface} m²)</Text>
                 <Text style={styles.lineValue}>{formatInt(est.base_price_m2)} €/m²</Text>
               </View>
               <View style={styles.lineRow}>
@@ -221,8 +221,11 @@ export default function PropertyDetailScreen() {
                 <Text style={styles.lineValueStrong}>{formatEuro(est.value)}</Text>
               </View>
               <Text style={styles.detailHint}>
-                La largeur de la fourchette suit la dispersion des prix observés et le niveau de confiance. Pondération
-                des ventes par récence, distance et similarité de surface.
+                Les prix/m² des ventes sont d’abord ramenés à votre surface (le prix/m² baisse quand la taille
+                augmente), puis pondérés par récence, distance et similarité. La fourchette encadre la valeur centrale
+                (incertitude de la médiane + spécificités non renseignées) et non l’écart entre ventes individuelles,
+                indiqué par la dispersion. Elle est plafonnée à ±15 % (±20 % si confiance faible) : le niveau de
+                confiance porte le risque résiduel.
               </Text>
             </Animated.View>
 

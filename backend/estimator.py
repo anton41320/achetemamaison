@@ -18,6 +18,11 @@ MIN_COMPS = 8
 MIN_VIABLE = 3
 LOOKBACK_YEARS = 5
 MARKET_YEARS = 3
+TIGHT_TOL = 0.15  # surface tolerance tried first at each radius (less price/m² dispersion)
+IRREDUCIBLE = 0.07  # unobserved specifics of the property after declared adjustments
+SIZE_ELASTICITY = 0.20  # price/m² ∝ surface^-0.20 (hedonic log-surface coefficient ≈ 0.80)
+MAX_HALF = 0.15  # widest range shown when data is viable; the confidence score carries the residual risk
+METHOD_VERSION = "comparables_dvf_v2"  # bump when the range/selection logic changes: stored estimations auto-refresh
 
 LEVELS = [
     ("À 500 m", 500, 0.30),
@@ -194,12 +199,25 @@ def _weight(c: dict, surface: float) -> float:
 def _trim_outliers(comps: list[dict]) -> list[dict]:
     if len(comps) < 6:
         return comps
-    vals = sorted(c["price_m2"] for c in comps)
+    vals = sorted(c["pm2_adj"] for c in comps)
     q1, q3 = percentile(vals, 0.25), percentile(vals, 0.75)
     iqr = q3 - q1
-    lo, hi = q1 - 1.5 * iqr, q3 + 1.5 * iqr
-    kept = [c for c in comps if lo <= c["price_m2"] <= hi]
-    return kept if len(kept) >= MIN_VIABLE else comps
+    k = 1.0 if len(comps) >= 12 else 1.5  # stricter with many candidates: DVF mixes ruins, garages, renovated homes
+    lo, hi = q1 - k * iqr, q3 + k * iqr
+    kept = [c for c in comps if lo <= c["pm2_adj"] <= hi]
+    return kept if len(kept) >= max(MIN_VIABLE, MIN_COMPS if len(comps) >= MIN_COMPS else 0) else comps
+
+
+def _rel_iqr(comps: list[dict]) -> float:
+    vals = sorted(c["pm2_adj"] for c in comps)
+    med = median(vals)
+    return (percentile(vals, 0.75) - percentile(vals, 0.25)) / med if len(vals) >= 2 and med else 0.5
+
+
+def _se_median(comps: list[dict], weights: list[float]) -> float:
+    """Relative sampling error of the weighted median: robust sd (IQR/1.349) × 1.2533 / sqrt(Kish effective n)."""
+    n_eff = (sum(weights) ** 2) / sum(w * w for w in weights) if weights else 1.0
+    return 1.2533 * (_rel_iqr(comps) / 1.349) / math.sqrt(max(n_eff, 1.0))
 
 
 def _market(cands: list[dict], code_commune: str) -> list[MarketLevel]:
@@ -218,13 +236,30 @@ def estimate_from_candidates(cands: list[dict], *, surface: float, ptype: str, c
     notes: list[str] = []
     selected: list[dict] = []
     level_label = LEVELS[-1][0]
-    surface_filtered = True
+    tight_used = False
+
+    # Size-adjusted price/m²: every sale is brought to the target surface (price/m² falls with size).
+    for c in cands:
+        ratio = clamp(c["surface"] / surface, 0.5, 2.0)
+        c["pm2_adj"] = c["price_m2"] * ratio ** SIZE_ELASTICITY
+
+    def _prepared(sel: list[dict]) -> tuple[list[dict], list[float], float]:
+        comps_ = _trim_outliers(sel)
+        w_ = [_weight(c, surface) for c in comps_]
+        return comps_, w_, _se_median(comps_, w_)
 
     for idx, (label, radius, tol) in enumerate(LEVELS):
-        sel = [c for c in cands if _in_scope(c, radius, code_commune)
-               and (1 - tol) * surface <= c["surface"] <= (1 + tol) * surface]
+        in_scope = [c for c in cands if _in_scope(c, radius, code_commune)]
+        tight = [c for c in in_scope if (1 - TIGHT_TOL) * surface <= c["surface"] <= (1 + TIGHT_TOL) * surface]
+        wide = [c for c in in_scope if (1 - tol) * surface <= c["surface"] <= (1 + tol) * surface]
+        sel = wide
+        if len(tight) >= MIN_COMPS and len(wide) >= MIN_COMPS:
+            # Keep whichever set pins the central value best (fewer but closer sales vs more but noisier).
+            if _prepared(tight)[2] < _prepared(wide)[2]:
+                sel = tight
         if len(sel) >= MIN_COMPS or idx == len(LEVELS) - 1:
             selected, level_label = sel, label
+            tight_used = sel is tight
             if idx > 0 and len(sel) >= MIN_COMPS:
                 notes.append(f"Peu de ventes comparables à 500 m : rayon élargi ({label.lower()}).")
             break
@@ -233,25 +268,18 @@ def estimate_from_candidates(cands: list[dict], *, surface: float, ptype: str, c
     if len(selected) < MIN_VIABLE:
         # Drop the surface filter: use every sale of this type in the sector / commune.
         selected = [c for c in cands if _in_scope(c, 5000, code_commune) or c["code_commune"] == code_commune]
-        surface_filtered = False
         insufficient = True
         level_label = "Secteur (5 km) — toutes surfaces"
         notes.append("Données insuffisantes : très peu de ventes comparables. Fourchette élargie.")
         if not selected:
             raise NoDataError("Aucune vente DVF de ce type de bien dans un rayon de 5 km.")
 
-    comps = _trim_outliers(selected)
-    weights = [_weight(c, surface) for c in comps]
-    base_pm2 = weighted_median([c["price_m2"] for c in comps], weights)
+    comps, weights, se_median = _prepared(selected)
+    base_pm2 = weighted_median([c["pm2_adj"] for c in comps], weights)
+    if tight_used:
+        notes.append(f"Ventes de surface très proche (±{TIGHT_TOL * 100:.0f} %) retenues pour limiter la dispersion.")
 
     adjustments: list[Adjustment] = []
-    if not surface_filtered:
-        # Size effect when comparables have very different surfaces (price/m² decreases with size).
-        med_surf = median([c["surface"] for c in comps])
-        factor = clamp((med_surf / surface) ** 0.15, 0.8, 1.25)
-        base_pm2 *= factor
-        notes.append("Ajustement de taille appliqué : les ventes retenues ont des surfaces différentes du bien.")
-
     value_base = base_pm2 * surface
 
     cond_pct, cond_label = CONDITION_ADJ.get(condition, (0.0, "État correct"))
@@ -283,10 +311,8 @@ def estimate_from_candidates(cands: list[dict], *, surface: float, ptype: str, c
     pct_total = sum(a.pct for a in adjustments if a.key != "land")
     value = value_base * (1 + pct_total) + land_amount
 
-    # Dispersion and confidence
-    pm2s = sorted(c["price_m2"] for c in comps)
-    med_pm2 = median(pm2s)
-    rel_iqr = (percentile(pm2s, 0.75) - percentile(pm2s, 0.25)) / med_pm2 if len(pm2s) >= 2 and med_pm2 else 0.5
+    # Dispersion and confidence (on size-adjusted prices/m²)
+    rel_iqr = _rel_iqr(comps)
     med_age = median([c["age_years"] for c in comps])
     n = len(comps)
 
@@ -304,22 +330,23 @@ def estimate_from_candidates(cands: list[dict], *, surface: float, ptype: str, c
         ConfidenceDetail(key="count", label="Nombre de comparables", score=round(n_score, 1), max_score=40,
                          hint=f"{n} ventes retenues (20+ pour le maximum)"),
         ConfidenceDetail(key="dispersion", label="Homogénéité des prix", score=round(disp_score, 1), max_score=30,
-                         hint=f"Dispersion des prix/m² : ±{rel_iqr * 50:.0f} %"),
+                         hint=f"Dispersion des prix/m² (ramenés à {surface:g} m²) : ±{rel_iqr * 50:.0f} %"),
         ConfidenceDetail(key="recency", label="Récence des ventes", score=round(rec_score, 1), max_score=20,
                          hint=f"Âge médian des ventes : {med_age * 12:.0f} mois"),
         ConfidenceDetail(key="proximity", label="Proximité", score=prox_score, max_score=10,
                          hint=f"Périmètre retenu : {level_label}"),
     ]
 
-    # Range half-width: DVF sales carry irreducible noise (condition, works, negotiation),
-    # so the floor is 10 % and the width grows with dispersion and lower confidence.
-    half = max(0.12, 0.7 * rel_iqr)
-    if n < 5:
-        half += 0.05
-    half *= 1 + (100 - score) / 200
+    # Range half-width = uncertainty on the *central value*, not the spread of individual sales.
+    # Sampling error of the weighted median combined with an irreducible floor for unobserved specifics,
+    # widened when confidence is low or sales are old, and capped so the range stays actionable.
+    half = math.sqrt(se_median ** 2 + IRREDUCIBLE ** 2)
+    if med_age > 2.0:
+        half += 0.02
+    half *= 1 + (100 - score) / 400
+    half = clamp(half, 0.07, MAX_HALF if score >= 45 else MAX_HALF + 0.05)
     if insufficient:
         half = max(half, 0.25)
-    half = clamp(half, 0.10, 0.40)
 
     if med_age > 2.5:
         notes.append("Les ventes retenues sont relativement anciennes : le marché a pu évoluer depuis.")
@@ -330,11 +357,13 @@ def estimate_from_candidates(cands: list[dict], *, surface: float, ptype: str, c
         rooms=c.get("rooms"), price=c["price"], price_m2=round(c["price_m2"]), land_surface=c.get("land_surface"),
         commune=c["commune"], property_type=c["type"], weight=round(w, 4)) for c, w in top]
 
+    value_r = round_to(value, 1000)
     return Estimation(
-        value=round_to(value, 1000),
-        low=round_to(value * (1 - half), 1000),
-        high=round_to(value * (1 + half), 1000),
-        price_m2=round_to(value / surface, 10),
+        method=METHOD_VERSION,
+        value=value_r,
+        low=round_to(value_r * (1 - half), 1000),
+        high=round_to(value_r * (1 + half), 1000),
+        price_m2=round_to(value_r / surface, 10),
         base_price_m2=round_to(base_pm2, 10),
         confidence=Confidence(score=score, level=level, n_comparables=n,
                               dispersion_pct=round(rel_iqr * 50, 1), median_age_months=int(round(med_age * 12)),
