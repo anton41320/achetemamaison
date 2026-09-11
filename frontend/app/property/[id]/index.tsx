@@ -4,7 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ArrowsOutIcon, CaretLeftIcon, CaretRightIcon, ChartBarIcon, FolderOpenIcon, ImagesIcon, ListBulletsIcon, PencilLineIcon,
-  RulerIcon, TargetIcon, TrashIcon, WarningIcon,
+  RulerIcon, SparkleIcon, TargetIcon, TrashIcon, WarningIcon,
 } from "phosphor-react-native";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -322,6 +322,20 @@ export default function PropertyDetailScreen() {
             </Pressable>
 
             <Pressable
+              testID="pack-button"
+              accessibilityRole="button"
+              onPress={() => router.push(`/property/${id}/pack`)}
+              style={({ pressed }) => [styles.linkRow, styles.linkRowPremium, pressed && { opacity: 0.85 }]}
+            >
+              <SparkleIcon size={20} color={colors.onBrandPrimary} weight="fill" />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.linkLabel, { color: colors.onBrandPrimary }]}>Pack annonce premium · 49 €</Text>
+                <Text style={styles.linkSub}>Annonce IA + photos retouchées en PDF, retouches illimitées</Text>
+              </View>
+              <CaretRightIcon size={18} color={colors.onBrandPrimary} />
+            </Pressable>
+
+            <Pressable
               testID="view-comparables-button"
               accessibilityRole="button"
               onPress={() => router.push(`/property/${id}/comparables`)}
@@ -416,6 +430,8 @@ const useStyles = makeStyles((colors) => ({
   lineValueStrong: { fontFamily: fonts.bold, fontSize: 17, color: colors.onSurfaceSecondary, fontVariant: ["tabular-nums"] },
   linkRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.brandTertiary, borderRadius: radius.md, padding: spacing.lg, minHeight: 56 },
   linkLabel: { flex: 1, fontFamily: fonts.semibold, fontSize: 15, color: colors.onBrandTertiary },
+  linkRowPremium: { backgroundColor: colors.brandPrimary },
+  linkSub: { fontFamily: fonts.regular, fontSize: 12, color: colors.onBrandPrimary, opacity: 0.85, marginTop: 2 },
   actions: { gap: spacing.md, marginTop: spacing.sm },
   confirmRow: { flexDirection: "row", gap: spacing.md },
   deleteRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, minHeight: 48 },

@@ -49,7 +49,9 @@ export default function PhotosScreen() {
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["photos", id] }),
     onSuccess: (p) => setShowAfter((s) => ({ ...s, [p.id]: true })),
+    onError: (e: Error) => setPaywall(e.message.includes("Pack annonce") ? e.message : null),
   });
+  const [paywall, setPaywall] = useState<string | null>(null);
 
   const remove = useMutation({
     mutationFn: (photoId: string) => api.deletePhoto(photoId),
@@ -128,6 +130,15 @@ export default function PhotosScreen() {
           <View style={styles.warn} testID="photos-upload-error">
             <WarningIcon size={18} color={colors.error} weight="fill" />
             <Text style={[styles.warnText, { color: colors.error }]}>{uploadError}</Text>
+          </View>
+        ) : null}
+        {paywall ? (
+          <View style={styles.warn} testID="photos-paywall">
+            <SparkleIcon size={18} color={colors.warning} weight="fill" />
+            <View style={{ flex: 1, gap: spacing.sm }}>
+              <Text style={styles.warnText}>{paywall}</Text>
+              <PrimaryButton title="Découvrir le Pack annonce premium · 49 €" onPress={() => router.push(`/property/${id}/pack`)} testID="photos-paywall-button" />
+            </View>
           </View>
         ) : null}
 

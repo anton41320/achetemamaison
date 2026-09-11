@@ -1,0 +1,187 @@
+"""Pack annonce premium (49 €) — Stripe Checkout (one-off) + entitlement per property + premium listing PDF."""
+from __future__ import annotations
+
+import logging
+import os
+from datetime import date
+from io import BytesIO
+from typing import Optional
+
+import stripe
+from PIL import Image as PILImage
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import mm
+from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
+from models import PropertyDoc, utcnow
+from report import BRAND, BRAND_SOFT, CONDITION_LABELS, INK, LINE, MUTED, eur
+
+logger = logging.getLogger("pack")
+
+PACK_PRICE_CENTS = 4900
+PACK_CURRENCY = "eur"
+PACK_NAME = "Pack annonce premium Estimo"
+FREE_RETOUCHES = 1  # retouches offertes par bien avant le pack
+
+
+def stripe_ready() -> bool:
+    key = os.environ.get("STRIPE_API_KEY")
+    if key:
+        stripe.api_key = key
+        if "sk_test_emergent" in key:
+            # Emergent-managed test key: route through the integrations proxy (same as emergentintegrations).
+            stripe.api_base = os.environ.get("INTEGRATION_PROXY_URL", "https://integrations.emergentagent.com").rstrip("/") + "/stripe"
+    return bool(key)
+
+
+async def is_unlocked(db, pid: str) -> bool:
+    return await db.orders.find_one({"property_id": pid, "status": "paid"}, {"_id": 1}) is not None
+
+
+async def create_checkout(db, pid: str, return_url: str) -> dict:
+    if not stripe_ready():
+        raise RuntimeError("Paiement indisponible : clé Stripe absente")
+    order = {"property_id": pid, "amount": PACK_PRICE_CENTS, "currency": PACK_CURRENCY, "status": "pending", "created_at": utcnow()}
+    res = await db.orders.insert_one(order)
+    order_id = str(res.inserted_id)
+    sep = "&" if "?" in return_url else "?"
+    session = stripe.checkout.Session.create(
+        mode="payment",
+        line_items=[{"price_data": {"currency": PACK_CURRENCY, "unit_amount": PACK_PRICE_CENTS,
+                                    "product_data": {"name": PACK_NAME,
+                                                     "description": "Annonce IA + photos retouchées en PDF, retouches illimitées pour ce bien"}},
+                     "quantity": 1}],
+        success_url=f"{return_url}{sep}status=success&order_id={order_id}",
+        cancel_url=f"{return_url}{sep}status=cancelled&order_id={order_id}",
+        metadata={"order_id": order_id, "property_id": pid},
+    )
+    await db.orders.update_one({"_id": res.inserted_id}, {"$set": {"session_id": session.id}})
+    return {"order_id": order_id, "checkout_url": session.url}
+
+
+async def sync_pending(db, pid: str) -> None:
+    """Polling fallback: ask Stripe about pending sessions (server-side, verified) when no webhook is configured."""
+    if not stripe_ready():
+        return
+    async for o in db.orders.find({"property_id": pid, "status": "pending", "session_id": {"$ne": None}}):
+        try:
+            s = stripe.checkout.Session.retrieve(o["session_id"])
+        except Exception:  # noqa: BLE001
+            logger.exception("Stripe retrieve failed")
+            continue
+        if s.get("payment_status") == "paid":
+            await db.orders.update_one({"_id": o["_id"]}, {"$set": {"status": "paid", "paid_at": utcnow(),
+                                                                   "payment_intent": s.get("payment_intent")}})
+        elif s.get("status") == "expired":
+            await db.orders.update_one({"_id": o["_id"]}, {"$set": {"status": "failed"}})
+
+
+async def handle_webhook(db, payload: bytes, signature: Optional[str]) -> dict:
+    secret = os.environ.get("STRIPE_WEBHOOK_SECRET")
+    if not secret or not signature:
+        raise ValueError("Webhook non configuré")
+    event = stripe.Webhook.construct_event(payload, signature, secret)
+    try:
+        await db.webhook_events.insert_one({"_id": event["id"], "received_at": utcnow()})
+    except Exception:  # noqa: BLE001 — duplicate delivery
+        return {"received": True, "duplicate": True}
+    session = event["data"]["object"]
+    order_id = (session.get("metadata") or {}).get("order_id")
+    if event["type"] in ("checkout.session.completed", "checkout.session.async_payment_succeeded") and session.get("payment_status") == "paid" and order_id:
+        from bson import ObjectId
+        await db.orders.update_one({"_id": ObjectId(order_id), "status": {"$ne": "paid"}},
+                                   {"$set": {"status": "paid", "paid_at": utcnow(), "payment_intent": session.get("payment_intent")}})
+    elif event["type"] in ("checkout.session.async_payment_failed", "checkout.session.expired") and order_id:
+        from bson import ObjectId
+        await db.orders.update_one({"_id": ObjectId(order_id), "status": "pending"}, {"$set": {"status": "failed"}})
+    return {"received": True}
+
+
+# ---------------- Premium PDF ----------------
+
+def build_pack_pdf(prop: PropertyDoc, listing: dict, photos: list[tuple[bytes, bool]], final: Optional[dict],
+                   target: Optional[dict], include_price: bool) -> bytes:
+    ss = getSampleStyleSheet()
+    body = ParagraphStyle("body", parent=ss["BodyText"], fontName="Helvetica", fontSize=10.5, leading=15, textColor=INK)
+    small = ParagraphStyle("small", parent=body, fontSize=8, leading=11, textColor=MUTED)
+    title = ParagraphStyle("title", parent=ss["Title"], fontName="Helvetica-Bold", fontSize=22, leading=27, textColor=BRAND, alignment=0)
+    hook = ParagraphStyle("hook", parent=body, fontName="Helvetica-Oblique", fontSize=12, leading=17, textColor=BRAND)
+    h2 = ParagraphStyle("h2", parent=ss["Heading2"], fontName="Helvetica-Bold", fontSize=12.5, textColor=INK, spaceBefore=8, spaceAfter=4)
+
+    buf = BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=14 * mm, bottomMargin=14 * mm,
+                            title=f"{listing['title']} — Estimo")
+    story = []
+    max_w, max_h = A4[0] - 32 * mm, A4[1] - 28 * mm
+
+    def fitted(data: bytes, h_cap: float) -> Image:
+        im = PILImage.open(BytesIO(data))
+        w, h = im.size
+        scale = min(max_w / w, h_cap / h)
+        return Image(BytesIO(data), width=w * scale, height=h * scale)
+
+    # Cover: hero photo + title + hook
+    if photos:
+        story.append(fitted(photos[0][0], 120 * mm))
+        story.append(Spacer(1, 6))
+    story.append(Paragraph(listing["title"], title))
+    ptype = "Maison" if prop.property_type == "maison" else "Appartement"
+    meta = f"{ptype} · {prop.surface:g} m² · {prop.rooms} pièces · {prop.bedrooms} chambre(s) · {prop.commune} ({prop.postcode})"
+    if prop.property_type == "maison" and prop.land_surface:
+        meta += f" · terrain {prop.land_surface:g} m²"
+    story.append(Paragraph(meta, small))
+    story.append(Spacer(1, 6))
+    story.append(Paragraph(listing["hook"], hook))
+    if include_price and final:
+        story.append(Spacer(1, 6))
+        price_txt = f"<b>Prix : {eur(target['target_price'])}</b>" if target else f"<b>Fourchette de valeur estimée : {eur(final['low'])} – {eur(final['high'])}</b>"
+        t = Table([[Paragraph(price_txt, body)]], colWidths=[max_w])
+        t.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), BRAND_SOFT), ("BOX", (0, 0), (-1, -1), 0.5, LINE),
+                               ("TOPPADDING", (0, 0), (-1, -1), 8), ("BOTTOMPADDING", (0, 0), (-1, -1), 8), ("LEFTPADDING", (0, 0), (-1, -1), 10)]))
+        story.append(t)
+    story.append(PageBreak())
+
+    # Description + highlights
+    story.append(Paragraph("Description", h2))
+    for para in listing["description"].split("\n"):
+        if para.strip():
+            story.append(Paragraph(para.strip(), body))
+            story.append(Spacer(1, 4))
+    if listing.get("highlights"):
+        story.append(Paragraph("Points forts", h2))
+        for hl in listing["highlights"]:
+            story.append(Paragraph(f"• {hl}", body))
+    story.append(Paragraph("Caractéristiques", h2))
+    rows = [["Type", ptype], ["Surface habitable", f"{prop.surface:g} m²"], ["Pièces / chambres", f"{prop.rooms} / {prop.bedrooms}"],
+            ["État déclaré", CONDITION_LABELS.get(prop.condition, prop.condition)]]
+    if prop.year_built:
+        rows.append(["Année de construction", str(prop.year_built)])
+    if prop.property_type == "maison" and prop.land_surface:
+        rows.append(["Terrain", f"{prop.land_surface:g} m²"])
+    f = prop.features
+    if f.dpe:
+        rows.append(["DPE", f.dpe])
+    if f.heating:
+        rows.append(["Chauffage", f.heating.replace("_", " ")])
+    if f.pool and f.pool != "aucune":
+        rows.append(["Piscine", f.pool.replace("_", " ")])
+    if f.garage and f.garage != "aucun":
+        rows.append(["Garage", "oui" if f.garage == "un" else "double ou plus"])
+    t = Table([[Paragraph(a, body), Paragraph(b, body)] for a, b in rows], colWidths=[60 * mm, max_w - 60 * mm])
+    t.setStyle(TableStyle([("LINEBELOW", (0, 0), (-1, -1), 0.4, LINE), ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3)]))
+    story.append(t)
+
+    # Photo pages
+    for i, (data, retouched) in enumerate(photos[1:], 2):
+        story.append(PageBreak())
+        story.append(fitted(data, max_h - 20 * mm))
+        story.append(Spacer(1, 4))
+        story.append(Paragraph(f"Photo {i}/{len(photos)}" + (" · visuel retouché par IA, non contractuel" if retouched else ""), small))
+
+    story.append(Spacer(1, 10))
+    story.append(Paragraph(f"Annonce générée avec Estimo le {date.today().strftime('%d/%m/%Y')} à partir des informations déclarées par le vendeur. "
+                           "Les visuels retouchés par IA (luminosité, netteté, couleurs) n'ajoutent aucun élément et restent non contractuels. "
+                           "Diagnostics et surfaces à confirmer dans le dossier de vente.", small))
+    doc.build(story)
+    return buf.getvalue()

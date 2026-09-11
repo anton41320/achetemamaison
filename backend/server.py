@@ -6,14 +6,15 @@ import os
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 import requests
 from bson import ObjectId
 from dotenv import load_dotenv
-from fastapi import APIRouter, FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import Response
 from motor.motor_asyncio import AsyncIOMotorClient
+from pydantic import BaseModel, Field
 from starlette.middleware.cors import CORSMiddleware
 
 import communes
@@ -22,6 +23,7 @@ import dvf_ingest
 import hedonic
 import ml_model
 import notaire
+import pack
 import photos as photo_ai
 import storage
 from blend import blend, market_estimate, market_signal
@@ -440,6 +442,11 @@ async def retouch_photo(photo_id: str):
         raise HTTPException(status_code=404, detail="Photo introuvable")
     if doc.get("status") == "processing":
         raise HTTPException(status_code=409, detail="Retouche déjà en cours")
+    if not await pack.is_unlocked(db, doc["property_id"]):
+        used = await db.photos.count_documents({"property_id": doc["property_id"], "deleted_at": None, "status": "done"})
+        if used >= pack.FREE_RETOUCHES and doc.get("status") != "done":
+            raise HTTPException(status_code=402, detail=f"Retouche offerte déjà utilisée ({pack.FREE_RETOUCHES} par bien). "
+                                                        "Le Pack annonce premium (49 €) débloque les retouches illimitées pour ce bien.")
     await db.photos.update_one({"_id": doc["_id"]}, {"$set": {"status": "processing", "error": None}})
     try:
         original, _ = await asyncio.to_thread(storage.get_object, doc["original_path"])
@@ -463,6 +470,91 @@ async def delete_photo(photo_id: str):
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="Photo introuvable")
     return {"deleted": True}
+
+
+# ---------------- Pack annonce premium (Stripe) ----------------
+
+class CheckoutIn(BaseModel):
+    return_url: str = Field(min_length=8, max_length=500)
+
+
+async def _pack_status(pid: str) -> dict:
+    await pack.sync_pending(db, pid)
+    unlocked = await pack.is_unlocked(db, pid)
+    last = await db.orders.find_one({"property_id": pid}, sort=[("created_at", -1)])
+    used = await db.photos.count_documents({"property_id": pid, "deleted_at": None, "status": "done"})
+    n_photos = await db.photos.count_documents({"property_id": pid, "deleted_at": None})
+    n_listings = await db.listings.count_documents({"property_id": pid, "deleted_at": None})
+    return {"property_id": pid, "unlocked": unlocked, "price_cents": pack.PACK_PRICE_CENTS, "currency": pack.PACK_CURRENCY,
+            "payments_available": pack.stripe_ready(), "free_retouches": pack.FREE_RETOUCHES, "retouches_used": used,
+            "photos": n_photos, "listings": n_listings,
+            "last_order": {"order_id": str(last["_id"]), "status": last["status"]} if last else None}
+
+
+@api.get("/properties/{pid}/pack/status")
+async def pack_status(pid: str):
+    if not await db.properties.find_one({"_id": _oid(pid), "deleted_at": None}, {"_id": 1}):
+        raise HTTPException(status_code=404, detail="Bien introuvable")
+    return await _pack_status(pid)
+
+
+@api.post("/properties/{pid}/pack/checkout", status_code=201)
+async def pack_checkout(pid: str, body: CheckoutIn):
+    if not await db.properties.find_one({"_id": _oid(pid), "deleted_at": None}, {"_id": 1}):
+        raise HTTPException(status_code=404, detail="Bien introuvable")
+    if not body.return_url.startswith(("http://", "https://")):
+        raise HTTPException(status_code=422, detail="URL de retour invalide")
+    if await pack.is_unlocked(db, pid):
+        raise HTTPException(status_code=409, detail="Pack déjà débloqué pour ce bien")
+    try:
+        return await pack.create_checkout(db, pid, body.return_url)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Stripe checkout failed")
+        raise HTTPException(status_code=502, detail=f"Paiement indisponible : {str(exc)[:160]}")
+
+
+@api.post("/stripe/webhook")
+async def stripe_webhook(request: Request):
+    try:
+        return await pack.handle_webhook(db, await request.body(), request.headers.get("stripe-signature"))
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=400, detail=str(exc)[:160])
+
+
+@api.get("/properties/{pid}/pack.pdf")
+async def pack_pdf(pid: str, style: str = Query(default="sobre"), include_price: bool = Query(default=True)):
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Bien introuvable")
+    if not await pack.is_unlocked(db, pid):
+        raise HTTPException(status_code=402, detail="Pack annonce premium requis (49 €)")
+    prop = PropertyDoc.from_mongo(doc)
+    listing = await db.listings.find_one({"property_id": pid, "deleted_at": None}, sort=[("created_at", -1)])
+    if not listing:
+        try:
+            result = await generate_listing(prop, style if style in ("sobre", "chaleureux", "premium", "familial") else "sobre", None, include_price)
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(status_code=502, detail=f"Génération de l'annonce indisponible : {str(exc)[:160]}")
+        listing = ListingDoc(property_id=pid, style=style, extra_facts=None, **result)
+        await db.listings.insert_one({**listing.to_mongo(), "deleted_at": None})
+        listing = listing.model_dump()
+    photo_docs = await db.photos.find({"property_id": pid, "deleted_at": None}).sort("created_at", 1).to_list(30)
+
+    def _fetch(p: dict):
+        path = p.get("retouched_path") if p.get("status") == "done" and p.get("retouched_path") else p["original_path"]
+        try:
+            return storage.get_object(path)[0], path == p.get("retouched_path")
+        except Exception:  # noqa: BLE001
+            return None
+
+    photos = [x for x in await asyncio.gather(*(asyncio.to_thread(_fetch, p) for p in photo_docs)) if x]
+    final = blend(prop.estimation, await _get_weights()) if prop.estimation else None
+    target = (await _target_payload(doc))["analysis"]
+    pdf = await asyncio.to_thread(pack.build_pack_pdf, prop, listing, photos, final, target, include_price)
+    return Response(content=pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": f'inline; filename="estimo-annonce-{pid[-6:]}.pdf"'})
 
 
 @api.get("/files/{path:path}")

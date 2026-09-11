@@ -528,6 +528,19 @@ export interface PropertyNextSteps {
   total: number;
 }
 
+export interface PackStatus {
+  property_id: string;
+  unlocked: boolean;
+  price_cents: number;
+  currency: string;
+  payments_available: boolean;
+  free_retouches: number;
+  retouches_used: number;
+  photos: number;
+  listings: number;
+  last_order: { order_id: string; status: "pending" | "paid" | "failed" } | null;
+}
+
 export async function uploadDocument(propertyId: string, itemKey: string, uri: string, name: string, type: string): Promise<SaleDocument> {
   const form = new FormData();
   if (typeof window !== "undefined" && typeof document !== "undefined") {
@@ -597,6 +610,10 @@ export const api = {
   alerts: () => request<AlertsResponse>("/alerts"),
   nextSteps: () => request<{ properties: PropertyNextSteps[] }>("/next-steps"),
   propertyNextSteps: (id: string) => request<PropertyNextSteps>(`/properties/${id}/next-steps`),
+  packStatus: (id: string) => request<PackStatus>(`/properties/${id}/pack/status`),
+  packCheckout: (id: string, return_url: string) =>
+    request<{ order_id: string; checkout_url: string }>(`/properties/${id}/pack/checkout`, { method: "POST", body: JSON.stringify({ return_url }) }),
+  packPdfUrl: (id: string, style: ListingStyle) => `${BASE}/properties/${id}/pack.pdf?style=${style}`,
 };
 
 export interface HedonicModelInfo {
