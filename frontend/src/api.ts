@@ -511,6 +511,22 @@ export interface AlertsResponse {
   alerts: ExpiryAlert[];
 }
 
+export interface NextStep {
+  key: "features" | "target" | "dossier" | "photos" | "listing" | "export";
+  label: string;
+  done: boolean;
+  route: string;
+  detail: string;
+}
+
+export interface PropertyNextSteps {
+  property_id: string;
+  steps: NextStep[];
+  next: NextStep | null;
+  done: number;
+  total: number;
+}
+
 export async function uploadDocument(propertyId: string, itemKey: string, uri: string, name: string, type: string): Promise<SaleDocument> {
   const form = new FormData();
   if (typeof window !== "undefined" && typeof document !== "undefined") {
@@ -578,6 +594,8 @@ export const api = {
     request<TargetResponse>(`/properties/${id}/target`, { method: "PUT", body: JSON.stringify({ target_price }) }),
   notaireUrl: (id: string) => `${BASE}/properties/${id}/notaire.pdf`,
   alerts: () => request<AlertsResponse>("/alerts"),
+  nextSteps: () => request<{ properties: PropertyNextSteps[] }>("/next-steps"),
+  propertyNextSteps: (id: string) => request<PropertyNextSteps>(`/properties/${id}/next-steps`),
 };
 
 export interface HedonicModelInfo {
@@ -589,6 +607,10 @@ export interface HedonicModelInfo {
   coefficients?: Record<string, number>;
   in_sample?: { n: number; mape: number; median_ape: number; within_15pct: number; r2_log: number | null } | null;
   holdout?: { n: number; mape: number; median_ape: number; within_15pct: number; r2_log: number | null; test_year: number } | null;
+  holdout_local?: {
+    n: number; mape: number; median_ape: number; within_15pct: number; r2_log: number | null; test_year: number;
+    without_local?: { n: number; mape: number; median_ape: number; within_15pct: number; r2_log: number | null };
+  } | null;
   communes_with_effect?: number;
 }
 

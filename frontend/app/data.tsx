@@ -143,8 +143,21 @@ export default function DataScreen() {
                       <View style={styles.aggCell}><Text style={styles.aggValue}>{model.data.holdout.r2_log ?? "—"}</Text><Text style={styles.aggLabel}>R² (log)</Text></View>
                     </View>
                   </View>
+                  {model.data.holdout_local ? (
+                    <View style={styles.aggBlock} testID="hedonic-local-metrics">
+                      <Text style={styles.aggTitle}>Avec micro-localisation (ventes voisines) <Text style={styles.aggN}>({formatInt(model.data.holdout_local.n)} biens)</Text></Text>
+                      <View style={styles.aggRow}>
+                        <View style={styles.aggCell}><Text style={styles.aggValue}>{pct(model.data.holdout_local.median_ape)}</Text><Text style={styles.aggLabel}>Erreur médiane</Text></View>
+                        <View style={styles.aggCell}><Text style={styles.aggValue}>{pct(model.data.holdout_local.within_15pct)}</Text><Text style={styles.aggLabel}>Erreur ≤ 15 %</Text></View>
+                        <View style={styles.aggCell}><Text style={styles.aggValue}>{model.data.holdout_local.r2_log ?? "—"}</Text><Text style={styles.aggLabel}>R² (log)</Text></View>
+                      </View>
+                      {model.data.holdout_local.without_local ? (
+                        <Text style={styles.muted}>Sans micro-localisation sur les mêmes ventes : erreur médiane {pct(model.data.holdout_local.without_local.median_ape)}, R² {model.data.holdout_local.without_local.r2_log ?? "—"}.</Text>
+                      ) : null}
+                    </View>
+                  ) : null}
                   <Text style={styles.muted}>
-                    Élasticité surface {model.data.coefficients?.log_surface?.toFixed(2)} · terrain (maison) {model.data.coefficients?.log_land_maison?.toFixed(3)} ·
+                    Élasticité surface {model.data.coefficients?.log_surface?.toFixed(2)} (maison {((model.data.coefficients?.log_surface ?? 0) + (model.data.coefficients?.log_surface_maison ?? 0)).toFixed(2)}) · terrain (maison) {model.data.coefficients?.log_land_maison?.toFixed(3)} ·
                     tendance annuelle {pct((model.data.coefficients?.year_rel ?? 0) * 100)}. Le modèle sert à expliquer et à comparer ; la fourchette affichée reste celle des comparables.
                   </Text>
                 </>

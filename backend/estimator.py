@@ -22,7 +22,7 @@ TIGHT_TOL = 0.15  # surface tolerance tried first at each radius (less price/m²
 IRREDUCIBLE = 0.07  # unobserved specifics of the property after declared adjustments
 SIZE_ELASTICITY = 0.20  # price/m² ∝ surface^-0.20 (hedonic log-surface coefficient ≈ 0.80)
 MAX_HALF = 0.15  # widest range shown when data is viable; the confidence score carries the residual risk
-METHOD_VERSION = "comparables_dvf_v2"  # bump when the range/selection logic changes: stored estimations auto-refresh
+METHOD_VERSION = "comparables_dvf_v3"  # bump when the range/selection/hedonic logic changes: stored estimations auto-refresh
 
 LEVELS = [
     ("À 500 m", 500, 0.30),

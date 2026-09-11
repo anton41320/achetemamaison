@@ -76,12 +76,13 @@ async def _run_estimation(p: PropertyIn | PropertyDoc):
         cond = next((a for a in est.adjustments if a.key == "condition"), None)
         year = next((a for a in est.adjustments if a.key == "year"), None)
         try:
+            local = await hedonic.local_effect(db, model, lat=p.lat, lon=p.lon, ptype=p.property_type)
             est.hedonic = hedonic.explain(
                 model, surface=p.surface, rooms=p.rooms, land=p.land_surface, ptype=p.property_type,
                 code_commune=p.code_commune, commune=p.commune, dept=p.code_commune[:2],
                 condition_pct=cond.pct if cond else 0.0, condition_label=cond.label if cond else "État correct",
                 year_pct=year.pct if year else 0.0, year_label=year.label if year else None,
-                comparables_value=est.value, features_pct=features_pct,
+                comparables_value=est.value, features_pct=features_pct, local=local,
             )
         except Exception:  # noqa: BLE001
             logger.exception("Hedonic explain failed")
@@ -308,6 +309,65 @@ async def alerts(horizon_days: int = Query(default=90, ge=1, le=365)):
                     "expiry_date": d["expiry_date"], "days_left": days_left, "level": level})
     out.sort(key=lambda a: a["days_left"])
     return {"as_of": today.isoformat(), "horizon_days": horizon_days, "alerts": out}
+
+
+# ---------------- Prochaines étapes ----------------
+
+async def _next_steps_for(doc: dict) -> dict:
+    pid = str(doc["_id"])
+    prop = PropertyDoc.from_mongo(doc)
+    steps: list[dict] = []
+
+    def step(key: str, label: str, done: bool, route: str, detail: str = ""):
+        steps.append({"key": key, "label": label, "done": done, "route": route, "detail": detail})
+
+    feats_filled = any(v is not None for v in prop.features.model_dump().values())
+    step("features", "Compléter les caractéristiques", feats_filled, f"/property/{pid}/edit",
+         "Piscine, chauffage, DPE, garage… affinent l'estimation")
+    step("target", "Fixer votre prix cible", prop.target_price is not None, f"/property/{pid}",
+         "Situez votre prix dans la fourchette et le marché")
+
+    dossier = await _dossier(pid)
+    expired = [it for it in dossier["items"] if it["status"] == "expire"]
+    to_check = [it for it in dossier["items"] if it["status"] == "a_verifier"]
+    missing = [it for it in dossier["items"] if it["required"] and it["status"] == "manquant"]
+    dossier_done = not expired and not to_check and not missing
+    if expired:
+        label, detail = f"Renouveler : {expired[0]['label']}", "Diagnostic expiré, à refaire avant la vente"
+    elif to_check:
+        label, detail = f"Valider la lecture : {to_check[0]['label']}", "Vérifiez les champs extraits par l'IA"
+    elif missing:
+        label = f"Ajouter : {missing[0]['label']}"
+        detail = f"{len(missing)} document{'s' if len(missing) > 1 else ''} obligatoire{'s' if len(missing) > 1 else ''} manquant{'s' if len(missing) > 1 else ''}"
+    else:
+        label, detail = "Dossier de vente complet", f"{dossier['progress']['done']}/{dossier['progress']['total_required']} obligatoires validés"
+    route = f"/property/{pid}/document/{to_check[0]['documents'][0]['id']}" if to_check and not expired and to_check[0]["documents"] else f"/property/{pid}/dossier"
+    step("dossier", label, dossier_done, route, detail)
+
+    n_photos = await db.photos.count_documents({"property_id": pid, "deleted_at": None})
+    step("photos", "Ajouter des photos", n_photos > 0, f"/property/{pid}/photos", "Photos retouchées par IA pour l'annonce")
+    n_listings = await db.listings.count_documents({"property_id": pid, "deleted_at": None})
+    step("listing", "Rédiger l'annonce", n_listings > 0, f"/property/{pid}/listing", "Annonce IA à partir des faits déclarés")
+    step("export", "Exporter le dossier pour le notaire", False, f"/property/{pid}/dossier",
+         "PDF unique : synthèse + documents validés")
+
+    next_step = next((s for s in steps if not s["done"]), None)
+    done = sum(1 for s in steps if s["done"])
+    return {"property_id": pid, "steps": steps, "next": next_step, "done": done, "total": len(steps) - 1}
+
+
+@api.get("/next-steps")
+async def next_steps():
+    docs = await db.properties.find({"deleted_at": None}).sort("created_at", -1).to_list(200)
+    return {"properties": [await _next_steps_for(d) for d in docs]}
+
+
+@api.get("/properties/{pid}/next-steps")
+async def property_next_steps(pid: str):
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Bien introuvable")
+    return await _next_steps_for(doc)
 
 
 @api.get("/properties/{pid}/listings")

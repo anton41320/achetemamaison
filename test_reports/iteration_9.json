@@ -1,0 +1,27 @@
+{
+  "summary": "Phase 9 validated end-to-end. Backend pytest 11/11 passed on /app/backend/tests/test_estimo_phase9.py. Hedonic v2: GET /api/models/hedonic returns available=true, name='hedonic_v2', coefficients include log_surface_maison and rooms_maison, and holdout_local carries median_ape, r2_log and a nested without_local sub-object. POST /api/estimate/preview for Villefranche maison 140 m² 6 p. 4 ch. condition 'correct' land 800 m² returns estimation.method='comparables_dvf_v3'; hedonic.model_version='hedonic_v2'; hedonic.factors include the five keys location, surface, rooms, land and the new micro_location; hedonic.agreement='ecart_modere'/'convergent' with |delta_vs_comparables_pct|<0.25; hedonic half-width (high-low)/(2*value) <= 0.15 (measured 0.147). GET /api/properties/6aa02db9efd8f90925a5a758 auto-refreshes to method 'comparables_dvf_v3' and returns hedonic with micro_location factor and agreement='convergent' (comparables 185k€ vs hedonic 173k€, delta -7%). Next-steps: GET /api/next-steps returns {properties:[…]} with 6 steps per property (keys features/target/dossier/photos/listing/export), total=5 (export not counted toward total by design), and 'next' set to the first step with done=false. For 6aa02db9efd8f90925a5a758: done=4, next.key='dossier', next.label='Ajouter : Titre de propriété', route '/property/6aa02db9efd8f90925a5a758/dossier'. For all three Blois properties: next.key='features' with route '/property/{id}/edit'. GET /api/properties/{pid}/next-steps returns the same shape; unknown pid returns 404. Regressions: GET report.pdf, /final, /target, /alerts all 200. Frontend (390x844): home '/' → 6aa02db9efd8f90925a5a758 shows testID property-card-6aa02db9efd8f90925a5a758-next-step-label = 'Ajouter : Titre de propriété' with '4/5' progress badge; tapping property-card-6aa02db9efd8f90925a5a758-next-step navigates to /property/6aa02db9efd8f90925a5a758/dossier and dossier-screen is present; Blois cards show 'Compléter les caractéristiques' and tapping navigates to /property/{id}/edit; tapping the main card still opens /property/{id} (detail). Property detail /property/6aa02db9efd8f90925a5a758 → hedonic-card visible, factor 'Micro-localisation (ventes voisines)' listed, hedonic-agreement testID reads 'Les deux approches convergent (-7 % vs comparables)'. /data → hedonic-local-metrics testID contains 'Avec micro-localisation (ventes voisines)' plus median_ape 19,2 %, within_15pct 41,0 %, r2 0.639 and a 'Sans micro-localisation' comparison line. No red-screen, no console errors observed.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_estimo_phase9.py",
+    "/app/test_reports/pytest/phase9.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py:356 — total = len(steps) - 1 hides the 'export' step from the denominator so it never counts. Intentional (spec: 5-step progress bar over 6 steps) but the API contract could be made explicit by naming it 'total_tracked' or documenting it in the response schema.",
+    "hedonic.py:307-308 — 'half = min(median_ape/100, 0.15)' hard-caps the range at ±15 % without a floor tied to sigma; on comfortable-fit properties the interval may look narrower than the true uncertainty. Consistent with the comparables cap; keep as-is unless intervals widen with confidence.",
+    "PropertyCard.tsx:61 — stepRowUrgent is only triggered when next.key='dossier' AND label starts with 'Renouveler'; other urgent cases (expired diagnostic on a non-first slot) will not be highlighted. Minor UX polish opportunity."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "None. No properties/documents/photos/listings/target were created, modified or deleted.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Phase 9 (hedonic_v2 + next-steps) verified. Backend URL https://estimate-home.preview.emergentagent.com. Seed pids: Soings 6aa02db9efd8f90925a5a758 (target set, docs validated, next.key='dossier', done=4/5); Blois 6aa02db9efd8f90925a5a756 / 6aa02c492f09d3116cfaf507 / 6aa02c392f09d3116cfaf505 (next.key='features'). METHOD_VERSION is now 'comparables_dvf_v3'; hedonic model name is 'hedonic_v2'. next-steps returns total=5 (export step excluded). Regression pytest: /app/backend/tests/test_estimo_phase9.py.",
+  "rca_of_issue": "N/A — no bug found this iteration."
+}

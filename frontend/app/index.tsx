@@ -1,7 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { DatabaseIcon, PlusIcon } from "phosphor-react-native";
+import { useCallback } from "react";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -21,13 +22,28 @@ export default function HomeScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const { data, isLoading, isError, refetch, isRefetching } = useQuery({
     queryKey: ["properties"],
     queryFn: api.listProperties,
   });
+  const steps = useQuery({ queryKey: ["next-steps"], queryFn: api.nextSteps, enabled: !!data && data.length > 0 });
+  const stepsById = new Map((steps.data?.properties ?? []).map((s) => [s.property_id, s]));
+
+  useFocusEffect(
+    useCallback(() => {
+      queryClient.invalidateQueries({ queryKey: ["next-steps"] });
+      queryClient.invalidateQueries({ queryKey: ["alerts"] });
+      queryClient.invalidateQueries({ queryKey: ["properties"] });
+    }, [queryClient]),
+  );
 
   const goNew = () => router.push("/new");
+  const onRefresh = () => {
+    refetch();
+    steps.refetch();
+  };
 
   return (
     <View style={styles.screen} testID="home-screen">
@@ -74,13 +90,15 @@ export default function HomeScreen() {
           keyExtractor={(p) => p.id}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 96 }]}
           ListHeaderComponent={<AlertsBanner />}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.brandPrimary} />}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={colors.brandPrimary} />}
           renderItem={({ item, index }) => (
             <Animated.View entering={FadeInDown.delay(Math.min(index, 6) * 60).duration(320)}>
               <PropertyCard
                 property={item}
                 onPress={() => router.push(`/property/${item.id}`)}
                 testID={`property-card-${item.id}`}
+                nextSteps={stepsById.get(item.id) ?? null}
+                onStepPress={(route) => router.push(route as any)}
               />
             </Animated.View>
           )}
