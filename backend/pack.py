@@ -90,22 +90,22 @@ async def is_unlocked(db, pid: str) -> bool:
 async def create_checkout(db, pid: str, return_url: str) -> dict:
     if not stripe_ready():
         raise RuntimeError("Paiement indisponible : clé Stripe absente")
-    order = {"property_id": pid, "amount": PACK_PRICE_CENTS, "currency": PACK_CURRENCY, "status": "pending",
-             "return_url": return_url, "created_at": utcnow()}
-    res = await db.orders.insert_one(order)
-    order_id = str(res.inserted_id)
+    order_id = str(ObjectId())
     sep = "&" if "?" in return_url else "?"
     session = stripe.checkout.Session.create(
         mode="payment",
         line_items=[{"price_data": {"currency": PACK_CURRENCY, "unit_amount": PACK_PRICE_CENTS,
                                     "product_data": {"name": PACK_NAME,
-                                                     "description": "Annonce IA + photos retouchées en PDF, retouches illimitées pour ce bien"}},
+                                                     "description": "Annonce IA + photos retouchées en PDF, retouches illimitées pour ce bien",
+                                                     # Service fourni par voie électronique (requis par Stripe Managed Payments)
+                                                     "tax_code": "txcd_10000000"}},
                      "quantity": 1}],
         success_url=f"{return_url}{sep}status=success&order_id={order_id}",
         cancel_url=f"{return_url}{sep}status=cancelled&order_id={order_id}",
         metadata={"order_id": order_id, "property_id": pid},
     )
-    await db.orders.update_one({"_id": res.inserted_id}, {"$set": {"session_id": session.id}})
+    await db.orders.insert_one({"_id": ObjectId(order_id), "property_id": pid, "amount": PACK_PRICE_CENTS, "currency": PACK_CURRENCY,
+                                "status": "pending", "return_url": return_url, "session_id": session.id, "created_at": utcnow()})
     return {"order_id": order_id, "checkout_url": session.url}
 
 

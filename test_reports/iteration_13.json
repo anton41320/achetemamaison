@@ -1,0 +1,38 @@
+{
+  "summary": "Iteration 13 — Stripe LIVE mode switch verification (NO PAYMENT made). GET /api/properties/6aa02c492f09d3116cfaf507/pack/status correctly reports mode='live', payments_available=true, webhook_configured=false, unlocked=false. Regression PASS: /api/properties/6aa02db9efd8f90925a5a758/pack/status still unlocked=true; /pack.pdf still returns 200 application/pdf. Frontend /property/6aa02c492f09d3116cfaf507/pack on 390x844 renders pack-offer and pack-pay-button and the pack-test-mode testID is ABSENT (LIVE badge is correctly hidden). pack-pay-button text = 'Payer 49 € et débloquer'. Pay button was NOT tapped. HOWEVER, CRITICAL BUG: POST /api/properties/{pid}/pack/checkout returns 502 in LIVE mode. Root cause (backend logs, req_9wlEB9N3Z6Lk8d/req_aDrNxiHnRrXYO2): Stripe returns 400 InvalidRequestError — 'Invalid line_items[0]: the product tax code is missing. Product tax code is required for Managed Payments, which is enabled by default on your account. If you want to disable Managed Payments on this session, you can pass managed_payments[enabled]=false.' Backend then wraps this into HTTP 502 via server.py:516. This means the LIVE checkout URL (cs_live_…) can NEVER be created with the current /app/backend/pack.py:create_checkout payload → the pack purchase flow is fully broken in LIVE mode. pytest phase13.xml: 4 passed, 1 failed (test_pack_checkout_live_session).",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/properties/{pid}/pack/checkout", "issue": "Fails with HTTP 502 in Stripe LIVE mode because Managed Payments is enabled on the Stripe account (acct_1UFYARLIoDrKmVqD) and requires either a product tax_code or managed_payments[enabled]=false in the Checkout Session payload. Fix in /app/backend/pack.py:98 stripe.checkout.Session.create(...) — add managed_payments={'enabled': False} (simplest, no tax classification needed for a digital service invoice) OR add tax_code='txcd_10000000' (or a specific SaaS/service code) to product_data. Without this fix, no LIVE cs_live_ checkout URL can be created and no user can purchase the pack in production.", "priority": "CRITICAL"}
+    ],
+    "minor": [
+      {"endpoint": "POST /api/properties/{pid}/pack/checkout", "issue": "create_checkout inserts the pending order in Mongo BEFORE calling Stripe (pack.py:95). When Stripe raises, the order stays 'pending' with no session_id, so pack/status.last_order is a dangling pending entry. Consider inserting after the Stripe call succeeds, or deleting the order on failure."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Tap pack-pay-button in LIVE mode", "issue": "Not exercised per instructions (no real payment), but will surface the 502 above to the user as an error. Requires backend fix first.", "affected_testIDs": ["pack-pay-button"]}
+    ],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_stripe_live_mode.py", "/app/test_reports/pytest/phase13.xml"],
+  "action_items": [
+    "URGENT: In /app/backend/pack.py:98 (stripe.checkout.Session.create), add `managed_payments={'enabled': False}` OR set `product_data['tax_code']='txcd_10000000'` so the LIVE Stripe account (Managed Payments enabled) accepts the session. Re-run test_stripe_live_mode.py to confirm cs_live_ URL is returned.",
+    "Consider deferring the Mongo order insert until after stripe.checkout.Session.create succeeds, or delete the order in the except branch, to avoid dangling pending orders when Stripe rejects the payload.",
+    "STRIPE_WEBHOOK_SECRET is still empty in /app/backend/.env → webhook_configured=false. For production LIVE, configure a Stripe webhook for checkout.session.completed and set the secret; polling (pack.sync_pending) currently covers detection."
+  ],
+  "critical_code_review_comments": [
+    "pack.py:44 live_mode() correctly detects sk_live_ prefix; pack.py:39 uses api.stripe.com directly (not the Emergent proxy) for live keys — correct.",
+    "server.py:514-516 wraps unknown Stripe errors as 502 with truncated detail, which is user-safe but hides that Stripe returned a 400 InvalidRequestError. Consider returning 400 with the Stripe error code for observability.",
+    "pack.py:95 order document is inserted BEFORE calling Stripe — if Stripe rejects (as it does now in LIVE), the pending row remains and shows in /pack/status as last_order.",
+    "pack.py:32-40 sets stripe.api_key/api_base at every call to stripe_ready() — safe for hot key swaps but adds one env read per request."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "80% (4/5 pytest cases, including regression) — LIVE checkout creation is the failing case", "frontend": "100% (pack-offer + pack-pay-button visible, pack-test-mode absent as required)"},
+  "seed_data_creation": "Two 'pending' pack orders were inserted on property 6aa02c492f09d3116cfaf507 via failed LIVE checkout attempts (no session_id, no charge). No properties/photos/listings modified. No real card entered. No pack unlocked.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Stripe key is LIVE (sk_live_…). The account has Managed Payments ON, so Checkout Session create requires managed_payments.enabled=false or product tax_code. Until pack.py is patched, POST /api/properties/{pid}/pack/checkout returns 502 wrapping a Stripe 400. Do NOT complete any payment in LIVE. Locked LIVE pids for future E2E once fixed: 6aa02c492f09d3116cfaf507, 6aa3f68d440f04920cdaffde, 6aa02db9efd8f90925a5a756. Already-unlocked (paid in earlier TEST-mode iterations): 6aa02db9efd8f90925a5a758 and 6aa02c392f09d3116cfaf505.",
+  "rca_of_issue": "RCA — LIVE Stripe Checkout fails: 1) STRIPE_API_KEY switched to sk_live_ → pack.stripe_ready() correctly routes to https://api.stripe.com. 2) create_checkout builds line_items with product_data={name, description} but NO tax_code and NO managed_payments override. 3) The LIVE Stripe account acct_1UFYARLIoDrKmVqD has Managed Payments enabled by default, which mandates a product tax_code. 4) Stripe API responds 400 InvalidRequestError. 5) server.py pack_checkout catches generic Exception and returns HTTP 502 with the Stripe message truncated. Reproduce: curl -X POST {BASE}/api/properties/6aa02c492f09d3116cfaf507/pack/checkout -H 'Content-Type: application/json' -d '{\"return_url\":\"https://estimate-home.preview.emergentagent.com/property/6aa02c492f09d3116cfaf507/pack\"}' → 502. Mitigation (single-line change in pack.py:98): add managed_payments={'enabled': False} inside stripe.checkout.Session.create(...). Alternative: set product_data['tax_code']='txcd_10000000' (general services)."
+}

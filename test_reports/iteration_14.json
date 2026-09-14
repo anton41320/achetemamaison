@@ -1,0 +1,30 @@
+{
+  "summary": "Iteration 14 — Backend-only re-verification of Stripe LIVE checkout fix (NO PAYMENT). Both bugs from iteration 13 are resolved. (1) POST /api/properties/6aa02c492f09d3116cfaf507/pack/checkout with return_url=https://estimate-home.preview.emergentagent.com/property/.../pack now returns HTTP 201 with checkout_url starting with https://checkout.stripe.com/c/pay/cs_live_ — the tax_code 'txcd_10000000' added to product_data in /app/backend/pack.py:101 satisfies Stripe Managed Payments. (2) GET /api/properties/6aa02c492f09d3116cfaf507/pack/status returns mode='live', payments_available=true, webhook_configured=false, unlocked=false, last_order.status='pending'. (3) Sending an invalid body {\"return_url\":\"foo\"} correctly returns HTTP 422 and, thanks to the reordered insert in pack.create_checkout (order document is now inserted AFTER stripe.checkout.Session.create succeeds), NO order is inserted — last_order.order_id is unchanged between before/after. Direct MongoDB inspection confirms zero dangling rows: total=3 pending orders on the property, all with cs_live_ session_id, dangling_no_session_id=0. Regression PASS: previously TEST-paid property 6aa02db9efd8f90925a5a758 still unlocked=true and /pack.pdf still returns 200 application/pdf. pytest test_stripe_live_mode.py: 5/5 passed. Added test_stripe_live_no_dangling.py: 3/3 passed. Full run: 8/8 passed. NO checkout URL was opened, NO card entered.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": [], "react_native_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_stripe_live_mode.py",
+    "/app/backend/tests/test_stripe_live_no_dangling.py",
+    "/app/test_reports/pytest/phase13_retry.xml",
+    "/app/test_reports/pytest/phase14_no_dangling.xml",
+    "/app/test_reports/pytest/phase14_full.xml"
+  ],
+  "action_items": [
+    "STRIPE_WEBHOOK_SECRET is still empty in /app/backend/.env → webhook_configured=false. For production LIVE, configure a Stripe webhook for checkout.session.completed and set the secret. Polling (pack.sync_pending) currently covers detection, so this is not blocking but should be done before high-volume traffic."
+  ],
+  "critical_code_review_comments": [
+    "pack.py:95-109 create_checkout — order document now inserted only AFTER stripe.checkout.Session.create() succeeds; on Stripe rejection no dangling pending row remains. Verified by mongo inspection (3/3 pending orders on target pid all have a cs_live_ session_id).",
+    "pack.py:101 product_data.tax_code='txcd_10000000' (Services — general) satisfies Stripe Managed Payments requirement on live account acct_1UFYARLIoDrKmVqD. Alternative managed_payments={'enabled': False} was not needed.",
+    "server.py error mapping for Stripe exceptions still returns 502 (unchanged) — fine because the LIVE path no longer triggers it; keep in mind for future observability.",
+    "pack.stripe_ready() correctly routes live keys to https://api.stripe.com (not the Emergent proxy)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_stripe_live_no_dangling.py (added regression suite for invalid input & no-dangling behaviour)"
+  ],
+  "success_rate": {"backend": "100% (8/8 pytest cases across test_stripe_live_mode.py + test_stripe_live_no_dangling.py)", "frontend": "not tested this iteration (backend-only per request)"},
+  "seed_data_creation": "One new pending pack order (with cs_live_ session_id) was created on property 6aa02c492f09d3116cfaf507 by the checkout-success test. No card entered, no payment completed, no unlock. Current pending count for pid=3, all with valid session_id.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Stripe key is LIVE (sk_live_…). LIVE Checkout Session creation works via tax_code 'txcd_10000000'. Orders are inserted only after Stripe returns a session (no dangling rows). Locked LIVE pids available for future NON-payment verification: 6aa02c492f09d3116cfaf507 (current target), 6aa3f68d440f04920cdaffde, 6aa02db9efd8f90925a5a756. Already unlocked (from earlier TEST-mode paid): 6aa02db9efd8f90925a5a758, 6aa02c392f09d3116cfaf505. DO NOT complete any real payment. STRIPE_WEBHOOK_SECRET is still empty; polling covers detection.",
+  "rca_of_issue": "Iteration 13 bugs (both fixed): (A) Stripe Managed Payments (enabled by default on live account) required a product tax_code on the Checkout Session line_items. Fix: pack.py:101 now sets product_data.tax_code='txcd_10000000' (Services — general, applicable to the digital service invoice). (B) Order document was inserted BEFORE Stripe API call, leaving dangling pending rows without session_id when Stripe rejected the payload. Fix: pack.create_checkout now inserts the order AFTER stripe.checkout.Session.create() succeeds, so failures (e.g., 422 on invalid return_url, or any Stripe error) leave no order behind. Verified via (i) HTTP 201 + cs_live_ URL, (ii) HTTP 422 on {return_url:'foo'} without changing last_order.order_id, (iii) direct MongoDB count: 0 orders with missing session_id on the target property."
+}
