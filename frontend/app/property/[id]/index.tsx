@@ -348,6 +348,9 @@ export default function PropertyDetailScreen() {
 
             <View style={styles.actions}>
               <ShareReportButton propertyId={id!} />
+              <Text style={styles.detailHint} testID="report-photos-hint">
+                Le rapport PDF inclut vos photos (versions retouchées par IA si disponibles, signalées comme non contractuelles).
+              </Text>
               <PrimaryButton
                 title="Modifier les caractéristiques"
                 variant="secondary"

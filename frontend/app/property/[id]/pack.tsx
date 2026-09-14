@@ -89,6 +89,12 @@ export default function PackScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.unlockedTitle}>Pack débloqué pour ce bien</Text>
                 <Text style={styles.p}>Retouches IA illimitées et PDF d’annonce premium régénérable.</Text>
+                {d.last_order?.status === "paid" && d.last_order.customer_email ? (
+                  <Text style={styles.hint} testID="pack-receipt">
+                    {d.last_order.receipt_sent ? "Reçu envoyé à " : "Reçu en cours d’envoi à "}
+                    {d.last_order.customer_email}
+                  </Text>
+                ) : null}
               </View>
             </View>
             <View style={styles.card}>
@@ -125,6 +131,11 @@ export default function PackScreen() {
               <Text style={styles.priceKicker}>Paiement unique · ce bien</Text>
               <Text style={styles.price}>49 €</Text>
               <Text style={styles.priceSub}>TTC · carte bancaire via Stripe · sans abonnement</Text>
+              {d.mode === "test" ? (
+                <View style={styles.testBadge} testID="pack-test-mode">
+                  <Text style={styles.testBadgeText}>Mode test Stripe — aucun débit réel</Text>
+                </View>
+              ) : null}
             </View>
             <View style={styles.card}>
               <Text style={styles.h3}>Ce que comprend le pack</Text>
@@ -189,6 +200,8 @@ const useStyles = makeStyles((colors) => ({
   priceKicker: { fontFamily: fonts.medium, fontSize: 12, color: colors.onBrandPrimary, textTransform: "uppercase", letterSpacing: 0.8, opacity: 0.85 },
   price: { fontFamily: fonts.bold, fontSize: 48, lineHeight: 56, color: colors.onBrandPrimary },
   priceSub: { fontFamily: fonts.regular, fontSize: 13, color: colors.onBrandPrimary, opacity: 0.85 },
+  testBadge: { marginTop: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: colors.warningSoft },
+  testBadgeText: { fontFamily: fonts.medium, fontSize: 11, color: colors.warning },
   incRow: { flexDirection: "row", gap: spacing.md, alignItems: "flex-start" },
   warn: { flexDirection: "row", gap: spacing.md, alignItems: "center", backgroundColor: colors.warningSoft, borderRadius: radius.md, padding: spacing.lg },
   warnText: { flex: 1, fontFamily: fonts.medium, fontSize: 13, lineHeight: 19, color: colors.warning },

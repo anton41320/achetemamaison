@@ -486,9 +486,10 @@ async def _pack_status(pid: str) -> dict:
     n_photos = await db.photos.count_documents({"property_id": pid, "deleted_at": None})
     n_listings = await db.listings.count_documents({"property_id": pid, "deleted_at": None})
     return {"property_id": pid, "unlocked": unlocked, "price_cents": pack.PACK_PRICE_CENTS, "currency": pack.PACK_CURRENCY,
-            "payments_available": pack.stripe_ready(), "free_retouches": pack.FREE_RETOUCHES, "retouches_used": used,
+            **pack.payments_config(), "free_retouches": pack.FREE_RETOUCHES, "retouches_used": used,
             "photos": n_photos, "listings": n_listings,
-            "last_order": {"order_id": str(last["_id"]), "status": last["status"]} if last else None}
+            "last_order": {"order_id": str(last["_id"]), "status": last["status"], "customer_email": last.get("customer_email"),
+                           "receipt_sent": bool(last.get("receipt_sent_at")), "paid_at": last.get("paid_at")} if last else None}
 
 
 @api.get("/properties/{pid}/pack/status")
@@ -540,16 +541,7 @@ async def pack_pdf(pid: str, style: str = Query(default="sobre"), include_price:
         listing = ListingDoc(property_id=pid, style=style, extra_facts=None, **result)
         await db.listings.insert_one({**listing.to_mongo(), "deleted_at": None})
         listing = listing.model_dump()
-    photo_docs = await db.photos.find({"property_id": pid, "deleted_at": None}).sort("created_at", 1).to_list(30)
-
-    def _fetch(p: dict):
-        path = p.get("retouched_path") if p.get("status") == "done" and p.get("retouched_path") else p["original_path"]
-        try:
-            return storage.get_object(path)[0], path == p.get("retouched_path")
-        except Exception:  # noqa: BLE001
-            return None
-
-    photos = [x for x in await asyncio.gather(*(asyncio.to_thread(_fetch, p) for p in photo_docs)) if x]
+    photos = await _property_photos(pid)
     final = blend(prop.estimation, await _get_weights()) if prop.estimation else None
     target = (await _target_payload(doc))["analysis"]
     pdf = await asyncio.to_thread(pack.build_pack_pdf, prop, listing, photos, final, target, include_price)
@@ -790,15 +782,30 @@ async def property_trend(pid: str):
     }
 
 
+async def _property_photos(pid: str, limit: int = 30) -> list[tuple[bytes, bool]]:
+    """(bytes, retouched?) for every photo of the bien, retouched version preferred, in upload order."""
+    photo_docs = await db.photos.find({"property_id": pid, "deleted_at": None}).sort("created_at", 1).to_list(limit)
+
+    def _fetch(p: dict):
+        path = p.get("retouched_path") if p.get("status") == "done" and p.get("retouched_path") else p["original_path"]
+        try:
+            return storage.get_object(path)[0], path == p.get("retouched_path")
+        except Exception:  # noqa: BLE001
+            return None
+
+    return [x for x in await asyncio.gather(*(asyncio.to_thread(_fetch, p) for p in photo_docs)) if x]
+
+
 @api.get("/properties/{pid}/report.pdf")
-async def property_report(pid: str):
+async def property_report(pid: str, photos: bool = Query(default=True)):
     doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
     if not doc:
         raise HTTPException(status_code=404, detail="Bien introuvable")
     prop = PropertyDoc.from_mongo(doc)
     if not prop.estimation:
         raise HTTPException(status_code=422, detail="Aucune estimation disponible")
-    pdf = await asyncio.to_thread(build_report, prop, blend(prop.estimation, await _get_weights()))
+    imgs = await _property_photos(pid, 8) if photos else []
+    pdf = await asyncio.to_thread(build_report, prop, blend(prop.estimation, await _get_weights()), imgs)
     filename = f"estimo-{pid[-6:]}.pdf"
     return Response(content=pdf, media_type="application/pdf",
                     headers={"Content-Disposition": f'inline; filename="{filename}"'})

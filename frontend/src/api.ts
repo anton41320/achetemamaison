@@ -534,11 +534,14 @@ export interface PackStatus {
   price_cents: number;
   currency: string;
   payments_available: boolean;
+  mode: "test" | "live";
+  webhook_configured: boolean;
+  email_ready: boolean;
   free_retouches: number;
   retouches_used: number;
   photos: number;
   listings: number;
-  last_order: { order_id: string; status: "pending" | "paid" | "failed" } | null;
+  last_order: { order_id: string; status: "pending" | "paid" | "failed"; customer_email: string | null; receipt_sent: boolean; paid_at: string | null } | null;
 }
 
 export async function uploadDocument(propertyId: string, itemKey: string, uri: string, name: string, type: string): Promise<SaleDocument> {

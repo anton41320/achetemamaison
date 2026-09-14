@@ -5,12 +5,13 @@ from datetime import datetime
 from io import BytesIO
 from typing import Optional
 
+from PIL import Image as PILImage
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_LEFT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from models import PropertyDoc
 
@@ -36,7 +37,7 @@ def pct(p: float, digits: int = 1) -> str:
     return f"{s}\u202f%"
 
 
-def build_report(prop: PropertyDoc, final: Optional[dict] = None) -> bytes:
+def build_report(prop: PropertyDoc, final: Optional[dict] = None, photos: Optional[list[tuple[bytes, bool]]] = None) -> bytes:
     est = prop.estimation
     assert est is not None
     buf = BytesIO()
@@ -135,6 +136,27 @@ def build_report(prop: PropertyDoc, final: Optional[dict] = None) -> bytes:
         rows.append([c.date[:7], f"{c.distance_m} m", c.commune, f"{c.surface:g} m²" + (f" · {c.rooms} p." if c.rooms else ""),
                      eur(c.price), f"{eur(c.price_m2)}/m²"])
     story.append(_table(rows, [20 * mm, 20 * mm, 44 * mm, 34 * mm, 28 * mm, 28 * mm], body))
+
+    # Photos (retouched preferred), 2 per row
+    if photos:
+        story.append(PageBreak())
+        story.append(Paragraph("Photos du bien", h2))
+        cell_w = (A4[0] - 36 * mm - 6 * mm) / 2
+        cells = []
+        for data, retouched in photos[:8]:
+            try:
+                im = PILImage.open(BytesIO(data))
+            except Exception:  # noqa: BLE001
+                continue
+            w, h = im.size
+            scale = min(cell_w / w, 70 * mm / h)
+            cells.append([Image(BytesIO(data), width=w * scale, height=h * scale),
+                          Paragraph("Visuel retouché par IA · non contractuel" if retouched else "Photo d'origine", small)])
+        grid = [[cells[i], cells[i + 1] if i + 1 < len(cells) else ""] for i in range(0, len(cells), 2)]
+        if grid:
+            t = Table(grid, colWidths=[cell_w + 3 * mm, cell_w + 3 * mm])
+            t.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 8)]))
+            story.append(t)
 
     story.append(Spacer(1, 10))
     story.append(Paragraph(

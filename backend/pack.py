@@ -6,14 +6,17 @@ import os
 from datetime import date
 from io import BytesIO
 from typing import Optional
+from urllib.parse import urlparse
 
 import stripe
+from bson import ObjectId
 from PIL import Image as PILImage
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+import emailer
 from models import PropertyDoc, utcnow
 from report import BRAND, BRAND_SOFT, CONDITION_LABELS, INK, LINE, MUTED, eur
 
@@ -32,7 +35,52 @@ def stripe_ready() -> bool:
         if "sk_test_emergent" in key:
             # Emergent-managed test key: route through the integrations proxy (same as emergentintegrations).
             stripe.api_base = os.environ.get("INTEGRATION_PROXY_URL", "https://integrations.emergentagent.com").rstrip("/") + "/stripe"
+        else:
+            stripe.api_base = "https://api.stripe.com"
     return bool(key)
+
+
+def live_mode() -> bool:
+    return (os.environ.get("STRIPE_API_KEY") or "").startswith("sk_live_")
+
+
+def payments_config() -> dict:
+    return {"payments_available": stripe_ready(), "mode": "live" if live_mode() else "test",
+            "webhook_configured": bool(os.environ.get("STRIPE_WEBHOOK_SECRET")), "email_ready": emailer.email_ready()}
+
+
+async def _mark_paid(db, order: dict, session) -> None:
+    details = session.get("customer_details") or {}
+    res = await db.orders.update_one({"_id": order["_id"], "status": {"$ne": "paid"}},
+                                     {"$set": {"status": "paid", "paid_at": utcnow(), "payment_intent": session.get("payment_intent"),
+                                               "customer_email": details.get("email"), "customer_name": details.get("name"),
+                                               "amount_total": session.get("amount_total"), "live_mode": bool(session.get("livemode"))}})
+    if res.modified_count:
+        await send_receipt(db, await db.orders.find_one({"_id": order["_id"]}))
+
+
+async def send_receipt(db, order: dict) -> bool:
+    """Send the receipt once per paid order (recipient = Stripe checkout email, a server-side record)."""
+    to = order.get("customer_email")
+    if not to or order.get("receipt_sent_at") or not emailer.email_ready():
+        return False
+    prop = await db.properties.find_one({"_id": ObjectId(order["property_id"])}, {"address_label": 1})
+    origin = urlparse(order.get("return_url") or "")
+    app_origin = f"{origin.scheme}://{origin.netloc}" if origin.scheme == "https" and origin.netloc else None
+    if not app_origin or not prop:
+        logger.warning("Receipt skipped for order %s: missing https origin or property", order["_id"])
+        return False
+    subject, html = emailer.receipt_html(order_id=str(order["_id"]), address_label=prop["address_label"],
+                                         amount_cents=order.get("amount_total") or order["amount"], paid_at=order.get("paid_at") or utcnow(),
+                                         app_origin=app_origin, property_id=order["property_id"], live_mode=bool(order.get("live_mode")))
+    try:
+        email_id = await emailer.send_email(to=to, subject=subject, html=html)
+    except Exception:  # noqa: BLE001
+        logger.exception("Receipt email failed for order %s", order["_id"])
+        await db.orders.update_one({"_id": order["_id"]}, {"$set": {"receipt_error": "send_failed"}})
+        return False
+    await db.orders.update_one({"_id": order["_id"]}, {"$set": {"receipt_sent_at": utcnow(), "receipt_email_id": email_id}, "$unset": {"receipt_error": ""}})
+    return True
 
 
 async def is_unlocked(db, pid: str) -> bool:
@@ -42,7 +90,8 @@ async def is_unlocked(db, pid: str) -> bool:
 async def create_checkout(db, pid: str, return_url: str) -> dict:
     if not stripe_ready():
         raise RuntimeError("Paiement indisponible : clé Stripe absente")
-    order = {"property_id": pid, "amount": PACK_PRICE_CENTS, "currency": PACK_CURRENCY, "status": "pending", "created_at": utcnow()}
+    order = {"property_id": pid, "amount": PACK_PRICE_CENTS, "currency": PACK_CURRENCY, "status": "pending",
+             "return_url": return_url, "created_at": utcnow()}
     res = await db.orders.insert_one(order)
     order_id = str(res.inserted_id)
     sep = "&" if "?" in return_url else "?"
@@ -71,10 +120,12 @@ async def sync_pending(db, pid: str) -> None:
             logger.exception("Stripe retrieve failed")
             continue
         if s.get("payment_status") == "paid":
-            await db.orders.update_one({"_id": o["_id"]}, {"$set": {"status": "paid", "paid_at": utcnow(),
-                                                                   "payment_intent": s.get("payment_intent")}})
+            await _mark_paid(db, o, s)
         elif s.get("status") == "expired":
             await db.orders.update_one({"_id": o["_id"]}, {"$set": {"status": "failed"}})
+    # Retry receipts that failed earlier (e.g. email service hiccup)
+    async for o in db.orders.find({"property_id": pid, "status": "paid", "receipt_sent_at": None, "customer_email": {"$ne": None}}):
+        await send_receipt(db, o)
 
 
 async def handle_webhook(db, payload: bytes, signature: Optional[str]) -> dict:
@@ -88,13 +139,15 @@ async def handle_webhook(db, payload: bytes, signature: Optional[str]) -> dict:
         return {"received": True, "duplicate": True}
     session = event["data"]["object"]
     order_id = (session.get("metadata") or {}).get("order_id")
-    if event["type"] in ("checkout.session.completed", "checkout.session.async_payment_succeeded") and session.get("payment_status") == "paid" and order_id:
-        from bson import ObjectId
-        await db.orders.update_one({"_id": ObjectId(order_id), "status": {"$ne": "paid"}},
-                                   {"$set": {"status": "paid", "paid_at": utcnow(), "payment_intent": session.get("payment_intent")}})
-    elif event["type"] in ("checkout.session.async_payment_failed", "checkout.session.expired") and order_id:
-        from bson import ObjectId
-        await db.orders.update_one({"_id": ObjectId(order_id), "status": "pending"}, {"$set": {"status": "failed"}})
+    if not order_id:
+        return {"received": True}
+    order = await db.orders.find_one({"_id": ObjectId(order_id)})
+    if not order:
+        return {"received": True}
+    if event["type"] in ("checkout.session.completed", "checkout.session.async_payment_succeeded") and session.get("payment_status") == "paid":
+        await _mark_paid(db, order, session)
+    elif event["type"] in ("checkout.session.async_payment_failed", "checkout.session.expired"):
+        await db.orders.update_one({"_id": order["_id"], "status": "pending"}, {"$set": {"status": "failed"}})
     return {"received": True}
 
 
