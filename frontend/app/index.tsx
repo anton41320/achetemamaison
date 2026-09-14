@@ -24,7 +24,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const { data, isLoading, isError, refetch, isRefetching } = useQuery({
+  const { data, isLoading, isError, error, refetch, isRefetching } = useQuery({
     queryKey: ["properties"],
     queryFn: api.listProperties,
   });
@@ -72,6 +72,9 @@ export default function HomeScreen() {
       ) : isError ? (
         <View style={styles.center}>
           <Text style={styles.emptyTitle}>Impossible de charger vos biens</Text>
+          <Text style={styles.emptyText} testID="home-error-detail">
+            {error instanceof Error ? error.message : "Erreur réseau"} · Vérifiez votre connexion puis réessayez.
+          </Text>
           <PrimaryButton title="Réessayer" onPress={() => refetch()} testID="home-retry-button" variant="secondary" />
         </View>
       ) : !data || data.length === 0 ? (

@@ -21,6 +21,7 @@ import communes
 import dossier as dossier_mod
 import dvf_ingest
 import hedonic
+import jobs
 import ml_model
 import notaire
 import pack
@@ -110,16 +111,19 @@ async def _get_weights() -> Weights:
     return Weights(**doc)
 
 
-def _ingest_then_train():
-    communes.refresh_populations(mongo_url, db_name, DVF_DEPARTMENTS)
-    dvf_ingest.ingest_all(mongo_url, db_name, DVF_DEPARTMENTS, DVF_YEARS)
-    hedonic.train(mongo_url, db_name)
-    ml_model.train(mongo_url, db_name)
+def _ingest_running() -> bool:
+    return dvf_ingest.is_running() or jobs.is_running()
 
 
 @api.get("/health")
 async def health():
     return {"status": "ok", "app": "Estimo", "departments": DVF_DEPARTMENTS}
+
+
+@app.get("/health", include_in_schema=False)
+async def root_health():
+    """Platform health probes hit /health (no /api prefix); must answer fast and never depend on background jobs."""
+    return {"status": "ok"}
 
 
 @api.get("/geocode")
@@ -164,7 +168,7 @@ async def dvf_status():
             d[k] = v if d[k] is None or v is None else fn(d[k], v)
     total = sum(d["total"] for d in depts.values())
     return {
-        "state": "running" if dvf_ingest.is_running() else meta.get("state", "empty" if total == 0 else "idle"),
+        "state": "running" if _ingest_running() else meta.get("state", "empty" if total == 0 else "idle"),
         "progress": meta.get("progress", 0),
         "error": meta.get("error"),
         "started_at": meta.get("started_at").isoformat() if meta.get("started_at") else None,
@@ -179,9 +183,9 @@ async def dvf_status():
 
 @api.post("/dvf/ingest", status_code=202)
 async def dvf_ingest_trigger():
-    if dvf_ingest.is_running():
+    if _ingest_running():
         return {"started": False, "message": "Ingestion déjà en cours"}
-    asyncio.get_running_loop().run_in_executor(None, _ingest_then_train)
+    jobs.start(jobs.ingest_then_train, mongo_url, db_name, DVF_DEPARTMENTS, DVF_YEARS)
     return {"started": True, "message": "Ingestion lancée en arrière-plan"}
 
 
@@ -189,8 +193,8 @@ async def dvf_ingest_trigger():
 async def hedonic_model():
     model = await hedonic.load_model(db)
     if not model:
-        return {"available": False, "training": hedonic.is_training()}
-    return {"available": True, "training": hedonic.is_training(), **hedonic.model_summary(model)}
+        return {"available": False, "training": hedonic.is_training() or jobs.is_running()}
+    return {"available": True, "training": hedonic.is_training() or jobs.is_running(), **hedonic.model_summary(model)}
 
 
 @api.post("/models/hedonic/train", status_code=202)
@@ -205,12 +209,12 @@ async def hedonic_train():
 async def ml_meta_route():
     meta = await ml_model.load_meta(db)
     if not meta:
-        return {"available": False, "training": ml_model.is_training()}
+        return {"available": False, "training": ml_model.is_training() or jobs.is_running()}
     meta.pop("_id", None)
     for k in ("trained_at", "data_until"):
         if meta.get(k):
             meta[k] = meta[k].isoformat()
-    return {"available": True, "training": ml_model.is_training(), **meta}
+    return {"available": True, "training": ml_model.is_training() or jobs.is_running(), **meta}
 
 
 @api.post("/models/ml/train", status_code=202)
@@ -916,15 +920,15 @@ async def startup():
     if await db.communes.estimated_document_count() == 0:
         logger.info("Commune populations missing: fetching from geo.api.gouv.fr")
         asyncio.get_running_loop().run_in_executor(None, communes.refresh_populations, mongo_url, db_name, DVF_DEPARTMENTS)
-    if count == 0 and not dvf_ingest.is_running():
+    if count == 0 and not _ingest_running():
         logger.info("DVF collection empty: starting background ingestion for %s", DVF_DEPARTMENTS)
-        asyncio.get_running_loop().run_in_executor(None, _ingest_then_train)
-    elif not await db.models.find_one({"_id": hedonic.MODEL_NAME}) and not hedonic.is_training():
-        logger.info("Hedonic model missing: training in background")
-        asyncio.get_running_loop().run_in_executor(None, hedonic.train, mongo_url, db_name)
-    if count > 0 and not await db.models.find_one({"_id": ml_model.MODEL_NAME}) and not ml_model.is_training():
-        logger.info("ML model missing: training in background")
-        asyncio.get_running_loop().run_in_executor(None, ml_model.train, mongo_url, db_name)
+        jobs.start(jobs.ingest_then_train, mongo_url, db_name, DVF_DEPARTMENTS, DVF_YEARS)
+    elif count > 0:
+        hed_missing = not await db.models.find_one({"_id": hedonic.MODEL_NAME}) and not hedonic.is_training()
+        ml_missing = not await db.models.find_one({"_id": ml_model.MODEL_NAME}) and not ml_model.is_training()
+        if hed_missing or ml_missing:
+            logger.info("Models missing (hedonic=%s, ml=%s): training in a background process", hed_missing, ml_missing)
+            jobs.start(jobs.train_models, mongo_url, db_name, hed_missing, ml_missing)
 
 
 @app.on_event("shutdown")

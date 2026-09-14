@@ -1,0 +1,36 @@
+{
+  "summary": "Deployment health-probe fix + heavy jobs subprocess refactor verified. All 11 backend tests pass (11/11). Backend exposes top-level GET /health (JSON {status:'ok'}) internally on localhost:8001 — confirmed. Public https://estimate-home.preview.emergentagent.com/health returns HTTP 200 (Expo web HTML in this preview because ingress routes non-/api to port 3000, as noted in the request; deployment ingress will route it to backend and return JSON). /api/health, /api/dvf/status (state='idle', total=110213), /api/models/hedonic (available, not training), /api/models/ml (available), /api/properties (5 items, all with estimation), /api/next-steps, /api/alerts all return 200 with valid payloads. jobs.start uses multiprocessing 'spawn' context, second start returns False while a job is alive, and imports live inside the target functions (picklable). Frontend (390x844): home renders property cards + AlertsBanner + next-step rows; error state via route-abort shows home-error-detail 'Failed to fetch · Vérifiez votre connexion puis réessayez.' with a working home-retry-button that recovers 20 cards after unblocking; /property/6aa02db9efd8f90925a5a758 renders estimation-value '174k€ – 218k€ · Valeur centrale 196 000 €'; /data renders '110 213 ventes' across Indre-et-Loire, Loir-et-Cher, Loiret. Console has one benign Expo web warning: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' — non-blocking.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "shadow* style props", "issue": "React Native Web deprecation warning at runtime: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' Not blocking. Likely coming from any StyleSheet using shadowColor/shadowOpacity/shadowRadius/shadowOffset (see /app/frontend/app/index.tsx:154-158 fab style)."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_estimo_health_deployment.py",
+    "/app/test_reports/pytest/deployment_fix.xml"
+  ],
+  "action_items": [
+    "Optional: silence the react-native-web 'shadow*' warning by moving to a shared shadow util or migrating to boxShadow on web. Not blocking the deployment fix."
+  ],
+  "critical_code_review_comments": [
+    "/app/backend/jobs.py: uses multiprocessing.get_context('spawn').Process(daemon=True) and defers heavy imports (communes/dvf_ingest/hedonic/ml_model) inside the target functions — picklable and correct.",
+    "/app/backend/server.py startup: DVF ingestion & model training are launched via jobs.start (subprocess). Only communes.refresh_populations still runs via run_in_executor (line 922) — acceptable (light HTTP fetch), but could also be moved to jobs.start for full isolation if desired.",
+    "/app/backend/server.py: top-level '@app.get(/health)' registered (line 123-126) with include_in_schema=False so platform probes get {status:'ok'} without touching /api or background jobs — correct.",
+    "dvf_status derives running state from _ingest_running() which OR-s dvf_ingest.is_running() and jobs.is_running() — subprocess-aware.",
+    "Home screen error UI (index.tsx:72-79) shows the real error message under the title with testID home-error-detail and a retry button — matches the requested behavior."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (11/11)", "frontend": "100% (5/5 flows)"},
+  "seed_data_creation": "None; used existing property id 6aa02db9efd8f90925a5a758 which returns 200 with estimation.value=196000. Did NOT trigger POST /api/dvf/ingest (per instructions).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Public GET /health in this preview returns Expo web HTML because the emergentagent preview ingress routes non-/api paths to port 3000. This is expected. On the deployed environment the ingress routes /health to the backend (port 8001) and the JSON {status:'ok'} response will make the platform health probe pass. Verified backend endpoint locally with curl http://localhost:8001/health => 200 {'status':'ok'}. Do NOT call POST /api/dvf/ingest (would re-download DVF).",
+  "rca_of_issue": "Root cause: platform health probes hit GET /health (no /api prefix). Previously only /api/health existed, so /health returned 404 and the deployed backend was considered unhealthy. Additionally, DVF ingestion and model training were launched inside the API process via loop.run_in_executor, saturating threads/CPU and further blocking probes. Fix (verified): (1) added top-level GET /health on FastAPI app that returns {status:'ok'} without touching DB or jobs; (2) refactored heavy jobs into /app/backend/jobs.py using multiprocessing spawn subprocess, with imports inside the target functions to be picklable; (3) startup now calls jobs.start(ingest_then_train, ...) / jobs.start(train_models, ...) instead of run_in_executor; (4) /api/dvf/status derives 'running' from jobs.is_running() OR dvf_ingest.is_running(). Home screen (index.tsx) now shows the real error message under the title with testID home-error-detail and a retry button — verified end-to-end."
+}
