@@ -6,7 +6,6 @@ import io
 import os
 import uuid
 
-from emergentintegrations.llm.chat import ImageContent, LlmChat, UserMessage
 from PIL import Image, ImageOps
 
 MODEL = "gemini-3.1-flash-image-preview"
@@ -37,6 +36,8 @@ def normalize(data: bytes) -> tuple[bytes, str]:
 
 
 async def retouch(image_bytes: bytes) -> tuple[bytes, str]:
+    from emergentintegrations.llm.chat import ImageContent, LlmChat, UserMessage  # lazy: keeps LLM SDKs out of startup memory
+
     api_key = os.environ["EMERGENT_LLM_KEY"]
     chat = LlmChat(api_key=api_key, session_id=f"retouch-{uuid.uuid4()}",
                    system_message="You are a professional real-estate photo editor.")

@@ -18,8 +18,8 @@ from typing import Optional
 
 import numpy as np
 from pymongo import MongoClient
-from sklearn.neighbors import BallTree
 
+import model_store
 from models import HedonicFactor, HedonicResult
 
 logger = logging.getLogger("hedonic")
@@ -140,6 +140,8 @@ def _evaluate(model: dict, X, y, communes, depts, local: Optional[np.ndarray] = 
 
 def _holdout_local(model: dict, X_tr, y_tr, comm_tr, dep_tr, coords_tr, ages_tr, X_te, coords_te, types_tr, types_te) -> np.ndarray:
     """Micro-location term for each test sale from *training* neighbours only (honest evaluation)."""
+    from sklearn.neighbors import BallTree  # training only: keeps scikit-learn out of the API process
+
     resid_tr = y_tr - np.array([_predict_log(model, X_tr[i], comm_tr[i], dep_tr[i]) for i in range(len(y_tr))])
     out = np.zeros(len(X_te))
     for t in (0.0, 1.0):
@@ -205,6 +207,7 @@ def train(mongo_url: str, db_name: str) -> None:
         model["ref_year"] = REF_YEAR
         model["trained_at"] = datetime.now(timezone.utc)
         db.models.replace_one({"_id": MODEL_NAME}, {"_id": MODEL_NAME, **model}, upsert=True)
+        model_store.dump(MODEL_NAME, model)
         _cache.clear()
         _cache.update(model)
         logger.info("Hedonic model trained on %d sales: %s | holdout %s | holdout+local %s", model["n"], model["in_sample"],
@@ -215,12 +218,14 @@ def train(mongo_url: str, db_name: str) -> None:
 
 
 async def load_model(db) -> Optional[dict]:
-    if _cache:
-        return _cache
-    doc = await db.models.find_one({"_id": MODEL_NAME})
-    if doc:
+    head = await db.models.find_one({"_id": MODEL_NAME}, {"trained_at": 1})
+    if not head:
+        return None
+    if _cache.get("trained_at") != head.get("trained_at"):  # refreshed by a training subprocess or a disk seed
+        doc = await db.models.find_one({"_id": MODEL_NAME})
+        _cache.clear()
         _cache.update(doc)
-    return doc
+    return _cache
 
 
 def model_summary(model: dict) -> dict:

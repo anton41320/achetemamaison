@@ -18,9 +18,9 @@ from typing import Optional
 import joblib
 import lightgbm as lgb
 import numpy as np
-import shap
 from pymongo import MongoClient
 
+import model_store
 from estimator import LOOKBACK_YEARS, NoDataError, estimate_from_candidates, haversine_m
 from models import MlFactor, MlResult
 
@@ -201,6 +201,7 @@ def train(mongo_url: str, db_name: str) -> None:
             "trained_at": datetime.now(timezone.utc), "data_until": last_date,
         }
         db.models.replace_one({"_id": MODEL_NAME}, meta, upsert=True)
+        model_store.dump(MODEL_NAME, meta)
         _cache.clear()
         logger.info("ML trained: holdout %s | gate %s | promoted=%s", holdout, gate, promoted)
     except Exception:  # noqa: BLE001
@@ -215,14 +216,14 @@ async def load_meta(db) -> Optional[dict]:
 
 
 def _load_bundle() -> Optional[dict]:
-    if "bundle" in _cache:
-        return _cache["bundle"]
     if not MODEL_PATH.exists():
         return None
-    bundle = joblib.load(MODEL_PATH)
-    bundle["explainer"] = shap.TreeExplainer(bundle["model"])
-    _cache["bundle"] = bundle
-    return bundle
+    mtime = MODEL_PATH.stat().st_mtime
+    if _cache.get("mtime") != mtime:  # (re)load when the file was (re)written, e.g. by a training subprocess
+        _cache.clear()
+        _cache["bundle"] = joblib.load(MODEL_PATH)
+        _cache["mtime"] = mtime
+    return _cache["bundle"]
 
 
 def predict(meta: dict, *, surface: float, rooms: int, land: Optional[float], ptype: str, code_commune: str,
@@ -234,8 +235,9 @@ def predict(meta: dict, *, surface: float, rooms: int, land: Optional[float], pt
            "location": {"coordinates": [lon, lat]}}
     X = _encode([row], bundle["commune_map"], bundle["dept_map"], year_frac=bundle["year_frac"])
     log_pred = float(bundle["model"].predict(X)[0])
-    sv = bundle["explainer"].shap_values(X)[0]
-    base = float(bundle["explainer"].expected_value)
+    # Native LightGBM SHAP values (TreeSHAP): one contribution per feature, last column = expected value.
+    contrib = bundle["model"].predict(X, pred_contrib=True)[0]
+    sv, base = contrib[:-1], float(contrib[-1])
     grouped: dict[str, float] = {}
     labels: dict[str, str] = {}
     for f, v in zip(FEATURES, sv):

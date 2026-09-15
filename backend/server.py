@@ -24,6 +24,7 @@ import dvf_ingest
 import hedonic
 import jobs
 import ml_model
+import model_store
 import notaire
 import pack
 import photos as photo_ai
@@ -202,9 +203,9 @@ async def hedonic_model():
 
 @public.post("/models/hedonic/train", status_code=202)
 async def hedonic_train():
-    if hedonic.is_training():
+    if hedonic.is_training() or jobs.is_running():
         return {"started": False, "message": "Entraînement déjà en cours"}
-    asyncio.get_running_loop().run_in_executor(None, hedonic.train, mongo_url, db_name)
+    jobs.start(jobs.retrain, mongo_url, db_name, "hedonic")
     return {"started": True, "message": "Entraînement lancé en arrière-plan"}
 
 
@@ -222,9 +223,9 @@ async def ml_meta_route():
 
 @public.post("/models/ml/train", status_code=202)
 async def ml_train():
-    if ml_model.is_training():
+    if ml_model.is_training() or jobs.is_running():
         return {"started": False, "message": "Entraînement déjà en cours"}
-    asyncio.get_running_loop().run_in_executor(None, ml_model.train, mongo_url, db_name)
+    jobs.start(jobs.retrain, mongo_url, db_name, "ml")
     return {"started": True, "message": "Entraînement ML lancé en arrière-plan (≈ 1 min)"}
 
 
@@ -930,6 +931,8 @@ async def startup():
         logger.info("DVF collection empty: starting background ingestion for %s", DVF_DEPARTMENTS)
         jobs.start(jobs.ingest_then_train, mongo_url, db_name, DVF_DEPARTMENTS, DVF_YEARS)
     elif count > 0:
+        # Cheap path first: seed the shipped model artifacts (no training in the constrained deployment container).
+        await asyncio.to_thread(model_store.seed_missing_sync, mongo_url, db_name)
         hed_missing = not await db.models.find_one({"_id": hedonic.MODEL_NAME}) and not hedonic.is_training()
         ml_missing = not await db.models.find_one({"_id": ml_model.MODEL_NAME}) and not ml_model.is_training()
         if hed_missing or ml_missing:

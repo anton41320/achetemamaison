@@ -6,8 +6,6 @@ import os
 import re
 import uuid
 
-from emergentintegrations.llm.chat import LlmChat, UserMessage
-
 from models import PropertyDoc
 
 STYLE_GUIDE = {
@@ -64,6 +62,8 @@ def _parse(text: str) -> dict:
 
 
 async def generate_listing(prop: PropertyDoc, style: str, extra_facts: str | None, include_price: bool) -> dict:
+    from emergentintegrations.llm.chat import LlmChat, UserMessage  # lazy: keeps the LLM SDKs out of API startup memory
+
     api_key = os.environ["EMERGENT_LLM_KEY"]
     chat = LlmChat(api_key=api_key, session_id=f"listing-{uuid.uuid4()}", system_message=SYSTEM).with_model(
         "anthropic", "claude-sonnet-4-6")

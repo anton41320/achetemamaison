@@ -9,8 +9,6 @@ import uuid
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
-from emergentintegrations.llm.chat import FileContentWithMimeType, LlmChat, UserMessage
-
 from models import PropertyDoc
 
 OCR_MODEL = "gemini-3-flash-preview"
@@ -145,6 +143,8 @@ def _parse(text: str) -> dict:
 
 
 async def ocr_document(data: bytes, mime: str, expected_item: str) -> dict:
+    from emergentintegrations.llm.chat import FileContentWithMimeType, LlmChat, UserMessage  # lazy: ~160 MB of SDKs
+
     suffix = ".pdf" if mime == "application/pdf" else ".jpg"
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
         tmp.write(data)
