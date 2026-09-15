@@ -188,7 +188,7 @@ async def dvf_status():
 async def dvf_ingest_trigger():
     if _ingest_running():
         return {"started": False, "message": "Ingestion déjà en cours"}
-    jobs.start(jobs.ingest_then_train, mongo_url, db_name, DVF_DEPARTMENTS, DVF_YEARS)
+    jobs.start(jobs.ingest_then_train, mongo_url, db_name, DVF_DEPARTMENTS, DVF_YEARS, 0.0)
     return {"started": True, "message": "Ingestion lancée en arrière-plan"}
 
 

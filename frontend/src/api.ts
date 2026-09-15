@@ -368,18 +368,31 @@ export interface ValidationReport extends ValidationAgg {
   }[];
 }
 
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-      ...(init?.headers ?? {}),
-    },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        ...(init?.headers ?? {}),
+      },
+    });
+  } catch {
+    throw new ApiError("Serveur injoignable. Vérifiez votre connexion et réessayez.", 0);
+  }
   if (res.status === 401 && authToken && !path.startsWith("/auth/")) onUnauthorized?.();
   if (!res.ok) {
-    let message = `Erreur ${res.status}`;
+    let message = res.status >= 500 ? `Le serveur est momentanément indisponible (erreur ${res.status}). Réessayez dans un instant.` : `Erreur ${res.status}`;
     try {
       const body = await res.json();
       if (typeof body?.detail === "string") message = body.detail;
@@ -387,7 +400,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       // keep default
     }
-    throw new Error(message);
+    throw new ApiError(message, res.status);
   }
   return res.json() as Promise<T>;
 }

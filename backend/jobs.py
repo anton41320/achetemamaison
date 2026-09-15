@@ -10,24 +10,38 @@ logger = logging.getLogger("jobs")
 _proc: Optional[multiprocessing.Process] = None
 
 
-def ingest_then_train(mongo_url: str, db_name: str, depts: list[str], years: list[int]) -> None:
+def _low_priority(delay_s: float) -> None:
+    """Let the API finish booting and pass health probes before saturating CPU; then run niced."""
+    import os
+    import time
+
+    time.sleep(delay_s)
+    try:
+        os.nice(10)
+    except OSError:
+        pass
+
+
+def ingest_then_train(mongo_url: str, db_name: str, depts: list[str], years: list[int], delay_s: float = 45.0) -> None:
     import communes
     import dvf_ingest
     import hedonic
     import ml_model
 
     logging.basicConfig(level=logging.INFO)
+    _low_priority(delay_s)
     communes.refresh_populations(mongo_url, db_name, depts)
     dvf_ingest.ingest_all(mongo_url, db_name, depts, years)
     hedonic.train(mongo_url, db_name)
     ml_model.train(mongo_url, db_name)
 
 
-def train_models(mongo_url: str, db_name: str, hedonic_missing: bool, ml_missing: bool) -> None:
+def train_models(mongo_url: str, db_name: str, hedonic_missing: bool, ml_missing: bool, delay_s: float = 30.0) -> None:
     import hedonic
     import ml_model
 
     logging.basicConfig(level=logging.INFO)
+    _low_priority(delay_s)
     if hedonic_missing:
         hedonic.train(mongo_url, db_name)
     if ml_missing:

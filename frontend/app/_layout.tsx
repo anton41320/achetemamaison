@@ -4,7 +4,7 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import { LogBox } from "react-native";
+import { LogBox, Pressable, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 
@@ -21,13 +21,29 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
   const { colors } = useTheme();
-  const { user, loading } = useSession();
+  const { user, loading, startupError, retry } = useSession();
 
   useEffect(() => {
     if (fontsReady && !loading) SplashScreen.hideAsync().catch(() => {});
   }, [fontsReady, loading]);
 
   if (!fontsReady || loading) return null;
+  if (startupError && !user) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 12, backgroundColor: colors.surface }} testID="startup-error">
+        <Text style={{ fontFamily: "PlusJakartaSans-SemiBold", fontSize: 18, color: colors.onSurface, textAlign: "center" }}>Serveur momentanément indisponible</Text>
+        <Text style={{ fontFamily: "PlusJakartaSans-Regular", fontSize: 14, color: colors.onSurfaceTertiary, textAlign: "center" }}>{startupError}</Text>
+        <Pressable
+          testID="startup-retry"
+          accessibilityRole="button"
+          onPress={retry}
+          style={{ minHeight: 48, paddingHorizontal: 24, borderRadius: 12, backgroundColor: colors.brandPrimary, alignItems: "center", justifyContent: "center", marginTop: 8 }}
+        >
+          <Text style={{ fontFamily: "PlusJakartaSans-SemiBold", fontSize: 15, color: colors.onBrandPrimary }}>Réessayer</Text>
+        </Pressable>
+      </View>
+    );
+  }
   const signedIn = !!user;
   return (
     <Stack

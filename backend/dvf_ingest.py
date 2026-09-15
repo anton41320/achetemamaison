@@ -43,9 +43,13 @@ def download(dept: str, year: int) -> Path:
         return path
     url = BASE_URL.format(year=year, dept=dept)
     logger.info("Downloading %s", url)
-    r = requests.get(url, timeout=180)
-    r.raise_for_status()
-    path.write_bytes(r.content)
+    with requests.get(url, timeout=180, stream=True) as r:
+        r.raise_for_status()
+        tmp = path.with_suffix(".part")
+        with open(tmp, "wb") as f:
+            for chunk in r.iter_content(chunk_size=1 << 20):
+                f.write(chunk)
+        tmp.replace(path)
     return path
 
 
