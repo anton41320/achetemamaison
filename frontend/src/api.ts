@@ -1,5 +1,19 @@
 const BASE = `${process.env.EXPO_PUBLIC_BACKEND_URL}/api`;
 
+// Session token (set by SessionProvider); sent as Bearer header, or as ?t= for links opened by the OS.
+let authToken: string | null = null;
+let onUnauthorized: (() => void) | null = null;
+export function setApiToken(token: string | null) {
+  authToken = token;
+}
+export function setUnauthorizedHandler(fn: (() => void) | null) {
+  onUnauthorized = fn;
+}
+export function withToken(url: string): string {
+  if (!authToken) return url;
+  return `${url}${url.includes("?") ? "&" : "?"}t=${encodeURIComponent(authToken)}`;
+}
+
 export type PropertyType = "appartement" | "maison";
 export type Condition = "a_renover" | "travaux" | "correct" | "bon" | "neuf_renove";
 export type ConfidenceLevel = "eleve" | "moyen" | "faible";
@@ -357,8 +371,13 @@ export interface ValidationReport extends ValidationAgg {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     ...init,
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+    headers: {
+      "Content-Type": "application/json",
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+      ...(init?.headers ?? {}),
+    },
   });
+  if (res.status === 401 && authToken && !path.startsWith("/auth/")) onUnauthorized?.();
   if (!res.ok) {
     let message = `Erreur ${res.status}`;
     try {
@@ -400,7 +419,7 @@ export async function uploadPhoto(propertyId: string, uri: string, name: string,
   } else {
     form.append("file", { uri, name, type } as any);
   }
-  const res = await fetch(`${BASE}/properties/${propertyId}/photos`, { method: "POST", body: form });
+  const res = await fetch(`${BASE}/properties/${propertyId}/photos`, { method: "POST", body: form, headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} });
   if (!res.ok) {
     let message = `Erreur ${res.status}`;
     try {
@@ -553,7 +572,7 @@ export async function uploadDocument(propertyId: string, itemKey: string, uri: s
     form.append("file", { uri, name, type } as any);
   }
   form.append("item_key", itemKey);
-  const res = await fetch(`${BASE}/properties/${propertyId}/documents`, { method: "POST", body: form });
+  const res = await fetch(`${BASE}/properties/${propertyId}/documents`, { method: "POST", body: form, headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} });
   if (!res.ok) {
     let message = `Erreur ${res.status}`;
     try {
@@ -579,7 +598,7 @@ export const api = {
   updateProperty: (id: string, body: PropertyUpdate) =>
     request<Property>(`/properties/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   trend: (id: string) => request<TrendReport>(`/properties/${id}/trend`),
-  reportUrl: (id: string) => `${BASE}/properties/${id}/report.pdf`,
+  reportUrl: (id: string) => withToken(`${BASE}/properties/${id}/report.pdf`),
   deleteProperty: (id: string) => request<{ deleted: boolean }>(`/properties/${id}`, { method: "DELETE" }),
   dvfStatus: () => request<DvfStatus>("/dvf/status"),
   dvfIngest: () => request<{ started: boolean; message: string }>("/dvf/ingest", { method: "POST" }),
@@ -609,14 +628,14 @@ export const api = {
   getTarget: (id: string) => request<TargetResponse>(`/properties/${id}/target`),
   putTarget: (id: string, target_price: number | null) =>
     request<TargetResponse>(`/properties/${id}/target`, { method: "PUT", body: JSON.stringify({ target_price }) }),
-  notaireUrl: (id: string) => `${BASE}/properties/${id}/notaire.pdf`,
+  notaireUrl: (id: string) => withToken(`${BASE}/properties/${id}/notaire.pdf`),
   alerts: () => request<AlertsResponse>("/alerts"),
   nextSteps: () => request<{ properties: PropertyNextSteps[] }>("/next-steps"),
   propertyNextSteps: (id: string) => request<PropertyNextSteps>(`/properties/${id}/next-steps`),
   packStatus: (id: string) => request<PackStatus>(`/properties/${id}/pack/status`),
   packCheckout: (id: string, return_url: string) =>
     request<{ order_id: string; checkout_url: string }>(`/properties/${id}/pack/checkout`, { method: "POST", body: JSON.stringify({ return_url }) }),
-  packPdfUrl: (id: string, style: ListingStyle) => `${BASE}/properties/${id}/pack.pdf?style=${style}`,
+  packPdfUrl: (id: string, style: ListingStyle) => withToken(`${BASE}/properties/${id}/pack.pdf?style=${style}`),
 };
 
 export interface HedonicModelInfo {
@@ -693,4 +712,31 @@ export const CONFIDENCE_LABELS: Record<ConfidenceLevel, string> = {
 export const TYPE_LABELS: Record<PropertyType, string> = {
   appartement: "Appartement",
   maison: "Maison",
+};
+
+// ---------------- Auth ----------------
+export interface AuthUser {
+  id: string;
+  email: string;
+  created_at: string;
+}
+export interface AuthResponse {
+  access_token: string;
+  token_type: "bearer";
+  user: AuthUser;
+}
+export const authApi = {
+  register: (email: string, password: string) =>
+    request<AuthResponse>("/auth/register", { method: "POST", body: JSON.stringify({ email, password }) }),
+  login: (email: string, password: string) =>
+    request<AuthResponse>("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
+  me: () => request<AuthUser>("/auth/me"),
+  changePassword: (current_password: string, new_password: string) =>
+    request<{ ok: boolean }>("/auth/change-password", { method: "POST", body: JSON.stringify({ current_password, new_password }) }),
+  forgotPassword: (email: string, origin: string) =>
+    request<{ ok: boolean; message: string }>("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email, origin }) }),
+  resetPassword: (token_or_code: string, new_password: string) =>
+    request<AuthResponse & { ok: boolean }>("/auth/reset-password", { method: "POST", body: JSON.stringify({ token_or_code, new_password }) }),
+  deleteAccount: (password: string) =>
+    request<{ ok: boolean }>("/auth/account", { method: "DELETE", body: JSON.stringify({ password }) }),
 };

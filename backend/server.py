@@ -11,12 +11,13 @@ from typing import Literal, Optional
 import requests
 from bson import ObjectId
 from dotenv import load_dotenv
-from fastapi import APIRouter, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import Response
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field
 from starlette.middleware.cors import CORSMiddleware
 
+import auth
 import communes
 import dossier as dossier_mod
 import dvf_ingest
@@ -51,7 +52,9 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[db_name]
 
 app = FastAPI(title="Estimo API")
-api = APIRouter(prefix="/api")
+api = APIRouter(prefix="/api")          # routes protégées (connexion requise)
+public = APIRouter(prefix="/api")       # routes publiques
+auth.init(db)
 
 
 def _prop_response(doc: dict) -> dict:
@@ -115,7 +118,7 @@ def _ingest_running() -> bool:
     return dvf_ingest.is_running() or jobs.is_running()
 
 
-@api.get("/health")
+@public.get("/health")
 async def health():
     return {"status": "ok", "app": "Estimo", "departments": DVF_DEPARTMENTS}
 
@@ -126,7 +129,7 @@ async def root_health():
     return {"status": "ok"}
 
 
-@api.get("/geocode")
+@public.get("/geocode")
 async def geocode(q: str = Query(min_length=3, max_length=200), limit: int = Query(default=6, le=10)):
     def _call():
         return requests.get(BAN_URL, params={"q": q, "limit": limit, "autocomplete": 1}, timeout=8)
@@ -150,7 +153,7 @@ async def geocode(q: str = Query(min_length=3, max_length=200), limit: int = Que
     return {"results": out, "covered_departments": DVF_DEPARTMENTS}
 
 
-@api.get("/dvf/status")
+@public.get("/dvf/status")
 async def dvf_status():
     meta = await db.dvf_meta.find_one({"_id": "status"}) or {}
     per_dept = await db.dvf_sales.aggregate([
@@ -181,7 +184,7 @@ async def dvf_status():
     }
 
 
-@api.post("/dvf/ingest", status_code=202)
+@public.post("/dvf/ingest", status_code=202)
 async def dvf_ingest_trigger():
     if _ingest_running():
         return {"started": False, "message": "Ingestion déjà en cours"}
@@ -189,7 +192,7 @@ async def dvf_ingest_trigger():
     return {"started": True, "message": "Ingestion lancée en arrière-plan"}
 
 
-@api.get("/models/hedonic")
+@public.get("/models/hedonic")
 async def hedonic_model():
     model = await hedonic.load_model(db)
     if not model:
@@ -197,7 +200,7 @@ async def hedonic_model():
     return {"available": True, "training": hedonic.is_training() or jobs.is_running(), **hedonic.model_summary(model)}
 
 
-@api.post("/models/hedonic/train", status_code=202)
+@public.post("/models/hedonic/train", status_code=202)
 async def hedonic_train():
     if hedonic.is_training():
         return {"started": False, "message": "Entraînement déjà en cours"}
@@ -205,7 +208,7 @@ async def hedonic_train():
     return {"started": True, "message": "Entraînement lancé en arrière-plan"}
 
 
-@api.get("/models/ml")
+@public.get("/models/ml")
 async def ml_meta_route():
     meta = await ml_model.load_meta(db)
     if not meta:
@@ -217,7 +220,7 @@ async def ml_meta_route():
     return {"available": True, "training": ml_model.is_training() or jobs.is_running(), **meta}
 
 
-@api.post("/models/ml/train", status_code=202)
+@public.post("/models/ml/train", status_code=202)
 async def ml_train():
     if ml_model.is_training():
         return {"started": False, "message": "Entraînement déjà en cours"}
@@ -225,12 +228,12 @@ async def ml_train():
     return {"started": True, "message": "Entraînement ML lancé en arrière-plan (≈ 1 min)"}
 
 
-@api.get("/settings/weights")
+@public.get("/settings/weights")
 async def get_weights():
     return (await _get_weights()).model_dump()
 
 
-@api.put("/settings/weights")
+@public.put("/settings/weights")
 async def put_weights(w: Weights):
     if w.comparables + w.hedonic + w.market + w.ml <= 0:
         raise HTTPException(status_code=422, detail="Au moins un poids doit être supérieur à 0")
@@ -240,7 +243,7 @@ async def put_weights(w: Weights):
 
 @api.get("/properties/{pid}/final")
 async def property_final(pid: str):
-    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()})
     if not doc or not doc.get("estimation"):
         raise HTTPException(status_code=404, detail="Bien introuvable")
     prop = PropertyDoc.from_mongo(doc)
@@ -249,7 +252,7 @@ async def property_final(pid: str):
 
 @api.get("/properties/{pid}/market-signal")
 async def property_market_signal(pid: str):
-    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()})
     if not doc:
         raise HTTPException(status_code=404, detail="Bien introuvable")
     return await market_signal(db, lat=doc["lat"], lon=doc["lon"], code_commune=doc["code_commune"],
@@ -274,7 +277,7 @@ async def _target_payload(doc: dict) -> dict:
 
 @api.get("/properties/{pid}/target")
 async def get_target(pid: str):
-    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()})
     if not doc:
         raise HTTPException(status_code=404, detail="Bien introuvable")
     return await _target_payload(doc)
@@ -282,7 +285,7 @@ async def get_target(pid: str):
 
 @api.put("/properties/{pid}/target")
 async def put_target(pid: str, body: TargetPriceIn):
-    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()})
     if not doc:
         raise HTTPException(status_code=404, detail="Bien introuvable")
     await db.properties.update_one({"_id": doc["_id"]}, {"$set": {"target_price": body.target_price, "updated_at": utcnow()}})
@@ -294,7 +297,7 @@ async def put_target(pid: str, body: TargetPriceIn):
 @api.get("/alerts")
 async def alerts(horizon_days: int = Query(default=90, ge=1, le=365)):
     """Expiry reminders: for each (property, checklist item) the most recent validated document with an expiry date."""
-    props = {str(p["_id"]): p for p in await db.properties.find({"deleted_at": None}, {"address_label": 1}).to_list(500)}
+    props = {str(p["_id"]): p for p in await db.properties.find({"deleted_at": None, **auth.own()}, {"address_label": 1}).to_list(500)}
     docs = await db.documents.find({"deleted_at": None, "validated": True, "expiry_date": {"$ne": None},
                                     "property_id": {"$in": list(props)}}).to_list(2000)
     latest: dict[tuple[str, str], dict] = {}
@@ -367,13 +370,13 @@ async def _next_steps_for(doc: dict) -> dict:
 
 @api.get("/next-steps")
 async def next_steps():
-    docs = await db.properties.find({"deleted_at": None}).sort("created_at", -1).to_list(200)
+    docs = await db.properties.find({"deleted_at": None, **auth.own()}).sort("created_at", -1).to_list(200)
     return {"properties": [await _next_steps_for(d) for d in docs]}
 
 
 @api.get("/properties/{pid}/next-steps")
 async def property_next_steps(pid: str):
-    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()})
     if not doc:
         raise HTTPException(status_code=404, detail="Bien introuvable")
     return await _next_steps_for(doc)
@@ -387,7 +390,7 @@ async def list_listings(pid: str):
 
 @api.post("/properties/{pid}/listings", status_code=201)
 async def create_listing(pid: str, req: ListingRequest):
-    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()})
     if not doc:
         raise HTTPException(status_code=404, detail="Bien introuvable")
     prop = PropertyDoc.from_mongo(doc)
@@ -397,7 +400,7 @@ async def create_listing(pid: str, req: ListingRequest):
         logger.exception("Listing generation failed")
         raise HTTPException(status_code=502, detail=f"Génération indisponible : {exc}")
     listing = ListingDoc(property_id=pid, style=req.style, extra_facts=req.extra_facts, **result)
-    res = await db.listings.insert_one({**listing.to_mongo(), "deleted_at": None})
+    res = await db.listings.insert_one({**listing.to_mongo(), "deleted_at": None, **auth.own()})
     saved = await db.listings.find_one({"_id": res.inserted_id})
     return ListingDoc.from_mongo(saved).model_dump(mode="json")
 
@@ -418,7 +421,7 @@ async def list_photos(pid: str):
 
 @api.post("/properties/{pid}/photos", status_code=201)
 async def upload_photo(pid: str, file: UploadFile = File(...)):
-    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()})
     if not doc:
         raise HTTPException(status_code=404, detail="Bien introuvable")
     raw = await file.read()
@@ -434,14 +437,14 @@ async def upload_photo(pid: str, file: UploadFile = File(...)):
     except storage.StorageError as exc:
         raise HTTPException(status_code=exc.status if exc.status in (402, 503) else 502, detail=str(exc))
     photo = PhotoDoc(property_id=pid, original_path=path, original_mime=mime, original_size=len(data))
-    res = await db.photos.insert_one({**photo.to_mongo(), "deleted_at": None, "retouched_path": None})
+    res = await db.photos.insert_one({**photo.to_mongo(), "deleted_at": None, "retouched_path": None, **auth.own()})
     saved = await db.photos.find_one({"_id": res.inserted_id})
     return PhotoDoc.from_mongo(saved).model_dump(mode="json")
 
 
 @api.post("/photos/{photo_id}/retouch")
 async def retouch_photo(photo_id: str):
-    doc = await db.photos.find_one({"_id": _oid(photo_id), "deleted_at": None})
+    doc = await db.photos.find_one({"_id": _oid(photo_id), "deleted_at": None, **auth.own()})
     if not doc:
         raise HTTPException(status_code=404, detail="Photo introuvable")
     if doc.get("status") == "processing":
@@ -498,21 +501,21 @@ async def _pack_status(pid: str) -> dict:
 
 @api.get("/properties/{pid}/pack/status")
 async def pack_status(pid: str):
-    if not await db.properties.find_one({"_id": _oid(pid), "deleted_at": None}, {"_id": 1}):
+    if not await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()}, {"_id": 1}):
         raise HTTPException(status_code=404, detail="Bien introuvable")
     return await _pack_status(pid)
 
 
 @api.post("/properties/{pid}/pack/checkout", status_code=201)
 async def pack_checkout(pid: str, body: CheckoutIn):
-    if not await db.properties.find_one({"_id": _oid(pid), "deleted_at": None}, {"_id": 1}):
+    if not await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()}, {"_id": 1}):
         raise HTTPException(status_code=404, detail="Bien introuvable")
     if not body.return_url.startswith(("http://", "https://")):
         raise HTTPException(status_code=422, detail="URL de retour invalide")
     if await pack.is_unlocked(db, pid):
         raise HTTPException(status_code=409, detail="Pack déjà débloqué pour ce bien")
     try:
-        return await pack.create_checkout(db, pid, body.return_url)
+        return await pack.create_checkout(db, pid, body.return_url, auth.owner_id())
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
     except Exception as exc:  # noqa: BLE001
@@ -520,7 +523,7 @@ async def pack_checkout(pid: str, body: CheckoutIn):
         raise HTTPException(status_code=502, detail=f"Paiement indisponible : {str(exc)[:160]}")
 
 
-@api.post("/stripe/webhook")
+@public.post("/stripe/webhook")
 async def stripe_webhook(request: Request):
     try:
         return await pack.handle_webhook(db, await request.body(), request.headers.get("stripe-signature"))
@@ -530,7 +533,7 @@ async def stripe_webhook(request: Request):
 
 @api.get("/properties/{pid}/pack.pdf")
 async def pack_pdf(pid: str, style: str = Query(default="sobre"), include_price: bool = Query(default=True)):
-    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()})
     if not doc:
         raise HTTPException(status_code=404, detail="Bien introuvable")
     if not await pack.is_unlocked(db, pid):
@@ -543,7 +546,7 @@ async def pack_pdf(pid: str, style: str = Query(default="sobre"), include_price:
         except Exception as exc:  # noqa: BLE001
             raise HTTPException(status_code=502, detail=f"Génération de l'annonce indisponible : {str(exc)[:160]}")
         listing = ListingDoc(property_id=pid, style=style, extra_facts=None, **result)
-        await db.listings.insert_one({**listing.to_mongo(), "deleted_at": None})
+        await db.listings.insert_one({**listing.to_mongo(), "deleted_at": None, **auth.own()})
         listing = listing.model_dump()
     photos = await _property_photos(pid)
     final = blend(prop.estimation, await _get_weights()) if prop.estimation else None
@@ -553,7 +556,7 @@ async def pack_pdf(pid: str, style: str = Query(default="sobre"), include_price:
                     headers={"Content-Disposition": f'inline; filename="estimo-annonce-{pid[-6:]}.pdf"'})
 
 
-@api.get("/files/{path:path}")
+@public.get("/files/{path:path}")
 async def get_file(path: str):
     known = await db.photos.find_one({"$or": [{"original_path": path}, {"retouched_path": path}]}, {"_id": 1})
     if not known:
@@ -587,7 +590,7 @@ def _doc_out(d: dict) -> dict:
 
 
 async def _dossier(pid: str) -> dict:
-    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()})
     if not doc:
         raise HTTPException(status_code=404, detail="Bien introuvable")
     prop = PropertyDoc.from_mongo(doc)
@@ -629,7 +632,7 @@ async def get_dossier(pid: str):
 
 @api.get("/properties/{pid}/notaire.pdf")
 async def notaire_export(pid: str):
-    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()})
     if not doc:
         raise HTTPException(status_code=404, detail="Bien introuvable")
     prop = PropertyDoc.from_mongo(doc)
@@ -667,7 +670,7 @@ async def override_item(pid: str, item_key: str, body: ChecklistOverride):
 async def upload_document(pid: str, file: UploadFile = File(...), item_key: str = Form(...)):
     if item_key not in dossier_mod.ITEMS and item_key != "autre":
         raise HTTPException(status_code=422, detail="Élément de checklist inconnu")
-    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()})
     if not doc:
         raise HTTPException(status_code=404, detail="Bien introuvable")
     raw = await file.read()
@@ -689,7 +692,7 @@ async def upload_document(pid: str, file: UploadFile = File(...), item_key: str 
         raise HTTPException(status_code=exc.status if exc.status in (402, 503) else 502, detail=str(exc))
     document = DocumentDoc(property_id=pid, item_key=item_key, file_path=path, mime=mime,
                            filename=file.filename or f"document.{ext}", size=len(data))
-    res = await db.documents.insert_one({**document.to_mongo(), "deleted_at": None, "ocr": None, "validated_fields": None,
+    res = await db.documents.insert_one({**document.to_mongo(), "deleted_at": None, "ocr": None, "validated_fields": None, **auth.own(),
                                          "expiry_date": None})
     try:
         ocr = await dossier_mod.ocr_document(data, mime, item_key)
@@ -704,7 +707,7 @@ async def upload_document(pid: str, file: UploadFile = File(...), item_key: str 
 
 @api.get("/documents/{did}")
 async def get_document(did: str):
-    d = await db.documents.find_one({"_id": _oid(did), "deleted_at": None})
+    d = await db.documents.find_one({"_id": _oid(did), "deleted_at": None, **auth.own()})
     if not d:
         raise HTTPException(status_code=404, detail="Document introuvable")
     return _doc_out(d)
@@ -712,7 +715,7 @@ async def get_document(did: str):
 
 @api.post("/documents/{did}/reocr")
 async def reocr_document(did: str):
-    d = await db.documents.find_one({"_id": _oid(did), "deleted_at": None})
+    d = await db.documents.find_one({"_id": _oid(did), "deleted_at": None, **auth.own()})
     if not d:
         raise HTTPException(status_code=404, detail="Document introuvable")
     try:
@@ -728,7 +731,7 @@ async def reocr_document(did: str):
 
 @api.put("/documents/{did}/validate")
 async def validate_document(did: str, body: DocumentValidate):
-    d = await db.documents.find_one({"_id": _oid(did), "deleted_at": None})
+    d = await db.documents.find_one({"_id": _oid(did), "deleted_at": None, **auth.own()})
     if not d:
         raise HTTPException(status_code=404, detail="Document introuvable")
     fields = body.fields.model_dump()
@@ -750,7 +753,7 @@ async def delete_document(did: str):
 
 @api.get("/properties/{pid}/trend")
 async def property_trend(pid: str):
-    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()})
     if not doc:
         raise HTTPException(status_code=404, detail="Bien introuvable")
     ptype = doc["property_type"]
@@ -802,7 +805,7 @@ async def _property_photos(pid: str, limit: int = 30) -> list[tuple[bytes, bool]
 
 @api.get("/properties/{pid}/report.pdf")
 async def property_report(pid: str, photos: bool = Query(default=True)):
-    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()})
     if not doc:
         raise HTTPException(status_code=404, detail="Bien introuvable")
     prop = PropertyDoc.from_mongo(doc)
@@ -821,7 +824,7 @@ async def create_property(payload: PropertyIn):
         payload.land_surface = None
     est = await _run_estimation(payload)
     doc = PropertyDoc(**payload.model_dump(), estimation=est)
-    res = await db.properties.insert_one(doc.to_mongo())
+    res = await db.properties.insert_one({**doc.to_mongo(), **auth.own()})
     await db.estimations.insert_one({"property_id": res.inserted_id, **est.model_dump()})
     saved = await db.properties.find_one({"_id": res.inserted_id})
     return _prop_response(saved)
@@ -829,13 +832,13 @@ async def create_property(payload: PropertyIn):
 
 @api.get("/properties")
 async def list_properties():
-    docs = await db.properties.find({"deleted_at": None}).sort("created_at", -1).to_list(200)
+    docs = await db.properties.find({"deleted_at": None, **auth.own()}).sort("created_at", -1).to_list(200)
     return [_prop_response(d) for d in docs]
 
 
 @api.get("/properties/{pid}")
 async def get_property(pid: str):
-    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()})
     if not doc:
         raise HTTPException(status_code=404, detail="Bien introuvable")
     if (doc.get("estimation") or {}).get("method") != METHOD_VERSION:
@@ -853,7 +856,7 @@ async def get_property(pid: str):
 
 @api.put("/properties/{pid}")
 async def update_property(pid: str, body: PropertyUpdate):
-    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()})
     if not doc:
         raise HTTPException(status_code=404, detail="Bien introuvable")
     prop = PropertyDoc.from_mongo(doc)
@@ -872,7 +875,7 @@ async def update_property(pid: str, body: PropertyUpdate):
 
 @api.post("/properties/{pid}/reestimate")
 async def reestimate_property(pid: str):
-    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None})
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()})
     if not doc:
         raise HTTPException(status_code=404, detail="Bien introuvable")
     prop = PropertyDoc.from_mongo(doc)
@@ -885,26 +888,28 @@ async def reestimate_property(pid: str):
 
 @api.delete("/properties/{pid}")
 async def delete_property(pid: str):
-    res = await db.properties.update_one({"_id": _oid(pid), "deleted_at": None},
+    res = await db.properties.update_one({"_id": _oid(pid), "deleted_at": None, **auth.own()},
                                          {"$set": {"deleted_at": utcnow(), "updated_at": utcnow()}})
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="Bien introuvable")
     return {"deleted": True}
 
 
-@api.post("/estimate/preview")
+@public.post("/estimate/preview")
 async def estimate_preview(payload: PropertyIn):
     est = await _run_estimation(payload)
     return est.model_dump(mode="json")
 
 
-@api.get("/validation")
+@public.get("/validation")
 async def validation(n: int = Query(default=40, ge=5, le=150)):
     report = await run_validation(db, n)
     return report
 
 
-app.include_router(api)
+app.include_router(public)
+app.include_router(auth.router)
+app.include_router(api, dependencies=[Depends(auth.require_user)])
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
@@ -916,6 +921,7 @@ async def startup():
         await asyncio.to_thread(storage.init_storage)
     except Exception as exc:  # noqa: BLE001
         logger.warning("Object storage init failed: %s", exc)
+    await auth.ensure_indexes()
     count = await db.dvf_sales.estimated_document_count()
     if await db.communes.estimated_document_count() == 0:
         logger.info("Commune populations missing: fetching from geo.api.gouv.fr")

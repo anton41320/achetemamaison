@@ -1,0 +1,34 @@
+{
+  "summary": "Auth (email+password) + onboarding fully verified end-to-end. Backend: 29/29 pytest tests pass in /app/backend/tests/test_estimo_auth.py — register (201 with duplicate 409, short password 422, invalid email 422), login (seed OK, wrong password/unknown email both 401 with 'Email ou mot de passe incorrect'), /auth/me (401 without / tampered, OK with seed token), scoping (properties 401 without token, 5 for seed, [] for throwaway, throwaway 404 on seed property, POST/GET/DELETE on throwaway's own property visible only to that account and invisible to seed), PDF report.pdf (401 without token, 200 with Authorization, 200 with ?t=), forgot-password (generic 200 for known+unknown email, http:// origin 422), reset-password with bogus code '000000' -> 400, change-password wrong->400 correct->200 then login with new password works, delete /auth/account wrong password->400 correct->200 then /auth/me->401, public routes /api/health, /api/geocode, /api/dvf/status, /api/models/hedonic, POST /api/estimate/preview still open. Frontend (mobile 390x844): signed-out '/' shows welcome-screen with 3 slides welcome-slide-{estimation,annonce,dossier} and welcome-signup-button/welcome-signin-button; sign-in with wrong password shows signin-screen-error, sign-in with delivered@resend.dev/Estimo2026! lands on home-screen with 20 property cards; home-account-button opens account-screen showing seed email, account-signout returns to welcome-screen; sign-up flow: mismatched confirm shows signup-confirm-error, creating qa-web-<random>@gmail.com/Motdepasse1 lands on home-screen with home-empty-state; account-delete -> account-delete-password -> account-delete-confirm returns to welcome-screen; forgot-password screen shows forgot-screen-success and forgot-goto-reset then reset-screen with reset-code field; session persists on reload; regression signed-in as seed: /property/6aa02db9efd8f90925a5a758 renders estimation '174k€ – 218k€ · Valeur centrale 196 000 €', share-report-button uses api.reportUrl which appends ?t=<token> via withToken() (verified in /app/frontend/src/api.ts:12-15 and 601), /property/6aa02db9efd8f90925a5a758/pack shows pack-unlocked, /data renders 110 213 ventes. Seed account was NOT deleted and its password was NOT changed. Throwaway accounts were cleaned up.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "shadow* style props", "issue": "React Native Web deprecation warning still emitted at runtime: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' Not blocking; pre-existing from iteration 15. Reference: /app/frontend/app/index.tsx:154-158 fab style."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_estimo_auth.py",
+    "/app/test_reports/pytest/auth_iter16.xml"
+  ],
+  "action_items": [
+    "Optional: migrate remaining shadow* style props to boxShadow (or a web-only shim) to silence the RN-Web deprecation warning."
+  ],
+  "critical_code_review_comments": [
+    "/app/backend/auth.py: Argon2 via pwdlib (recommended preset), JWT HS256 30d, bearer OR ?t= query for PDFs, timing-safe login (dummy hash when user missing), unique email index, TTL index on password_resets.expires_at, migration attributes ownerless docs to first account.",
+    "/app/backend/auth.py forgot_password: no user enumeration (same 200 message), max 3 resets per 5 min, origin must be https with non-empty netloc (http rejected 422), sha256-digest of token/code stored, 15-min expiration.",
+    "/app/backend/auth.py delete_account: soft-deletes owned business collections then deletes user + resets — matches App Store deletion requirement.",
+    "/app/frontend/src/api.ts:12-15 withToken() correctly appends ?t=<encoded token> to PDF/link URLs when a session token is set; used by reportUrl (601), notaireUrl (631), packPdfUrl (638).",
+    "/app/frontend/app/_layout.tsx uses expo-router Stack.Protected via SessionProvider to gate authenticated routes (home, property, data, account) — verified visually: unauthenticated '/' renders welcome-screen, authenticated '/' renders home-screen.",
+    "AuthShell component wires error/success banners with derived testIDs `${testID}-error` and `${testID}-success` — matches the requested selectors signin-screen-error, signup-screen-error, forgot-screen-success."
+  ],
+  "updated_files": ["/app/backend/tests/test_estimo_auth.py"],
+  "success_rate": {"backend": "100% (29/29)", "frontend": "100% (all 15 flows)"},
+  "seed_data_creation": "Session-scoped throwaway account created (qa-estimo-<rand>@gmail.com) and deleted at end of pytest run. change_password_and_delete test creates and destroys its own account. UI test created qa-web-<rand>@gmail.com and deleted it via account-delete flow. Seed account delivered@resend.dev untouched (password unchanged, account not deleted).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Auth is fully working. Reset emails are sent to Resend's sink address delivered@resend.dev so the 6-digit code cannot be read back — only the bogus-code negative path is exercised. Test file: /app/backend/tests/test_estimo_auth.py. To recreate a throwaway account for regression: POST /api/auth/register with a gmail.com address (Pydantic EmailStr rejects .test/.example TLDs). PDF URLs work with either Authorization header OR ?t=<token> query. Frontend testIDs of note: welcome-screen, welcome-slide-{estimation,annonce,dossier}, welcome-signup-button, welcome-signin-button, signin-screen(+-error/-forgot-link/-signup-link), signin-email, signin-password, signin-submit, signup-screen(+-error), signup-email/password/confirm(+-error), signup-submit, forgot-screen(+-success), forgot-email, forgot-submit, forgot-goto-reset, reset-screen, reset-code, reset-password, reset-confirm, reset-submit, home-screen, home-account-button, home-data-button, home-empty-state, home-empty-cta, home-fab-new, home-error-detail, home-retry-button, account-screen, account-current-password/new-password/change-password, account-signout, account-delete, account-delete-password/confirm/cancel, share-report-button, pack-unlocked.",
+  "rca_of_issue": ""
+}

@@ -9,6 +9,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 
 import { ErrorBoundary } from "@/src/components/error-boundary";
+import { SessionProvider, useSession } from "@/src/auth";
 import { queryClient } from "@/src/query-client";
 import { useTheme } from "@/src/theme";
 
@@ -18,20 +19,56 @@ LogBox.ignoreAllLogs(true);
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-export default function RootLayout() {
+function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
   const { colors } = useTheme();
+  const { user, loading } = useSession();
+
+  useEffect(() => {
+    if (fontsReady && !loading) SplashScreen.hideAsync().catch(() => {});
+  }, [fontsReady, loading]);
+
+  if (!fontsReady || loading) return null;
+  const signedIn = !!user;
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.surface },
+        animation: "slide_from_right",
+      }}
+    >
+      <Stack.Protected guard={!signedIn}>
+        <Stack.Screen name="welcome" />
+        <Stack.Screen name="sign-in" />
+        <Stack.Screen name="sign-up" />
+        <Stack.Screen name="forgot-password" />
+      </Stack.Protected>
+      <Stack.Protected guard={signedIn}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="new" />
+        <Stack.Screen name="data" />
+        <Stack.Screen name="account" />
+        <Stack.Screen name="property/[id]/index" />
+        <Stack.Screen name="property/[id]/edit" />
+        <Stack.Screen name="property/[id]/comparables" />
+        <Stack.Screen name="property/[id]/dossier" />
+        <Stack.Screen name="property/[id]/listing" />
+        <Stack.Screen name="property/[id]/photos" />
+        <Stack.Screen name="property/[id]/pack" />
+        <Stack.Screen name="property/[id]/document/[docId]" />
+      </Stack.Protected>
+      <Stack.Screen name="reset-password" />
+    </Stack>
+  );
+}
+
+export default function RootLayout() {
   const [loaded, error] = useFonts({
     "PlusJakartaSans-Regular": require("../assets/fonts/PlusJakartaSans-Regular.ttf"),
     "PlusJakartaSans-Medium": require("../assets/fonts/PlusJakartaSans-Medium.ttf"),
     "PlusJakartaSans-SemiBold": require("../assets/fonts/PlusJakartaSans-SemiBold.ttf"),
     "PlusJakartaSans-Bold": require("../assets/fonts/PlusJakartaSans-Bold.ttf"),
   });
-
-  useEffect(() => {
-    if (loaded || error) SplashScreen.hideAsync().catch(() => {});
-  }, [loaded, error]);
-
-  if (!loaded && !error) return null;
 
   // One app level ErrorBoundary; a render crash shows a reload screen
   // instead of a blank app.
@@ -40,14 +77,10 @@ export default function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <KeyboardProvider>
           <QueryClientProvider client={queryClient}>
-            <StatusBar style="dark" />
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: colors.surface },
-                animation: "slide_from_right",
-              }}
-            />
+            <SessionProvider>
+              <StatusBar style="dark" />
+              <RootNavigator fontsReady={!!(loaded || error)} />
+            </SessionProvider>
           </QueryClientProvider>
         </KeyboardProvider>
       </GestureHandlerRootView>

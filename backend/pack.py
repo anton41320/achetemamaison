@@ -87,7 +87,7 @@ async def is_unlocked(db, pid: str) -> bool:
     return await db.orders.find_one({"property_id": pid, "status": "paid"}, {"_id": 1}) is not None
 
 
-async def create_checkout(db, pid: str, return_url: str) -> dict:
+async def create_checkout(db, pid: str, return_url: str, owner_id: Optional[str] = None) -> dict:
     if not stripe_ready():
         raise RuntimeError("Paiement indisponible : clé Stripe absente")
     order_id = str(ObjectId())
@@ -105,7 +105,7 @@ async def create_checkout(db, pid: str, return_url: str) -> dict:
         metadata={"order_id": order_id, "property_id": pid},
     )
     await db.orders.insert_one({"_id": ObjectId(order_id), "property_id": pid, "amount": PACK_PRICE_CENTS, "currency": PACK_CURRENCY,
-                                "status": "pending", "return_url": return_url, "session_id": session.id, "created_at": utcnow()})
+                                "status": "pending", "return_url": return_url, "session_id": session.id, "owner_id": owner_id, "created_at": utcnow()})
     return {"order_id": order_id, "checkout_url": session.url}
 
 

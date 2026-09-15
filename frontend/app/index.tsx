@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { useFocusEffect, useRouter } from "expo-router";
-import { DatabaseIcon, PlusIcon } from "phosphor-react-native";
+import { DatabaseIcon, PlusIcon, UserCircleIcon } from "phosphor-react-native";
 import { useCallback } from "react";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
@@ -51,15 +51,26 @@ export default function HomeScreen() {
         title="Mes biens"
         subtitle="Estimo · Estimations DVF · Centre-Val de Loire"
         right={
-          <Pressable
-            testID="home-data-button"
-            accessibilityRole="button"
-            accessibilityLabel="Données DVF"
-            onPress={() => router.push("/data")}
-            style={styles.iconBtn}
-          >
-            <DatabaseIcon size={20} color={colors.onSurface} />
-          </Pressable>
+          <View style={{ flexDirection: "row", gap: spacing.sm }}>
+            <Pressable
+              testID="home-data-button"
+              accessibilityRole="button"
+              accessibilityLabel="Données DVF"
+              onPress={() => router.push("/data")}
+              style={styles.iconBtn}
+            >
+              <DatabaseIcon size={20} color={colors.onSurface} />
+            </Pressable>
+            <Pressable
+              testID="home-account-button"
+              accessibilityRole="button"
+              accessibilityLabel="Mon compte"
+              onPress={() => router.push("/account")}
+              style={styles.iconBtn}
+            >
+              <UserCircleIcon size={22} color={colors.onSurface} />
+            </Pressable>
+          </View>
         }
       />
 
