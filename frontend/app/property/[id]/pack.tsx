@@ -7,6 +7,7 @@ import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, Text, View
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { LISTING_STYLES, ListingStyle, api } from "@/src/api";
+import { PackPreview } from "@/src/components/PackPreview";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { ScreenHeader } from "@/src/components/ScreenHeader";
 import { ShareReportButton } from "@/src/components/ShareReportButton";
@@ -149,6 +150,7 @@ export default function PackScreen() {
                 Restent gratuits : l’estimation détaillée, le prix cible, la checklist du dossier de vente (saisie manuelle) et l’export notaire.
               </Text>
             </View>
+            <PackPreview />
             {polling ? (
               <View style={styles.warn} testID="pack-polling">
                 <ActivityIndicator color={colors.warning} />

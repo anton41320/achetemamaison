@@ -376,33 +376,60 @@ export class ApiError extends Error {
   }
 }
 
+// Silent retry on transient outages (Cloudflare 520-524, 502/503/504, network failure) so brief server
+// restarts stay invisible. Reads are always retried; writes only when the origin was demonstrably not
+// reached (connection failed, 503, 521-523) to avoid duplicating a request the server may have handled.
+const RETRY_DELAYS_MS = [700, 1800];
+const READ_RETRY_STATUSES = new Set([500, 502, 503, 504, 520, 521, 522, 523, 524]);
+const WRITE_RETRY_STATUSES = new Set([503, 521, 522, 523]);
+const NO_RETRY_PATHS = ["/pack/checkout"];
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+function shouldRetry(path: string, method: string, status: number, attempt: number): boolean {
+  if (attempt >= RETRY_DELAYS_MS.length) return false;
+  if (NO_RETRY_PATHS.some((p) => path.includes(p))) return false;
+  const isRead = method === "GET" || method === "HEAD";
+  if (status === 0) return true; // fetch threw: nothing reached the server
+  return isRead ? READ_RETRY_STATUSES.has(status) : WRITE_RETRY_STATUSES.has(status);
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  let res: Response;
-  try {
-    res = await fetch(`${BASE}${path}`, {
-      ...init,
-      headers: {
-        "Content-Type": "application/json",
-        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-        ...(init?.headers ?? {}),
-      },
-    });
-  } catch {
-    throw new ApiError("Serveur injoignable. Vérifiez votre connexion et réessayez.", 0);
-  }
-  if (res.status === 401 && authToken && !path.startsWith("/auth/")) onUnauthorized?.();
-  if (!res.ok) {
-    let message = res.status >= 500 ? `Le serveur est momentanément indisponible (erreur ${res.status}). Réessayez dans un instant.` : `Erreur ${res.status}`;
+  const method = (init?.method ?? "GET").toUpperCase();
+  for (let attempt = 0; ; attempt++) {
+    let res: Response | null = null;
     try {
-      const body = await res.json();
-      if (typeof body?.detail === "string") message = body.detail;
-      else if (Array.isArray(body?.detail)) message = body.detail.map((d: any) => d.msg).join(", ");
+      res = await fetch(`${BASE}${path}`, {
+        ...init,
+        headers: {
+          "Content-Type": "application/json",
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+          ...(init?.headers ?? {}),
+        },
+      });
     } catch {
-      // keep default
+      res = null;
     }
-    throw new ApiError(message, res.status);
+    const status = res?.status ?? 0;
+    if ((res === null || status >= 500) && shouldRetry(path, method, status, attempt)) {
+      await sleep(RETRY_DELAYS_MS[attempt]);
+      continue;
+    }
+    if (res === null) throw new ApiError("Serveur injoignable. Vérifiez votre connexion et réessayez.", 0);
+    if (res.status === 401 && authToken && !path.startsWith("/auth/")) onUnauthorized?.();
+    if (!res.ok) {
+      let message = res.status >= 500 ? `Le serveur est momentanément indisponible (erreur ${res.status}). Réessayez dans un instant.` : `Erreur ${res.status}`;
+      try {
+        const body = await res.json();
+        if (typeof body?.detail === "string") message = body.detail;
+        else if (Array.isArray(body?.detail)) message = body.detail.map((d: any) => d.msg).join(", ");
+      } catch {
+        // keep default
+      }
+      throw new ApiError(message, res.status);
+    }
+    return res.json() as Promise<T>;
   }
-  return res.json() as Promise<T>;
 }
 
 export interface Photo {
