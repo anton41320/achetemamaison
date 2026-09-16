@@ -1,0 +1,40 @@
+{
+  "summary": "Iteration 18 — rebranding « Achètes ma maison » + hard paywall on every AI tool verified end-to-end. BACKEND (8/8 pytest, /app/backend/tests/test_iter18_paywall.py): (1) POST /api/auth/login delivered@resend.dev/Estimo2026! -> 200 with token; (2) GET /api/health -> app == 'Achètes ma maison'; (3) locked property 6aa3f68d440f04920cdaffde -> GET /pack/status.unlocked=false, free_retouches=0, price_cents=4900; (4) POST /listings -> 402 detail starts with 'Pack annonce premium requis (49 €)'; (5) POST /documents (jpeg + item_key=dpe) -> 201 with ocr_status='locked' and status='a_verifier', then POST /documents/{did}/reocr -> 402 (same paywall detail), then DELETE /documents/{did} -> 200 {deleted:true}; (6) POST /properties/{id}/photos (uploaded small jpeg) then POST /photos/{id}/retouch -> 402 with paywall detail, then DELETE /photos/{id} -> 200; (7) GET /report.pdf on locked property -> 200 application/pdf, %PDF- magic, page-1 extracted text contains 'Achètes ma maison' + 'Rapport d’estimation', page-1 has ≥1 embedded image (logo), no 'Estimo' string anywhere in extracted text; (8) GET /notaire.pdf -> 200 application/pdf; regression: found an unlocked property in DB, GET /pack.pdf -> 200 application/pdf. Never called POST /pack/checkout (Stripe LIVE). FRONTEND (web 390x844, Playwright): /welcome renders welcome-screen + welcome-logo + 'Achètes ma maison' text + welcome-signin-button; /sign-in renders signin-screen + signin-screen-logo; signin-submit backgroundColor computes to rgb(22, 86, 201) (theme brand blue); login delivered@resend.dev/Estimo2026! -> home-screen with home-logo, subtitle contains 'Achètes ma maison ·'; /property/6aa3f68d440f04920cdaffde/listing shows listing-premium-gate and listing-generate-button label is exactly 'Débloquer le Pack premium · 49 €' and taps navigate to pack-screen; /photos shows photos-premium-gate; /pack shows pack-screen with pack-offer (49 €) and the feature list contains 'Lecture automatique de vos documents' + 'Annonce rédigée par l’IA' + 'Retouches photo IA' + 'PDF d’annonce premium' (pack-pay-button NOT clicked, Stripe LIVE); /dossier loads without startup-error. Console errors filtered (shadow/pointerEvents ignored): 0 across /welcome, /sign-in, /, /property/*/listing, /photos, /dossier, /pack. Both rebranding + hard-paywall requirements are met.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "shadow* style props", "issue": "React Native Web deprecation warning still emitted at runtime for 'shadow*' style props (pre-existing from iter 15–17, non-blocking). Reference: /app/frontend/app/index.tsx fab style."},
+      {"component": "pointerEvents prop", "issue": "'props.pointerEvents is deprecated. Use style.pointerEvents' warning still emitted, notably from /app/frontend/app/property/[id]/listing.tsx:136 <View style={styles.sparkle} pointerEvents=\"none\"> (non-blocking)."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter18_paywall.py",
+    "/app/test_reports/pytest/iter18_paywall.xml"
+  ],
+  "action_items": [
+    "Optional: migrate remaining 'shadow*' style props to boxShadow (web) via Platform.select to silence RN-Web deprecation warning.",
+    "Optional: replace remaining 'pointerEvents' props (e.g. /app/frontend/app/property/[id]/listing.tsx:136) with style.pointerEvents."
+  ],
+  "critical_code_review_comments": [
+    "/app/backend/pack.py: FREE_RETOUCHES set to 0 and require_unlocked() is now enforced on /listings (server.py:398), /photos/{id}/retouch (server.py:454) AND /documents/{did}/reocr (server.py:723). Storage of documents remains free (server.py:695-698 marks ocr_status='locked' when not unlocked and returns 201 without running OCR). Paywall detail is centralised in pack.PAYWALL_DETAIL='Pack annonce premium requis (49 €)' — matches all 402 responses.",
+    "/app/backend/server.py:124 GET /api/health returns app='Achètes ma maison'. FastAPI title also updated at server.py:55.",
+    "/app/backend/report.py + pack.py both import APP_NAME from report.py (APP_NAME = 'Achètes ma maison'). Report PDF page-1 title is 'Achètes ma maison · Rapport d’estimation' with an embedded PNG logo (verified via pypdf .images on page 1).",
+    "/app/frontend/app/property/[id]/listing.tsx:127-132: PrimaryButton title flips between 'Générer l’annonce' and 'Débloquer le Pack premium · 49 €' based on pack.unlocked; onPress correctly routes to /property/{id}/pack when locked.",
+    "/app/frontend/src/theme.ts:38 brandPrimary = '#1656C9' (rgb(22,86,201)) — matches the computed backgroundColor on signin-submit.",
+    "/app/frontend/app/property/[id]/document/[docId].tsx:101 renders <PremiumGate testID='document-premium-gate'> when the doc is locked — matches the spec.",
+    "/app/frontend/src/components/AuthShell.tsx:41 renders <BrandLogo testID='{screen}-logo'> so /sign-in exposes 'signin-screen-logo' as required."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter18_paywall.py",
+    "/app/test_reports/pytest/iter18_paywall.xml",
+    "/app/test_reports/iteration_18.json"
+  ],
+  "success_rate": {"backend": "100% (8/8)", "frontend": "100% (all requested flows)"},
+  "seed_data_creation": "Ephemeral only. During TestLockedPack a temporary jpeg document (item_key=dpe) and, when no photo pre-existed, a temporary jpeg photo were uploaded to property 6aa3f68d440f04920cdaffde and DELETED at the end of the same test class. No writes to the seed account, no orders created, POST /pack/checkout never called (Stripe LIVE).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Rebranding to « Achètes ma maison » + hard paywall on every AI tool (annonce/retouche/OCR) are live and fully verified. Locked property fixture: 6aa3f68d440f04920cdaffde (owned by delivered@resend.dev). Reusable test file: /app/backend/tests/test_iter18_paywall.py. WARNING: STRIPE_API_KEY is sk_live_...; never call POST /api/properties/{id}/pack/checkout during regression. Backend URL comes from EXPO_PUBLIC_BACKEND_URL. The pack-offer bullet list ('Lecture automatique de vos documents' etc.) is rendered OUTSIDE the pack-offer testID box (that box holds only the price card); assert at document.body.innerText level, not scoped to [data-testid='pack-offer']. Frontend session token key: localStorage['estimo_session_token']. Shadow*/pointerEvents deprecation warnings are known and non-blocking."
+}
