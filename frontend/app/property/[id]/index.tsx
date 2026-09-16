@@ -329,8 +329,8 @@ export default function PropertyDetailScreen() {
             >
               <SparkleIcon size={20} color={colors.onBrandPrimary} weight="fill" />
               <View style={{ flex: 1 }}>
-                <Text style={[styles.linkLabel, { color: colors.onBrandPrimary }]}>Pack annonce premium · 49 €</Text>
-                <Text style={styles.linkSub}>Annonce IA + photos retouchées en PDF, retouches illimitées</Text>
+                <Text style={[styles.linkLabel, { color: colors.onBrandPrimary }]}>Pack premium · 49 €</Text>
+                <Text style={styles.linkSub}>Débloque tous les outils IA : annonce, retouches photo, lecture des documents, PDF</Text>
               </View>
               <CaretRightIcon size={18} color={colors.onBrandPrimary} />
             </Pressable>

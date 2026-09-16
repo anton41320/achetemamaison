@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api } from "@/src/api";
 import { AlertsBanner } from "@/src/components/AlertsBanner";
+import { BrandLogo } from "@/src/components/BrandLogo";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { PropertyCard } from "@/src/components/PropertyCard";
 import { ScreenHeader } from "@/src/components/ScreenHeader";
@@ -49,7 +50,8 @@ export default function HomeScreen() {
     <View style={styles.screen} testID="home-screen">
       <ScreenHeader
         title="Mes biens"
-        subtitle="Estimo · Estimations DVF · Centre-Val de Loire"
+        subtitle="Achètes ma maison · Estimations DVF · Centre-Val de Loire"
+        leading={<BrandLogo size={40} wordmark="none" testID="home-logo" />}
         right={
           <View style={{ flexDirection: "row", gap: spacing.sm }}>
             <Pressable
@@ -93,7 +95,7 @@ export default function HomeScreen() {
           <Image source={{ uri: EMPTY_IMAGE }} style={styles.emptyImage} contentFit="cover" transition={300} />
           <Text style={styles.emptyTitle}>Aucune estimation pour le moment</Text>
           <Text style={styles.emptyText}>
-            Renseignez l’adresse et les caractéristiques de votre bien : Estimo calcule une fourchette de valeur à
+            Renseignez l’adresse et les caractéristiques de votre bien : Achètes ma maison calcule une fourchette de valeur à
             partir des ventes réelles (DVF) autour de chez vous, avec un niveau de confiance explicite.
           </Text>
           <PrimaryButton title="Nouvelle estimation" onPress={goNew} testID="home-empty-cta" />

@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { LISTING_STYLES, Listing, ListingStyle, api, formatMonth } from "@/src/api";
 import { Field, Segmented } from "@/src/components/Form";
+import { PremiumGate, usePackUnlocked } from "@/src/components/PremiumGate";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { ScreenHeader } from "@/src/components/ScreenHeader";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
@@ -29,6 +30,7 @@ export default function ListingScreen() {
   const [copied, setCopied] = useState<string | null>(null);
 
   const listings = useQuery({ queryKey: ["listings", id], queryFn: () => api.listListings(id!), enabled: !!id });
+  const pack = usePackUnlocked(id);
 
   const generate = useMutation({
     mutationFn: () => api.createListing(id!, { style, extra_facts: extra.trim() || null, include_price: includePrice }),
@@ -55,6 +57,7 @@ export default function ListingScreen() {
         bottomOffset={CTA_HEIGHT + spacing.lg}
         keyboardShouldPersistTaps="handled"
       >
+        {!pack.loading && !pack.unlocked ? <PremiumGate propertyId={id!} feature="la rédaction de l’annonce par l’IA" testID="listing-premium-gate" /> : null}
         <Segmented label="Style" testID="listing-style" scroll value={style} onChange={setStyle} options={LISTING_STYLES} />
         <Field
           label="Atouts et précisions (optionnel)"
@@ -68,7 +71,7 @@ export default function ListingScreen() {
           hint="Seuls les faits ci-dessus et ceux du bien seront utilisés. Rien d’autre ne sera inventé."
         />
         <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>Mentionner la fourchette de prix Estimo</Text>
+          <Text style={styles.switchLabel}>Mentionner la fourchette de prix estimée</Text>
           <Switch
             testID="listing-include-price"
             value={includePrice}
@@ -122,8 +125,8 @@ export default function ListingScreen() {
       <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
         <View style={[styles.cta, { paddingBottom: insets.bottom + spacing.lg }]}>
           <PrimaryButton
-            title={generate.isPending ? "Rédaction en cours…" : "Générer l’annonce"}
-            onPress={() => generate.mutate()}
+            title={pack.unlocked ? (generate.isPending ? "Rédaction en cours…" : "Générer l’annonce") : "Débloquer le Pack premium · 49 €"}
+            onPress={() => (pack.unlocked ? generate.mutate() : router.push(`/property/${id}/pack`))}
             loading={generate.isPending}
             testID="listing-generate-button"
           />

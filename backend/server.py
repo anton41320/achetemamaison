@@ -52,7 +52,7 @@ BAN_URL = os.environ["BAN_URL"]
 client = AsyncIOMotorClient(mongo_url)
 db = client[db_name]
 
-app = FastAPI(title="Estimo API")
+app = FastAPI(title="Achètes ma maison API")
 api = APIRouter(prefix="/api")          # routes protégées (connexion requise)
 public = APIRouter(prefix="/api")       # routes publiques
 auth.init(db)
@@ -121,7 +121,7 @@ def _ingest_running() -> bool:
 
 @public.get("/health")
 async def health():
-    return {"status": "ok", "app": "Estimo", "departments": DVF_DEPARTMENTS}
+    return {"status": "ok", "app": "Achètes ma maison", "departments": DVF_DEPARTMENTS}
 
 
 @app.get("/health", include_in_schema=False)
@@ -395,6 +395,7 @@ async def create_listing(pid: str, req: ListingRequest):
     if not doc:
         raise HTTPException(status_code=404, detail="Bien introuvable")
     prop = PropertyDoc.from_mongo(doc)
+    await pack.require_unlocked(db, pid, "La rédaction d’annonce par l’IA")
     try:
         result = await generate_listing(prop, req.style, req.extra_facts, req.include_price)
     except Exception as exc:  # noqa: BLE001
@@ -450,11 +451,7 @@ async def retouch_photo(photo_id: str):
         raise HTTPException(status_code=404, detail="Photo introuvable")
     if doc.get("status") == "processing":
         raise HTTPException(status_code=409, detail="Retouche déjà en cours")
-    if not await pack.is_unlocked(db, doc["property_id"]):
-        used = await db.photos.count_documents({"property_id": doc["property_id"], "deleted_at": None, "status": "done"})
-        if used >= pack.FREE_RETOUCHES and doc.get("status") != "done":
-            raise HTTPException(status_code=402, detail=f"Retouche offerte déjà utilisée ({pack.FREE_RETOUCHES} par bien). "
-                                                        "Le Pack annonce premium (49 €) débloque les retouches illimitées pour ce bien.")
+    await pack.require_unlocked(db, doc["property_id"], "La retouche photo par l’IA")
     await db.photos.update_one({"_id": doc["_id"]}, {"$set": {"status": "processing", "error": None}})
     try:
         original, _ = await asyncio.to_thread(storage.get_object, doc["original_path"])
@@ -695,6 +692,10 @@ async def upload_document(pid: str, file: UploadFile = File(...), item_key: str 
                            filename=file.filename or f"document.{ext}", size=len(data))
     res = await db.documents.insert_one({**document.to_mongo(), "deleted_at": None, "ocr": None, "validated_fields": None, **auth.own(),
                                          "expiry_date": None})
+    if not await pack.is_unlocked(db, pid):
+        # Storage is free; the AI reading (OCR) is part of the premium pack. The seller can still fill the fields by hand.
+        await db.documents.update_one({"_id": res.inserted_id}, {"$set": {"ocr_status": "locked"}})
+        return _doc_out(await db.documents.find_one({"_id": res.inserted_id}))
     try:
         ocr = await dossier_mod.ocr_document(data, mime, item_key)
         expiry = ocr.get("validity_date") or dossier_mod.expiry_for(item_key, ocr.get("document_date"))
@@ -719,6 +720,7 @@ async def reocr_document(did: str):
     d = await db.documents.find_one({"_id": _oid(did), "deleted_at": None, **auth.own()})
     if not d:
         raise HTTPException(status_code=404, detail="Document introuvable")
+    await pack.require_unlocked(db, d["property_id"], "La lecture automatique des documents par l’IA")
     try:
         data, mime = await asyncio.to_thread(storage.get_object, d["file_path"])
         ocr = await dossier_mod.ocr_document(data, mime, d["item_key"])

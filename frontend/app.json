@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Estimo",
+    "name": "Achètes ma maison",
     "slug": "frontend",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -18,7 +18,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#000000"
+        "backgroundColor": "#0B3B8F"
       },
       "package": "com.emergent.estimatehome.ye2qdy",
       "permissions": ["CAMERA", "READ_MEDIA_IMAGES"]
@@ -36,7 +36,7 @@
           "image": "./assets/images/splash-image.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#000000"
+          "backgroundColor": "#0B3B8F"
         }
       ],
       "expo-font",

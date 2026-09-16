@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import { CheckCircleIcon, CreditCardIcon, ImagesIcon, LockOpenIcon, PencilLineIcon, SparkleIcon, WarningIcon } from "phosphor-react-native";
+import { CreditCardIcon, FileTextIcon, ImagesIcon, LockOpenIcon, PencilLineIcon, SparkleIcon, WarningIcon } from "phosphor-react-native";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -14,9 +14,9 @@ import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
 const INCLUDED = [
   { Icon: PencilLineIcon, text: "Annonce rédigée par l’IA (style au choix), titre, accroche et points forts" },
-  { Icon: ImagesIcon, text: "Vos photos retouchées par l’IA en pleine page, photo de couverture" },
-  { Icon: SparkleIcon, text: "Retouches photo IA illimitées pour ce bien (1 offerte sans le pack)" },
-  { Icon: CheckCircleIcon, text: "PDF partageable (portails, réseaux, acquéreurs) — régénérable à volonté" },
+  { Icon: SparkleIcon, text: "Retouches photo IA illimitées pour ce bien, original toujours conservé" },
+  { Icon: FileTextIcon, text: "Lecture automatique de vos documents (diagnostics, titre, taxe foncière) par l’IA" },
+  { Icon: ImagesIcon, text: "PDF d’annonce premium avec photos retouchées en pleine page, régénérable à volonté" },
 ];
 
 export default function PackScreen() {
@@ -78,7 +78,7 @@ export default function PackScreen() {
 
   return (
     <View style={styles.screen} testID="pack-screen">
-      <ScreenHeader title="Pack annonce premium" subtitle="Annonce IA + photos retouchées · 49 € par bien" onBack={() => (router.canGoBack() ? router.back() : router.replace(`/property/${id}`))} />
+      <ScreenHeader title="Pack premium" subtitle="Tous les outils IA · 49 € par bien" onBack={() => (router.canGoBack() ? router.back() : router.replace(`/property/${id}`))} />
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xl }]}>
         {pack.isLoading || !d ? (
           <ActivityIndicator color={colors.brandPrimary} />
@@ -88,7 +88,7 @@ export default function PackScreen() {
               <LockOpenIcon size={22} color={colors.success} weight="fill" />
               <View style={{ flex: 1 }}>
                 <Text style={styles.unlockedTitle}>Pack débloqué pour ce bien</Text>
-                <Text style={styles.p}>Retouches IA illimitées et PDF d’annonce premium régénérable.</Text>
+                <Text style={styles.p}>Annonce IA, retouches photo illimitées, lecture des documents et PDF premium débloqués.</Text>
                 {d.last_order?.status === "paid" && d.last_order.customer_email ? (
                   <Text style={styles.hint} testID="pack-receipt">
                     {d.last_order.receipt_sent ? "Reçu envoyé à " : "Reçu en cours d’envoi à "}
@@ -118,7 +118,7 @@ export default function PackScreen() {
                 {d.photos} photo{d.photos > 1 ? "s" : ""} · {d.retouches_used} retouchée{d.retouches_used > 1 ? "s" : ""}. Les visuels retouchés portent la mention « non contractuel ».
               </Text>
               <ShareReportButton propertyId={id!} url={api.packPdfUrl(id!, style)} label="Générer et partager le PDF"
-                fileName={`estimo-annonce-${id!.slice(-6)}.pdf`} dialogTitle="Partager l’annonce premium" testID="pack-pdf-button" />
+                fileName={`achetesmamaison-annonce-${id!.slice(-6)}.pdf`} dialogTitle="Partager l’annonce premium" testID="pack-pdf-button" />
               <View style={styles.row}>
                 <PrimaryButton title="Photos & retouches" variant="ghost" onPress={() => router.push(`/property/${id}/photos`)} testID="pack-photos-button" style={{ flex: 1 }} />
                 <PrimaryButton title="Rédiger l’annonce" variant="ghost" onPress={() => router.push(`/property/${id}/listing`)} testID="pack-listing-button" style={{ flex: 1 }} />
@@ -146,7 +146,7 @@ export default function PackScreen() {
                 </View>
               ))}
               <Text style={styles.hint}>
-                Restent gratuits : l’estimation, le texte d’annonce simple (copie), le dossier de vente et l’export notaire.
+                Restent gratuits : l’estimation détaillée, le prix cible, la checklist du dossier de vente (saisie manuelle) et l’export notaire.
               </Text>
             </View>
             {polling ? (

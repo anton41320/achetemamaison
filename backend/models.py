@@ -304,7 +304,7 @@ class DocumentDoc(BaseDocument):
     mime: str
     filename: str
     size: int
-    ocr_status: Literal["pending", "done", "error"] = "pending"
+    ocr_status: Literal["pending", "done", "error", "locked"] = "pending"
     ocr: Optional[OcrResult] = None
     ocr_error: Optional[str] = None
     validated: bool = False

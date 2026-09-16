@@ -43,7 +43,7 @@ def _facts(prop: PropertyDoc, include_price: bool, extra: str | None) -> str:
     if prop.property_type == "maison" and prop.land_surface:
         lines.append(f"Terrain : {prop.land_surface:g} m²")
     if include_price and est:
-        lines.append(f"Prix indicatif : fourchette {int(est.low):,} € – {int(est.high):,} € (estimation Estimo)".replace(",", " "))
+        lines.append(f"Prix indicatif : fourchette {int(est.low):,} € – {int(est.high):,} € (estimation Achètes ma maison)".replace(",", " "))
     if extra and extra.strip():
         lines.append(f"Précisions fournies par le vendeur (utilisables telles quelles) : {extra.strip()}")
     return "\n".join(lines)

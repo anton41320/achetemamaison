@@ -6,6 +6,7 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
+import { BrandLogo } from "./BrandLogo";
 
 interface Props {
   title: string;
@@ -37,7 +38,7 @@ export function AuthShell({ title, subtitle, children, error, success, footer, t
         >
           <CaretLeftIcon size={22} color={colors.onSurface} />
         </Pressable>
-        <Text style={styles.brand}>Estimo</Text>
+        <BrandLogo size={36} testID={`${testID}-logo`} />
         <Text style={styles.title}>{title}</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
         <View style={styles.form}>{children}</View>
@@ -62,7 +63,6 @@ const useStyles = makeStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.surface },
   content: { padding: spacing.lg, gap: spacing.md },
   back: { width: 44, height: 44, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceSecondary, marginBottom: spacing.sm },
-  brand: { fontFamily: fonts.bold, fontSize: 14, letterSpacing: 1.5, textTransform: "uppercase", color: colors.brandPrimary },
   title: { fontFamily: fonts.bold, fontSize: 28, lineHeight: 34, color: colors.onSurface },
   subtitle: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, color: colors.onSurfaceTertiary },
   form: { marginTop: spacing.md, gap: spacing.sm },

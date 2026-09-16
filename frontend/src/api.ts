@@ -470,7 +470,7 @@ export interface SaleDocument {
   mime: string;
   filename: string;
   size: number;
-  ocr_status: "pending" | "done" | "error";
+  ocr_status: "pending" | "done" | "error" | "locked";
   ocr: OcrResult | null;
   ocr_error: string | null;
   validated: boolean;

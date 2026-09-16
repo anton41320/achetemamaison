@@ -9,6 +9,7 @@ from typing import Optional
 from urllib.parse import urlparse
 
 import stripe
+from fastapi import HTTPException
 from bson import ObjectId
 from PIL import Image as PILImage
 from reportlab.lib.pagesizes import A4
@@ -18,14 +19,14 @@ from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, S
 
 import emailer
 from models import PropertyDoc, utcnow
-from report import BRAND, BRAND_SOFT, CONDITION_LABELS, INK, LINE, MUTED, eur
+from report import APP_NAME, BRAND, BRAND_SOFT, CONDITION_LABELS, INK, LINE, MUTED, eur
 
 logger = logging.getLogger("pack")
 
 PACK_PRICE_CENTS = 4900
 PACK_CURRENCY = "eur"
-PACK_NAME = "Pack annonce premium Estimo"
-FREE_RETOUCHES = 1  # retouches offertes par bien avant le pack
+PACK_NAME = f"Pack annonce premium {APP_NAME}"
+FREE_RETOUCHES = 0  # aucune retouche offerte : tous les outils IA exigent le pack
 
 
 def stripe_ready() -> bool:
@@ -87,6 +88,15 @@ async def is_unlocked(db, pid: str) -> bool:
     return await db.orders.find_one({"property_id": pid, "status": "paid"}, {"_id": 1}) is not None
 
 
+PAYWALL_DETAIL = "Pack annonce premium requis (49 €)"
+
+
+async def require_unlocked(db, pid: str, feature: str) -> None:
+    """Every AI tool (annonce, retouche photo, lecture OCR) is reserved to the premium pack of the property."""
+    if not await is_unlocked(db, pid):
+        raise HTTPException(status_code=402, detail=f"{PAYWALL_DETAIL} : {feature} est réservée aux biens ayant débloqué le pack.")
+
+
 async def create_checkout(db, pid: str, return_url: str, owner_id: Optional[str] = None) -> dict:
     if not stripe_ready():
         raise RuntimeError("Paiement indisponible : clé Stripe absente")
@@ -96,7 +106,7 @@ async def create_checkout(db, pid: str, return_url: str, owner_id: Optional[str]
         mode="payment",
         line_items=[{"price_data": {"currency": PACK_CURRENCY, "unit_amount": PACK_PRICE_CENTS,
                                     "product_data": {"name": PACK_NAME,
-                                                     "description": "Annonce IA + photos retouchées en PDF, retouches illimitées pour ce bien",
+                                                     "description": "Outils IA débloqués pour ce bien : annonce, retouches photo illimitées, lecture des documents, PDF premium",
                                                      # Service fourni par voie électronique (requis par Stripe Managed Payments)
                                                      "tax_code": "txcd_10000000"}},
                      "quantity": 1}],
@@ -164,7 +174,7 @@ def build_pack_pdf(prop: PropertyDoc, listing: dict, photos: list[tuple[bytes, b
 
     buf = BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=14 * mm, bottomMargin=14 * mm,
-                            title=f"{listing['title']} — Estimo")
+                            title=f"{listing['title']} — {APP_NAME}")
     story = []
     max_w, max_h = A4[0] - 32 * mm, A4[1] - 28 * mm
 
@@ -233,7 +243,7 @@ def build_pack_pdf(prop: PropertyDoc, listing: dict, photos: list[tuple[bytes, b
         story.append(Paragraph(f"Photo {i}/{len(photos)}" + (" · visuel retouché par IA, non contractuel" if retouched else ""), small))
 
     story.append(Spacer(1, 10))
-    story.append(Paragraph(f"Annonce générée avec Estimo le {date.today().strftime('%d/%m/%Y')} à partir des informations déclarées par le vendeur. "
+    story.append(Paragraph(f"Annonce générée avec {APP_NAME} le {date.today().strftime('%d/%m/%Y')} à partir des informations déclarées par le vendeur. "
                            "Les visuels retouchés par IA (luminosité, netteté, couleurs) n'ajoutent aucun élément et restent non contractuels. "
                            "Diagnostics et surfaces à confirmer dans le dossier de vente.", small))
     doc.build(story)

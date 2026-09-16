@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from io import BytesIO
+from pathlib import Path
 from typing import Optional
 
 from PIL import Image as PILImage
@@ -15,11 +16,13 @@ from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, S
 
 from models import PropertyDoc
 
-BRAND = colors.HexColor("#2F5041")
-BRAND_SOFT = colors.HexColor("#EEF4F1")
-INK = colors.HexColor("#1C1C1E")
-MUTED = colors.HexColor("#6B6B70")
-LINE = colors.HexColor("#E5E4E2")
+APP_NAME = "Achètes ma maison"
+LOGO_PATH = Path(__file__).parent / "data" / "logo.png"
+BRAND = colors.HexColor("#1656C9")
+BRAND_SOFT = colors.HexColor("#E8F0FD")
+INK = colors.HexColor("#0F1F3D")
+MUTED = colors.HexColor("#6B7C99")
+LINE = colors.HexColor("#DCE5F2")
 
 CONDITION_LABELS = {"a_renover": "À rénover", "travaux": "Travaux à prévoir", "correct": "État correct",
                     "bon": "Bon état", "neuf_renove": "Neuf / rénové"}
@@ -42,7 +45,7 @@ def build_report(prop: PropertyDoc, final: Optional[dict] = None, photos: Option
     assert est is not None
     buf = BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=18 * mm, rightMargin=18 * mm, topMargin=16 * mm,
-                            bottomMargin=16 * mm, title=f"Estimo — {prop.address_label}")
+                            bottomMargin=16 * mm, title=f"{APP_NAME} — {prop.address_label}")
     ss = getSampleStyleSheet()
     h1 = ParagraphStyle("h1", parent=ss["Title"], fontName="Helvetica-Bold", fontSize=20, textColor=BRAND,
                         alignment=TA_LEFT, spaceAfter=2)
@@ -53,9 +56,9 @@ def build_report(prop: PropertyDoc, final: Optional[dict] = None, photos: Option
     big = ParagraphStyle("big", parent=body, fontName="Helvetica-Bold", fontSize=22, leading=26, textColor=BRAND)
 
     story = []
-    story.append(Paragraph("Estimo · Rapport d'estimation", h1))
-    story.append(Paragraph(f"Édité le {datetime.now().strftime('%d/%m/%Y')} · Méthode : comparables DVF"
-                           + (" + modèle hédonique" if est.hedonic else ""), small))
+    story.append(brand_header(f"{APP_NAME} · Rapport d'estimation", h1,
+                              f"Édité le {datetime.now().strftime('%d/%m/%Y')} · Méthode : comparables DVF"
+                              + (" + modèle hédonique" if est.hedonic else ""), small))
     story.append(Spacer(1, 8))
 
     ptype = "Maison" if prop.property_type == "maison" else "Appartement"
@@ -165,6 +168,22 @@ def build_report(prop: PropertyDoc, final: Optional[dict] = None, photos: Option
         "Visuel et valeurs non contractuels.", small))
     doc.build(story)
     return buf.getvalue()
+
+
+def brand_header(title: str, h1: ParagraphStyle, subtitle: str, small: ParagraphStyle) -> Table:
+    """Logo + title block shared by every PDF (report, notaire, pack)."""
+    cells = [Paragraph(title, h1), Paragraph(subtitle, small)]
+    if LOGO_PATH.exists():
+        row = [[Image(str(LOGO_PATH), width=14 * mm, height=14 * mm), cells]]
+        widths = [18 * mm, None]
+    else:
+        row = [[cells]]
+        widths = [None]
+    t = Table(row, colWidths=widths)
+    t.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                           ("RIGHTPADDING", (0, 0), (-1, -1), 0), ("TOPPADDING", (0, 0), (-1, -1), 0),
+                           ("BOTTOMPADDING", (0, 0), (-1, -1), 0)]))
+    return t
 
 
 def _table(rows, widths, style, bold_last: bool = False) -> Table:

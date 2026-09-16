@@ -17,7 +17,7 @@ interface Props {
   testID?: string;
 }
 
-export function ShareReportButton({ propertyId, url, label = "Partager le rapport PDF", fileName, dialogTitle = "Partager le rapport Estimo", testID = "share-report-button" }: Props) {
+export function ShareReportButton({ propertyId, url, label = "Partager le rapport PDF", fileName, dialogTitle = "Partager le rapport Achètes ma maison", testID = "share-report-button" }: Props) {
   const styles = useStyles();
   const { colors } = useTheme();
   const [busy, setBusy] = useState(false);
@@ -32,7 +32,7 @@ export function ShareReportButton({ propertyId, url, label = "Partager le rappor
     }
     setBusy(true);
     try {
-      const dest = new File(Paths.cache, fileName ?? `estimo-${propertyId.slice(-6)}.pdf`);
+      const dest = new File(Paths.cache, fileName ?? `achetesmamaison-${propertyId.slice(-6)}.pdf`);
       const file = await File.downloadFileAsync(target, dest, { idempotent: true });
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(file.uri, { mimeType: "application/pdf", UTI: "com.adobe.pdf", dialogTitle });

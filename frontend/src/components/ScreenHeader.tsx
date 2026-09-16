@@ -10,10 +10,12 @@ interface Props {
   subtitle?: string;
   onBack?: () => void;
   right?: ReactNode;
+  /** Optional element rendered before the titles (e.g. brand logo on the home screen). */
+  leading?: ReactNode;
   testID?: string;
 }
 
-export function ScreenHeader({ title, subtitle, onBack, right, testID }: Props) {
+export function ScreenHeader({ title, subtitle, onBack, right, leading, testID }: Props) {
   const styles = useStyles();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -31,6 +33,7 @@ export function ScreenHeader({ title, subtitle, onBack, right, testID }: Props) 
             <CaretLeftIcon size={22} color={colors.onSurface} weight="bold" />
           </Pressable>
         ) : null}
+        {leading}
         <View style={styles.titles}>
           <Text style={styles.title} numberOfLines={1}>{title}</Text>
           {subtitle ? <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text> : null}

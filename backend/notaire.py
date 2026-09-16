@@ -14,7 +14,7 @@ from reportlab.lib.units import mm
 from reportlab.platypus import Image, KeepTogether, PageBreak, Paragraph, SimpleDocTemplate, Spacer
 
 from models import PropertyDoc
-from report import BRAND, CONDITION_LABELS, INK, LEVEL_LABELS, MUTED, _table, eur
+from report import APP_NAME, BRAND, CONDITION_LABELS, INK, LEVEL_LABELS, MUTED, _table, brand_header, eur
 
 logger = logging.getLogger("notaire")
 
@@ -60,9 +60,9 @@ def build_cover(prop: PropertyDoc, final: Optional[dict], dossier: dict, attachm
     st = _styles()
     buf = BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=18 * mm, rightMargin=18 * mm, topMargin=16 * mm,
-                            bottomMargin=16 * mm, title=f"Estimo — Dossier de vente — {prop.address_label}")
-    story = [Paragraph("Estimo · Dossier de vente — synthèse pour le notaire", st["h1"]),
-             Paragraph(f"Édité le {datetime.now().strftime('%d/%m/%Y')} · document préparé par le vendeur avec Estimo", st["small"]),
+                            bottomMargin=16 * mm, title=f"{APP_NAME} — Dossier de vente — {prop.address_label}")
+    story = [brand_header(f"{APP_NAME} · Dossier de vente — synthèse pour le notaire", st["h1"],
+                          f"Édité le {datetime.now().strftime('%d/%m/%Y')} · document préparé par le vendeur avec {APP_NAME}", st["small"]),
              Spacer(1, 8)]
 
     ptype = "Maison" if prop.property_type == "maison" else "Appartement"
@@ -78,7 +78,7 @@ def build_cover(prop: PropertyDoc, final: Optional[dict], dossier: dict, attachm
 
     est = prop.estimation
     if est:
-        story.append(Paragraph("Estimation Estimo", st["h2"]))
+        story.append(Paragraph(f"Estimation {APP_NAME}", st["h2"]))
         rows = [["Indicateur", "Valeur"],
                 ["Fourchette comparables DVF", f"{eur(est.low)} – {eur(est.high)}"],
                 ["Valeur centrale comparables", eur(est.value)],

@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { OcrResult, api, fileUrl, formatMonth } from "@/src/api";
 import { Field } from "@/src/components/Form";
+import { PremiumGate, usePackUnlocked } from "@/src/components/PremiumGate";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { ScreenHeader } from "@/src/components/ScreenHeader";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
@@ -49,6 +50,7 @@ export default function DocumentReviewScreen() {
     },
   });
   const reocr = useMutation({ mutationFn: () => api.reocrDocument(docId!), onSuccess: invalidate });
+  const pack = usePackUnlocked(id);
   const remove = useMutation({
     mutationFn: () => api.deleteDocument(docId!),
     onSuccess: () => {
@@ -89,6 +91,15 @@ export default function DocumentReviewScreen() {
                 <SealCheckIcon size={18} color={colors.success} weight="fill" />
                 <Text style={styles.okText}>Document validé par vous{d.expiry_date ? ` · valide jusqu’au ${formatMonth(d.expiry_date)}` : ""}</Text>
               </View>
+            ) : d.ocr_status === "locked" ? (
+              pack.unlocked ? (
+                <View style={styles.infoBanner} testID="document-ocr-locked-unlocked">
+                  <Text style={styles.infoText}>Pack débloqué : lancez la lecture IA pour pré-remplir les champs, ou saisissez-les à la main.</Text>
+                  <PrimaryButton title="Lire le document avec l’IA" variant="secondary" onPress={() => reocr.mutate()} loading={reocr.isPending} testID="document-reocr-button" />
+                </View>
+              ) : (
+                <PremiumGate propertyId={id!} feature="la lecture automatique de ce document par l’IA (type, dates, champs clés, alertes)" testID="document-premium-gate" />
+              )
             ) : d.ocr_status === "error" ? (
               <View style={styles.warn} testID="document-ocr-error">
                 <WarningIcon size={18} color={colors.error} weight="fill" />
@@ -178,7 +189,7 @@ const useStyles = makeStyles((colors) => ({
   hint: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted },
   okBanner: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.successSoft, borderRadius: radius.md, padding: spacing.lg },
   okText: { flex: 1, fontFamily: fonts.medium, fontSize: 13, color: colors.success },
-  infoBanner: { backgroundColor: colors.brandTertiary, borderRadius: radius.md, padding: spacing.lg },
+  infoBanner: { backgroundColor: colors.brandTertiary, borderRadius: radius.md, padding: spacing.lg, gap: spacing.sm },
   infoText: { fontFamily: fonts.medium, fontSize: 13, lineHeight: 19, color: colors.onBrandTertiary },
   warn: { flexDirection: "row", gap: spacing.md, alignItems: "flex-start", backgroundColor: colors.warningSoft, borderRadius: radius.md, padding: spacing.lg },
   warnText: { flex: 1, fontFamily: fonts.medium, fontSize: 13, lineHeight: 19, color: colors.warning },

@@ -2,12 +2,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { CameraIcon, ImagesIcon, SparkleIcon, TrashIcon, WarningIcon } from "phosphor-react-native";
+import { CameraIcon, ImagesIcon, LockKeyIcon, SparkleIcon, TrashIcon, WarningIcon } from "phosphor-react-native";
 import { useState } from "react";
 import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Photo, api, fileUrl, uploadPhoto } from "@/src/api";
+import { PremiumGate, usePackUnlocked } from "@/src/components/PremiumGate";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { ScreenHeader } from "@/src/components/ScreenHeader";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
@@ -52,6 +53,7 @@ export default function PhotosScreen() {
     onError: (e: Error) => setPaywall(e.message.includes("Pack annonce") ? e.message : null),
   });
   const [paywall, setPaywall] = useState<string | null>(null);
+  const pack = usePackUnlocked(id);
 
   const remove = useMutation({
     mutationFn: (photoId: string) => api.deletePhoto(photoId),
@@ -107,6 +109,7 @@ export default function PhotosScreen() {
           La retouche améliore lumière, contraste et perspective, et efface uniquement de petits objets. Aucun élément n’est
           ajouté : le visuel retouché reste une représentation fidèle du bien.
         </Text>
+        {!pack.loading && !pack.unlocked ? <PremiumGate propertyId={id!} feature="la retouche photo par l’IA" testID="photos-premium-gate" /> : null}
 
         {permissionBlocked ? (
           <View style={styles.warn} testID="photos-permission-blocked">
@@ -137,7 +140,7 @@ export default function PhotosScreen() {
             <SparkleIcon size={18} color={colors.warning} weight="fill" />
             <View style={{ flex: 1, gap: spacing.sm }}>
               <Text style={styles.warnText}>{paywall}</Text>
-              <PrimaryButton title="Découvrir le Pack annonce premium · 49 €" onPress={() => router.push(`/property/${id}/pack`)} testID="photos-paywall-button" />
+              <PrimaryButton title="Débloquer le Pack premium · 49 €" onPress={() => router.push(`/property/${id}/pack`)} testID="photos-paywall-button" />
             </View>
           </View>
         ) : null}
@@ -193,9 +196,12 @@ export default function PhotosScreen() {
                 ) : null}
                 <View style={styles.actions}>
                   {p.status !== "processing" ? (
-                    <Pressable testID={`photo-retouch-${i}`} accessibilityRole="button" onPress={() => retouch.mutate(p.id)} style={styles.actionPrimary}>
-                      <SparkleIcon size={16} color={colors.onBrandPrimary} weight="fill" />
-                      <Text style={styles.actionPrimaryLabel}>{p.status === "done" ? "Retoucher à nouveau" : "Retoucher avec l’IA"}</Text>
+                    <Pressable testID={`photo-retouch-${i}`} accessibilityRole="button" onPress={() => (pack.unlocked ? retouch.mutate(p.id) : router.push(`/property/${id}/pack`))}
+                      style={[styles.actionPrimary, !pack.unlocked && styles.actionLocked]}>
+                      {pack.unlocked ? <SparkleIcon size={16} color={colors.onBrandPrimary} weight="fill" /> : <LockKeyIcon size={16} color={colors.onBrandTertiary} weight="fill" />}
+                      <Text style={[styles.actionPrimaryLabel, !pack.unlocked && styles.actionLockedLabel]}>
+                        {!pack.unlocked ? "Retouche IA · Pack premium" : p.status === "done" ? "Retoucher à nouveau" : "Retoucher avec l’IA"}
+                      </Text>
                     </Pressable>
                   ) : null}
                   <Pressable testID={`photo-delete-${i}`} accessibilityRole="button" onPress={() => remove.mutate(p.id)} style={styles.actionBtn}>
@@ -240,5 +246,7 @@ const useStyles = makeStyles((colors) => ({
   actions: { flexDirection: "row", gap: spacing.md, padding: spacing.lg },
   actionPrimary: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, minHeight: 48, borderRadius: radius.md, backgroundColor: colors.brandPrimary },
   actionPrimaryLabel: { fontFamily: fonts.semibold, fontSize: 14, color: colors.onBrandPrimary },
+  actionLocked: { backgroundColor: colors.brandTertiary, borderWidth: 1, borderColor: colors.brandSecondary },
+  actionLockedLabel: { color: colors.onBrandTertiary },
   actionBtn: { width: 48, height: 48, borderRadius: radius.md, backgroundColor: colors.errorSoft, alignItems: "center", justifyContent: "center" },
 }));

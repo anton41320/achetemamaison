@@ -24,7 +24,7 @@ logger = logging.getLogger("emailer")
 # Proxy email géré par Emergent — constante volontairement codée (survit au déploiement).
 EMAIL_BASE_URL = "https://integrations.emergentagent.com"
 EMAIL_KEY = os.environ.get("EMERGENT_EMAIL_KEY")
-EMAIL_FROM_NAME = os.environ.get("EMAIL_FROM_NAME", "Estimo")
+EMAIL_FROM_NAME = os.environ.get("EMAIL_FROM_NAME", "Achètes ma maison")
 EMAIL_REPLY_TO = os.environ.get("EMAIL_REPLY_TO")
 
 _SHORTENERS = ("bit.ly", "tinyurl.com", "t.co", "is.gd", "cutt.ly", "goo.gl", "rebrand.ly")
@@ -130,16 +130,16 @@ def receipt_html(*, order_id: str, address_label: str, amount_cents: int, paid_a
                                      "aucun montant réel n'a été débité.</p>")
     subject = f"Votre reçu {EMAIL_FROM_NAME} — Pack annonce premium ({amount})"
     html = (
-        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f5;padding:24px 0">'
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f6fb;padding:24px 0">'
         '<tr><td align="center">'
         '<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;'
-        'font-family:Arial,Helvetica,sans-serif;color:#1f2a24">'
-        f'<tr><td style="padding:28px 32px 8px"><p style="margin:0;font-size:20px;font-weight:bold;color:#1f5f4a">{brand}</p>'
+        'font-family:Arial,Helvetica,sans-serif;color:#0f1f3d">'
+        f'<tr><td style="padding:28px 32px 8px"><p style="margin:0;font-size:20px;font-weight:bold;color:#1656C9">{brand}</p>'
         '<p style="margin:4px 0 0;font-size:13px;color:#6b7772">Reçu de paiement</p></td></tr>'
         f'<tr><td style="padding:16px 32px">{test_note}'
         '<p style="margin:0 0 12px;font-size:15px;line-height:22px">Merci ! Votre <strong>Pack annonce premium</strong> est débloqué pour le bien&nbsp;: '
         f'<strong>{escape(address_label)}</strong>.</p>'
-        '<table role="presentation" width="100%" cellpadding="6" cellspacing="0" style="font-size:14px;border-top:1px solid #e3e8e5;border-bottom:1px solid #e3e8e5">'
+        '<table role="presentation" width="100%" cellpadding="6" cellspacing="0" style="font-size:14px;border-top:1px solid #dce5f2;border-bottom:1px solid #dce5f2">'
         f'<tr><td style="color:#6b7772">Produit</td><td align="right">Pack annonce premium (paiement unique)</td></tr>'
         f'<tr><td style="color:#6b7772">Montant</td><td align="right"><strong>{amount}</strong> TTC</td></tr>'
         f'<tr><td style="color:#6b7772">Date</td><td align="right">{date_txt}</td></tr>'
@@ -147,9 +147,9 @@ def receipt_html(*, order_id: str, address_label: str, amount_cents: int, paid_a
         '</table>'
         '<p style="margin:16px 0 8px;font-size:14px;line-height:22px">Ce que vous avez débloqué&nbsp;: le PDF d’annonce (texte IA + photos retouchées), '
         'régénérable à volonté, et les retouches photo IA illimitées pour ce bien.</p>'
-        f'<p style="margin:16px 0"><a href="{pdf_url}" style="display:inline-block;background:#1f5f4a;color:#ffffff;text-decoration:none;'
+        f'<p style="margin:16px 0"><a href="{pdf_url}" style="display:inline-block;background:#1656C9;color:#ffffff;text-decoration:none;'
         'padding:12px 20px;border-radius:8px;font-weight:bold;font-size:14px">Télécharger le PDF de l’annonce</a></p>'
-        f'<p style="margin:0 0 12px;font-size:13px;color:#6b7772">Ou ouvrez le pack dans l’application&nbsp;: <a href="{pack_url}" style="color:#1f5f4a">Pack annonce premium</a></p>'
+        f'<p style="margin:0 0 12px;font-size:13px;color:#6b7772">Ou ouvrez le pack dans l’application&nbsp;: <a href="{pack_url}" style="color:#1656C9">Pack annonce premium</a></p>'
         '</td></tr>'
         f'<tr><td style="padding:12px 32px 24px;font-size:12px;color:#8a948f;line-height:18px">Envoyé par {brand}. Le paiement a été traité par Stripe ; '
         'nous ne vous demanderons jamais vos identifiants ou données de carte par email.</td></tr>'

@@ -35,25 +35,26 @@ import { Appearance, StyleSheet, useColorScheme } from "react-native";
 
 export type ColorScheme = "light" | "dark";
 
+// Brand palette « Achètes ma maison » : bleu du logo (#1656C9 → #0B3B8F) sur fonds clairs teintés de bleu.
 const light = {
-  surface: "#F8F7F5",
-  onSurface: "#1C1C1E",
+  surface: "#F4F7FC",
+  onSurface: "#0F1F3D",
   surfaceSecondary: "#FFFFFF",
-  onSurfaceSecondary: "#1C1C1E",
-  surfaceTertiary: "#EAE9E6",
-  onSurfaceTertiary: "#3A3A3C",
-  surfaceInverse: "#1C1C1E",
+  onSurfaceSecondary: "#0F1F3D",
+  surfaceTertiary: "#E4ECF8",
+  onSurfaceTertiary: "#34486B",
+  surfaceInverse: "#0B3B8F",
   onSurfaceInverse: "#FFFFFF",
-  muted: "#8E8E93",
+  muted: "#6B7C99",
 
-  brand: "#2F5041",
+  brand: "#1656C9",
   onBrand: "#FFFFFF",
-  brandPrimary: "#2F5041",
+  brandPrimary: "#1656C9",
   onBrandPrimary: "#FFFFFF",
-  brandSecondary: "#DFE8E3",
-  onBrandSecondary: "#1D362B",
-  brandTertiary: "#EEF4F1",
-  onBrandTertiary: "#2F5041",
+  brandSecondary: "#D4E2FA",
+  onBrandSecondary: "#0B3B8F",
+  brandTertiary: "#E8F0FD",
+  onBrandTertiary: "#1656C9",
 
   success: "#2E9E4F",
   onSuccess: "#FFFFFF",
@@ -64,21 +65,21 @@ const light = {
   error: "#D9342B",
   onError: "#FFFFFF",
   errorSoft: "#FDE7E5",
-  info: "#007AFF",
+  info: "#1656C9",
   onInfo: "#FFFFFF",
 
-  border: "#E5E4E2",
-  borderStrong: "#CFCFCB",
-  divider: "#E5E4E2",
+  border: "#DCE5F2",
+  borderStrong: "#BFCEE6",
+  divider: "#E2E9F4",
 
   // Hero / photo overlays (identical across schemes)
   onHero: "#FFFFFF",
   onHeroMuted: "rgba(255,255,255,0.78)",
-  scrimTop: "rgba(28,28,30,0.20)",
-  scrimBottom: "rgba(28,28,30,0.88)",
+  scrimTop: "rgba(11,59,143,0.20)",
+  scrimBottom: "rgba(8,30,70,0.88)",
   glassFill: "rgba(255,255,255,0.22)",
   glassBorder: "rgba(255,255,255,0.45)",
-  skeleton: "#ECEBE8",
+  skeleton: "#E4ECF8",
 };
 
 export const fonts = {

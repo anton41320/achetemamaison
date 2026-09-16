@@ -192,15 +192,15 @@ async def forgot_password(body: ForgotIn, request: Request):
             link = f"{origin}/reset-password?token={raw}"
             brand = escape(emailer.EMAIL_FROM_NAME)
             html = (
-                '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f5;padding:24px 0"><tr><td align="center">'
-                '<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;font-family:Arial,Helvetica,sans-serif;color:#1f2a24">'
-                f'<tr><td style="padding:28px 32px 8px"><p style="margin:0;font-size:20px;font-weight:bold;color:#1f5f4a">{brand}</p>'
+                '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f6fb;padding:24px 0"><tr><td align="center">'
+                '<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;font-family:Arial,Helvetica,sans-serif;color:#0f1f3d">'
+                f'<tr><td style="padding:28px 32px 8px"><p style="margin:0;font-size:20px;font-weight:bold;color:#1656C9">{brand}</p>'
                 '<p style="margin:4px 0 0;font-size:13px;color:#6b7772">Réinitialisation du mot de passe</p></td></tr>'
                 '<tr><td style="padding:16px 32px"><p style="margin:0 0 12px;font-size:15px;line-height:22px">Vous avez demandé à réinitialiser votre mot de passe. '
                 f'Ce lien et ce code expirent dans {RESET_MINUTES} minutes.</p>'
-                f'<p style="margin:16px 0"><a href="{link}" style="display:inline-block;background:#1f5f4a;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:bold;font-size:14px">Choisir un nouveau mot de passe</a></p>'
+                f'<p style="margin:16px 0"><a href="{link}" style="display:inline-block;background:#1656C9;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:bold;font-size:14px">Choisir un nouveau mot de passe</a></p>'
                 f'<p style="margin:0 0 6px;font-size:14px">Depuis l’application, saisissez ce code&nbsp;:</p>'
-                f'<p style="margin:0 0 16px;font-size:28px;letter-spacing:6px;font-weight:bold;color:#1f5f4a">{code}</p>'
+                f'<p style="margin:0 0 16px;font-size:28px;letter-spacing:6px;font-weight:bold;color:#1656C9">{code}</p>'
                 '<p style="margin:0;font-size:13px;color:#6b7772">Si vous n’êtes pas à l’origine de cette demande, ignorez cet email : votre mot de passe reste inchangé.</p></td></tr>'
                 f'<tr><td style="padding:12px 32px 24px;font-size:12px;color:#8a948f;line-height:18px">Envoyé par {brand}. Nous ne vous demanderons jamais votre mot de passe par email.</td></tr>'
                 '</table></td></tr></table>'

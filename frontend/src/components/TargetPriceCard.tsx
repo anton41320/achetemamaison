@@ -70,7 +70,7 @@ export function TargetPriceCard({ propertyId, suggestedValue }: Props) {
       {showForm ? (
         <View style={{ gap: spacing.md }} testID="target-form">
           <Text style={styles.p}>
-            À quel prix souhaitez-vous vendre ? Estimo situe ce prix dans la fourchette finale et les signaux du marché.
+            À quel prix souhaitez-vous vendre ? Achètes ma maison situe ce prix dans la fourchette finale et les signaux du marché.
           </Text>
           <View style={styles.inputRow}>
             <TextInput

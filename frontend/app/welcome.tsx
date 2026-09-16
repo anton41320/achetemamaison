@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { Dimensions, FlatList, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { BrandLogo } from "@/src/components/BrandLogo";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
@@ -27,7 +28,9 @@ export default function WelcomeScreen() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top, paddingBottom: insets.bottom + spacing.lg }]} testID="welcome-screen">
-      <Text style={styles.brand}>Estimo</Text>
+      <View style={styles.brand}>
+        <BrandLogo size={96} wordmark="column" testID="welcome-logo" />
+      </View>
       <FlatList
         ref={listRef}
         data={SLIDES}
@@ -63,7 +66,7 @@ export default function WelcomeScreen() {
       <View style={styles.actions}>
         <PrimaryButton title="Créer un compte" onPress={() => router.push("/sign-up")} testID="welcome-signup-button" />
         <PrimaryButton title="J’ai déjà un compte" variant="secondary" onPress={() => router.push("/sign-in")} testID="welcome-signin-button" />
-        <Text style={styles.legal}>Gratuit pour l’estimation et le dossier de vente. Vos données restent privées et liées à votre compte.</Text>
+        <Text style={styles.legal}>Estimation et dossier de vente gratuits ; outils IA avec le Pack premium (49 € par bien). Vos données restent privées et liées à votre compte.</Text>
       </View>
     </View>
   );
@@ -71,7 +74,7 @@ export default function WelcomeScreen() {
 
 const useStyles = makeStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.surface },
-  brand: { fontFamily: fonts.bold, fontSize: 22, color: colors.brandPrimary, textAlign: "center", marginTop: spacing.lg },
+  brand: { alignItems: "center", marginTop: spacing.lg },
   slide: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.xl, gap: spacing.lg },
   iconWrap: { width: 120, height: 120, borderRadius: radius.pill, backgroundColor: colors.brandTertiary, alignItems: "center", justifyContent: "center" },
   title: { fontFamily: fonts.bold, fontSize: 26, lineHeight: 32, textAlign: "center", color: colors.onSurface },

@@ -59,7 +59,7 @@ export default function SignUpScreen() {
       <Field label="Confirmer le mot de passe" testID="signup-confirm" value={confirm} onChangeText={setConfirm} secureTextEntry
         autoComplete="new-password" placeholder="••••••••" error={confirmIssue} returnKeyType="done" onSubmitEditing={submit} />
       <PrimaryButton title="Créer mon compte" onPress={submit} loading={busy} testID="signup-submit" />
-      <Text style={styles.legal}>En créant un compte vous acceptez que vos données soient utilisées uniquement pour le service Estimo.</Text>
+      <Text style={styles.legal}>En créant un compte vous acceptez que vos données soient utilisées uniquement pour le service Achètes ma maison.</Text>
     </AuthShell>
   );
 }
