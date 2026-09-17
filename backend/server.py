@@ -129,6 +129,21 @@ async def root_health():
     """Platform health probes hit /health (no /api prefix); must answer fast and never depend on background jobs."""
     return {"status": "ok"}
 
+STORE_ASSETS_DIR = Path(__file__).resolve().parent.parent / "store-assets"
+
+
+@public.get("/store-assets/{name}", include_in_schema=False)
+async def store_asset(name: str):
+    """Kit App Store (captures + textes) préparé pour l'éditeur ; fichiers statiques non sensibles."""
+    target = (STORE_ASSETS_DIR / name).resolve()
+    if not target.is_file() or STORE_ASSETS_DIR not in target.parents or target.suffix not in (".zip", ".md", ".png"):
+        raise HTTPException(status_code=404, detail="Fichier introuvable")
+    media = {".zip": "application/zip", ".md": "text/markdown; charset=utf-8", ".png": "image/png"}[target.suffix]
+    return Response(content=target.read_bytes(), media_type=media,
+                    headers={"Content-Disposition": f'attachment; filename="{target.name}"'})
+
+
+
 
 @public.get("/geocode")
 async def geocode(q: str = Query(min_length=3, max_length=200), limit: int = Query(default=6, le=10)):
