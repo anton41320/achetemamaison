@@ -20,7 +20,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#0B3B8F"
       },
-      "package": "com.emergent.estimatehome.ye2qdy",
+      "package": "achetesmamaison.app",
       "permissions": ["CAMERA", "READ_MEDIA_IMAGES"]
     },
     "web": {
