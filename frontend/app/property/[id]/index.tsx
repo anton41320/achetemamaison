@@ -19,6 +19,7 @@ import { MarketSignalCard } from "@/src/components/MarketSignalCard";
 import { MlCard } from "@/src/components/MlCard";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { ShareReportButton } from "@/src/components/ShareReportButton";
+import { RisksCard } from "@/src/components/RisksCard";
 import { TargetPriceCard } from "@/src/components/TargetPriceCard";
 import { TrendCard } from "@/src/components/TrendCard";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
@@ -286,6 +287,10 @@ export default function PropertyDetailScreen() {
 
             <Animated.View entering={FadeInDown.delay(400).duration(320)}>
               <TargetPriceCard propertyId={id!} suggestedValue={est.value} />
+            </Animated.View>
+
+            <Animated.View entering={FadeInDown.delay(420).duration(320)}>
+              <RisksCard propertyId={id!} />
             </Animated.View>
 
             <Pressable

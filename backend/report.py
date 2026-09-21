@@ -40,7 +40,8 @@ def pct(p: float, digits: int = 1) -> str:
     return f"{s}\u202f%"
 
 
-def build_report(prop: PropertyDoc, final: Optional[dict] = None, photos: Optional[list[tuple[bytes, bool]]] = None) -> bytes:
+def build_report(prop: PropertyDoc, final: Optional[dict] = None, photos: Optional[list[tuple[bytes, bool]]] = None,
+                 risks: Optional[dict] = None) -> bytes:
     est = prop.estimation
     assert est is not None
     buf = BytesIO()
@@ -140,6 +141,9 @@ def build_report(prop: PropertyDoc, final: Optional[dict] = None, photos: Option
                      eur(c.price), f"{eur(c.price_m2)}/m²"])
     story.append(_table(rows, [20 * mm, 20 * mm, 44 * mm, 34 * mm, 28 * mm, 28 * mm], body))
 
+    if risks:
+        story.extend(risks_section(risks, h2, body, small))
+
     # Photos (retouched preferred), 2 per row
     if photos:
         story.append(PageBreak())
@@ -168,6 +172,30 @@ def build_report(prop: PropertyDoc, final: Optional[dict] = None, photos: Option
         "Visuel et valeurs non contractuels.", small))
     doc.build(story)
     return buf.getvalue()
+
+
+LEVEL_FR = {"none": "Non concerné", "low": "Faible", "medium": "Moyen", "high": "Fort", "info": "Commune"}
+
+
+def risks_section(risks: dict, h2: ParagraphStyle, body: ParagraphStyle, small: ParagraphStyle) -> list:
+    """« Risques & environnement » (Géorisques) : lignes de synthèse + tableau des risques présents."""
+    import georisques
+
+    out = [Paragraph("Risques & environnement (Géorisques)", h2)]
+    for line in georisques.summary_lines(risks):
+        out.append(Paragraph(line, body))
+    present = [it for it in risks.get("items", []) if it.get("present")]
+    if present:
+        rows = [["Risque", "Niveau", "Statut à l'adresse", "Statut commune"]]
+        for it in present:
+            rows.append([it["label"], it.get("detail") or LEVEL_FR.get(it.get("level"), "—"),
+                         it.get("status_address") or "—", it.get("status_commune") or "—"])
+        out.append(_table(rows, [58 * mm, 34 * mm, 42 * mm, 40 * mm], body))
+    fetched = risks.get("fetched_at")
+    when = fetched.strftime("%d/%m/%Y") if hasattr(fetched, "strftime") else str(fetched or "")[:10]
+    out.append(Paragraph(f"Source : georisques.gouv.fr (données consultées le {when}). Information indicative : l'état des risques "
+                         "et pollutions (ERP) réglementaire reste à établir par le vendeur.", small))
+    return out
 
 
 def brand_header(title: str, h1: ParagraphStyle, subtitle: str, small: ParagraphStyle) -> Table:

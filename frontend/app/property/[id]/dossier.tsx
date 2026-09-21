@@ -110,9 +110,15 @@ export default function DossierScreen() {
                 <View style={[styles.barFill, { width: `${d.progress.pct}%` as `${number}%` }]} />
               </View>
               <Text style={styles.hint}>
-                Chaque document importé est lu par l’IA (Gemini 3 Flash) puis doit être vérifié et validé par vous avant de
+                Chaque document importé est lu par l’IA (Gemini 3 Flash, Pack premium) puis doit être vérifié et validé par vous avant de
                 compter dans le dossier.
               </Text>
+              {d.risks ? (
+                <Text style={styles.hint} testID="dossier-risks-note">
+                  Checklist ajustée avec les risques Géorisques de l’adresse
+                  {d.risks.dossier_flags.geotechnique_required ? " (zone argile : étude géotechnique requise)" : ""}.
+                </Text>
+              ) : null}
             </View>
 
             {blocked ? (

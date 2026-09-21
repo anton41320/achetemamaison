@@ -1,0 +1,32 @@
+{
+  "summary": "Iteration 19 — Géorisques integration verified end-to-end. BACKEND (8/8 pytest, /app/backend/tests/test_georisques.py, JUnit /app/test_reports/pytest/georisques_iter19.xml): (1) POST /api/auth/login delivered@resend.dev/Estimo2026! -> 200 with token; (2) GET /api/properties/6aa3f68d440f04920cdaffde/risks unauth -> 401; (3) GET .../risks (auth) -> 200 with full normalised shape { fetched_at, partial:false, source_url containing 'georisques', items[] each having key/label/family/present/scope∈{adresse,commune}/level∈{none,low,medium,high,info}, argile{code:'2', level:'medium', label contains 'moyenne'}, radon{code,level,label}, catnat{count:10, by_type, last[]}, icpe{count, radius_m:1000, sites[]}, dossier_flags{erp_required:true, geotechnique_required:true, radon_significant, catnat_secheresse} }; (4) 2nd cached call returns in <1 s (JUnit shows fast path); (5) GET .../risks?refresh=true -> 200 within 35 s tolerance; (6) GET .../risks on 000000000000000000000000 -> 404; (7) GET .../dossier -> 200 with risks non null, item 'erp' required=true and reason starts with 'Toujours requis ·', item 'geotechnique' required=true and reason contains 'Géorisques'; (8) GET .../report.pdf -> 200 %PDF- and extracted text contains 'Risques & environnement (Géorisques)'; (9) GET .../notaire.pdf -> 200 %PDF- and page 1 text contains 'Risques & environnement'. FRONTEND (Playwright, mobile 390x844): login OK; /property/6aa3f68d440f04920cdaffde renders testID='risks-card' with 'risks-summary' text '6 risque(s) identifié(s) à l’adresse, 4 recensé(s) sur la commune.'; KPIs 'risks-argile' displays 'Exposition moyenne' + 'Argiles (retrait-gonflement)', 'risks-radon' 'Potentiel faible', 'risks-catnat' '10', 'risks-icpe' '0 · Sites industriels à 1 km'; row 'risk-argile' present; button 'risks-toggle' label 'Voir les 6 autres risques' → click expands rows 4→10 and relabels to 'Réduire'; 'risks-flag-geotech' visible ('Étude géotechnique ajoutée aux pièces requises…'); external link 'risks-source' present. /property/{id}/dossier renders 'dossier-risks-note' ('Checklist ajustée avec les risques Géorisques de l’adresse (zone argile : étude géotechnique requise).'). Item 'Étude géotechnique (G1) *' is visible with the required asterisk and reason 'Zone d''exposition argile « exposition moyenne » (Géorisques)'. Filtered console errors (excluding shadow*/pointerEvents): 0 across sign-in, property, dossier. No red screen, no page errors. All acceptance criteria of the review request are met.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_georisques.py",
+    "/app/test_reports/pytest/georisques_iter19.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "/app/backend/georisques.py: normalised aggregation over 5 public endpoints (rapport, rga, radon, catnat, ICPE) with 3-attempt retry + 20 s per-call timeout; ThreadPoolExecutor(max_workers=5) parallelises the fetch and asyncio.to_thread runs it off the event loop. 30-day cache in `risks` collection keyed by property id; when a fresh partial refresh occurs and a better cached snapshot exists, the cache is preserved (line 191-192). to_json drops mongo _id and ISO-formats fetched_at.",
+    "/app/backend/dossier.py:64-94: dossier_flags drive ERP reason ('Toujours requis · ' + summary_lines) and force geotechnique to required=true when argile.code ∈ {2,3} AND property_type=='maison' — matches the review requirement.",
+    "/app/backend/server.py:648-658: GET /properties/{pid}/risks is protected by auth.own() (401 sans token, 404 for unowned/missing id), returns 502 with truncated error if fetch throws — safe fallback.",
+    "/app/frontend/src/components/RisksCard.tsx: uses @tanstack/react-query with staleTime 1 h and manual refetch on error; testIDs match spec (risks-card, risks-summary, risks-argile/radon/catnat/icpe, risk-{key}, risks-toggle, risks-flag-geotech, risks-source). Toggle threshold hard-coded to 4 which matches spec ('les N autres risques').",
+    "/app/frontend/app/property/[id]/dossier.tsx:116-121: dossier-risks-note appears only when d.risks truthy and mentions the argile flag when geotechnique_required — good defensive rendering."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_georisques.py",
+    "/app/test_reports/pytest/georisques_iter19.xml",
+    "/app/test_reports/iteration_19.json"
+  ],
+  "success_rate": {"backend": "100% (8/8)", "frontend": "100% (all requested flows)"},
+  "seed_data_creation": "None. Read-only against seeded property 6aa3f68d440f04920cdaffde (delivered@resend.dev). No writes to properties/documents/photos/orders. POST /pack/checkout NEVER called (Stripe LIVE).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Géorisques feature is fully live and verified. Reusable pytest file: /app/backend/tests/test_georisques.py (auth+shape+cache+refresh+404+dossier+report+notaire). Property fixture 6aa3f68d440f04920cdaffde has argile.code='2' (Exposition moyenne), 10 CatNat arrêtés, 6 risks at address / 4 on commune, 0 ICPE within 1 km. Backend URL from EXPO_PUBLIC_BACKEND_URL. External Géorisques API can be slow/flaky — the backend retries 3× and returns cache; tests tolerate partial=True and up to 35 s for refresh. Existing shadow*/pointerEvents deprecation warnings from iter 15–18 remain non-blocking and are filtered out during console-error assertions."
+}

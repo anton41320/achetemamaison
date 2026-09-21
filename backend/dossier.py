@@ -57,10 +57,11 @@ ITEMS: dict[str, dict] = {
 }
 
 
-def build_checklist(prop: PropertyDoc) -> list[dict]:
+def build_checklist(prop: PropertyDoc, risks: Optional[dict] = None) -> list[dict]:
     y = prop.year_built
     maison = prop.property_type == "maison"
     old_install = y is None or y <= CURRENT_YEAR - 15
+    flags = (risks or {}).get("dossier_flags") or {}
     items: list[dict] = []
 
     def add(key: str, required: bool, reason: str):
@@ -68,7 +69,11 @@ def build_checklist(prop: PropertyDoc) -> list[dict]:
 
     add("titre_propriete", True, "Toujours requis")
     add("dpe", True, "Toujours requis, dès la publication de l'annonce")
-    add("erp", True, "Toujours requis")
+    if risks:
+        import georisques
+        add("erp", True, "Toujours requis · " + " ".join(georisques.summary_lines(risks))[:400])
+    else:
+        add("erp", True, "Toujours requis")
     if y is None:
         add("amiante", True, "Année de construction inconnue : requis si permis avant juillet 1997")
         add("plomb", False, "Année inconnue : requis seulement si construit avant 1949")
@@ -83,7 +88,9 @@ def build_checklist(prop: PropertyDoc) -> list[dict]:
     add("merules", False, "Selon zone à risque")
     if maison:
         add("assainissement", False, "Si non raccordée au tout-à-l'égout")
-        if prop.land_surface and prop.land_surface > 0:
+        if flags.get("geotechnique_required"):
+            add("geotechnique", True, f"Zone d'exposition argile « {(risks or {}).get('argile', {}).get('label', 'moyenne ou forte').lower()} » (Géorisques)")
+        elif prop.land_surface and prop.land_surface > 0:
             add("geotechnique", False, "Terrain : selon zone argile")
     if prop.dpe and prop.dpe.upper() in ("E", "F", "G") and maison:
         add("audit_energetique", True, f"DPE {prop.dpe.upper()} en maison")

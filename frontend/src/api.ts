@@ -520,10 +520,37 @@ export interface ChecklistItem {
   documents: SaleDocument[];
 }
 
+export type RiskLevel = "none" | "low" | "medium" | "high" | "info";
+export interface RiskItem {
+  key: string;
+  label: string;
+  family: "naturel" | "technologique";
+  present: boolean;
+  scope: "adresse" | "commune";
+  status_address: string | null;
+  status_commune: string | null;
+  level: RiskLevel;
+  detail?: string;
+}
+export interface Risks {
+  property_id: string;
+  fetched_at: string;
+  partial: boolean;
+  source_url: string;
+  commune: { libelle?: string; codePostal?: string; codeInsee?: string };
+  items: RiskItem[];
+  argile: { code: string; level: RiskLevel; label: string };
+  radon: { code: string; level: RiskLevel; label: string };
+  catnat: { count: number; by_type: Record<string, number>; last: { type: string; start: string; end: string }[] };
+  icpe: { count: number; radius_m: number; sites: { name: string; regime: string | null; seveso: string | null }[] };
+  dossier_flags: { erp_required: boolean; geotechnique_required: boolean; radon_significant: boolean; catnat_secheresse: boolean };
+}
+
 export interface Dossier {
   property_id: string;
   items: ChecklistItem[];
   unassigned: SaleDocument[];
+  risks: Risks | null;
   progress: { done: number; total_required: number; pct: number };
 }
 
@@ -666,6 +693,7 @@ export const api = {
     request<SaleDocument>(`/documents/${did}/validate`, { method: "PUT", body: JSON.stringify({ fields, validated }) }),
   deleteDocument: (did: string) => request<{ deleted: boolean }>(`/documents/${did}`, { method: "DELETE" }),
   getTarget: (id: string) => request<TargetResponse>(`/properties/${id}/target`),
+  risks: (id: string) => request<Risks>(`/properties/${id}/risks`),
   putTarget: (id: string, target_price: number | null) =>
     request<TargetResponse>(`/properties/${id}/target`, { method: "PUT", body: JSON.stringify({ target_price }) }),
   notaireUrl: (id: string) => withToken(`${BASE}/properties/${id}/notaire.pdf`),

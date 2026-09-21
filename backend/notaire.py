@@ -104,6 +104,11 @@ def build_cover(prop: PropertyDoc, final: Optional[dict], dossier: dict, attachm
     story.append(_table(rows, [66 * mm, 28 * mm, 26 * mm, 26 * mm, 28 * mm], st["body"]))
     story.append(Paragraph("* pièce obligatoire selon la situation déclarée du bien. Les statuts « manquant » et « à vérifier » signalent les pièces restant à fournir ou à contrôler.", st["small"]))
 
+    if dossier.get("risks"):
+        from report import risks_section
+
+        story.extend(risks_section(dossier["risks"], st["h2"], st["body"], st["small"]))
+
     story.append(Paragraph("Pièces jointes à ce dossier", st["h2"]))
     if not attachments:
         story.append(Paragraph("Aucun document validé pour le moment : seules les pièces validées par le vendeur sont jointes.", st["body"]))

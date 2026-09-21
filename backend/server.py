@@ -21,6 +21,7 @@ import auth
 import communes
 import dossier as dossier_mod
 import dvf_ingest
+import georisques
 import hedonic
 import jobs
 import ml_model
@@ -607,7 +608,12 @@ async def _dossier(pid: str) -> dict:
     if not doc:
         raise HTTPException(status_code=404, detail="Bien introuvable")
     prop = PropertyDoc.from_mongo(doc)
-    items = dossier_mod.build_checklist(prop)
+    try:
+        risks = await georisques.get_for_property(db, prop)
+    except Exception:  # noqa: BLE001 — Géorisques must never block the dossier
+        logger.exception("Géorisques unavailable")
+        risks = None
+    items = dossier_mod.build_checklist(prop, risks)
     docs = await db.documents.find({"property_id": pid, "deleted_at": None}).sort("created_at", -1).to_list(300)
     overrides = {o["item_key"]: o for o in await db.checklist_state.find({"property_id": pid}).to_list(100)}
     by_item: dict[str, list[dict]] = {}
@@ -634,8 +640,22 @@ async def _dossier(pid: str) -> dict:
                 done += 1
     unassigned = by_item.get("autre", [])
     return {"property_id": pid, "items": items, "unassigned": unassigned,
+            "risks": georisques.to_json(risks) if risks else None,
             "progress": {"done": done, "total_required": total_required,
                          "pct": round(done / total_required * 100) if total_required else 100}}
+
+
+@api.get("/properties/{pid}/risks")
+async def property_risks(pid: str, refresh: bool = Query(default=False)):
+    """Risques Géorisques (information publique, gratuite) — cache 30 jours par bien."""
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Bien introuvable")
+    try:
+        risks = await georisques.get_for_property(db, PropertyDoc.from_mongo(doc), force=refresh)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=f"Géorisques indisponible : {str(exc)[:120]}")
+    return georisques.to_json(risks)
 
 
 @api.get("/properties/{pid}/dossier")
@@ -830,7 +850,8 @@ async def property_report(pid: str, photos: bool = Query(default=True)):
     if not prop.estimation:
         raise HTTPException(status_code=422, detail="Aucune estimation disponible")
     imgs = await _property_photos(pid, 8) if photos else []
-    pdf = await asyncio.to_thread(build_report, prop, blend(prop.estimation, await _get_weights()), imgs)
+    risks = await db.risks.find_one({"_id": prop.id})
+    pdf = await asyncio.to_thread(build_report, prop, blend(prop.estimation, await _get_weights()), imgs, risks)
     filename = f"estimo-{pid[-6:]}.pdf"
     return Response(content=pdf, media_type="application/pdf",
                     headers={"Content-Disposition": f'inline; filename="{filename}"'})
