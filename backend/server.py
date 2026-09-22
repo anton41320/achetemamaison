@@ -23,6 +23,7 @@ import dossier as dossier_mod
 import dvf_ingest
 import georisques
 import hedonic
+import iap
 import jobs
 import legal
 import ml_model
@@ -58,6 +59,7 @@ app = FastAPI(title="Achètes ma maison API")
 api = APIRouter(prefix="/api")          # routes protégées (connexion requise)
 public = APIRouter(prefix="/api")       # routes publiques
 auth.init(db)
+iap.init(db)
 
 
 def _prop_response(doc: dict) -> dict:
@@ -951,6 +953,8 @@ app.include_router(public)
 app.include_router(legal.router, prefix="/api")  # https://<domaine>/api/privacy
 app.include_router(legal.router)  # https://<domaine>/privacy (hôte déployé : la racine est servie par l'API)
 app.include_router(auth.router)
+app.include_router(iap.router, prefix="/api")
+app.include_router(iap.webhook_router, prefix="/api")
 app.include_router(api, dependencies=[Depends(auth.require_user)])
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
@@ -963,6 +967,7 @@ async def startup():
         await asyncio.to_thread(storage.init_storage)
     except Exception as exc:  # noqa: BLE001
         logger.warning("Object storage init failed: %s", exc)
+    await iap.ensure_indexes()
     await auth.ensure_indexes()
     count = await db.dvf_sales.estimated_document_count()
     if await db.communes.estimated_document_count() == 0:

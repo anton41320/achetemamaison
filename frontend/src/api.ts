@@ -694,6 +694,8 @@ export const api = {
   deleteDocument: (did: string) => request<{ deleted: boolean }>(`/documents/${did}`, { method: "DELETE" }),
   getTarget: (id: string) => request<TargetResponse>(`/properties/${id}/target`),
   risks: (id: string) => request<Risks>(`/properties/${id}/risks`),
+  iapIntent: (propertyId: string) => request<{ ok: boolean; product_id: string }>("/iap/intents", { method: "POST", body: JSON.stringify({ property_id: propertyId }) }),
+  iapClaim: (propertyId: string) => request<{ unlocked: boolean; pending?: boolean; message?: string }>("/iap/claim", { method: "POST", body: JSON.stringify({ property_id: propertyId }) }),
   putTarget: (id: string, target_price: number | null) =>
     request<TargetResponse>(`/properties/${id}/target`, { method: "PUT", body: JSON.stringify({ target_price }) }),
   notaireUrl: (id: string) => withToken(`${BASE}/properties/${id}/notaire.pdf`),

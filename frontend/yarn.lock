@@ -1515,6 +1515,23 @@
     invariant "^2.2.4"
     nullthrows "^1.1.1"
 
+"@revenuecat/purchases-js-hybrid-mappings@19.2.0":
+  version "19.2.0"
+  resolved "https://registry.yarnpkg.com/@revenuecat/purchases-js-hybrid-mappings/-/purchases-js-hybrid-mappings-19.2.0.tgz#b081d0062cc6bd9d23118fc40e8b3a888cff77ba"
+  integrity sha512-PZyW5sVMjPrPArWHieocKsUSxVPC70dVOrCD/Gq2NDKlYd+eA5+W58ZizCHBvpQ6UaRfzoMewCRhlFZVNfnxag==
+  dependencies:
+    "@revenuecat/purchases-js" "1.63.1"
+
+"@revenuecat/purchases-js@1.63.1":
+  version "1.63.1"
+  resolved "https://registry.yarnpkg.com/@revenuecat/purchases-js/-/purchases-js-1.63.1.tgz#a4e50bc308cfd2d5ce6fbdf34d43d540d84a4dc2"
+  integrity sha512-0PoyNVM7bsuqqbJaAS51hi/3T60RmsmlPsoLJ90LceqwvdyDFz/elYVr3aA/TOtDmbXluJ20HSRChOFuH/GLkw==
+
+"@revenuecat/purchases-typescript-internal@19.2.0":
+  version "19.2.0"
+  resolved "https://registry.yarnpkg.com/@revenuecat/purchases-typescript-internal/-/purchases-typescript-internal-19.2.0.tgz#11943e3a38f55741ebb25072c2f63147ce428eec"
+  integrity sha512-Ha3KoMVoMFwzBiOsCkH/TUJwMNZFRDB8A218mb3p13IwbAj1wCGIYjJB/dpTPSf2TXxSHwbEn9OU84u4ngJ7mg==
+
 "@rtsao/scc@^1.1.0":
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/@rtsao/scc/-/scc-1.1.0.tgz#927dd2fae9bc3361403ac2c7a00c32ddce9ad7e8"
@@ -5409,6 +5426,14 @@ react-native-keyboard-controller@1.21.9:
   integrity sha512-+TkkFldht4+AXBQeDy1hLE7iqiW8/NkY/ekhcFsKIiRdI9qC5JDzx0TfAg1iYZB2IeOXppmURIy2jFCUjOcV1w==
   dependencies:
     react-native-is-edge-to-edge "^1.2.1"
+
+react-native-purchases@10.10.1:
+  version "10.10.1"
+  resolved "https://registry.yarnpkg.com/react-native-purchases/-/react-native-purchases-10.10.1.tgz#e4b48093f9f968ea8e739d6198ca8342d6c38961"
+  integrity sha512-rE2mrvV3K3CSFmgdR1t3YwSw5SpIniupTCcbPoJ6zTHpjigL7WRtLh2DYEaY+jiZWoiCr1DV+EgGx7tGh9qb0A==
+  dependencies:
+    "@revenuecat/purchases-js-hybrid-mappings" "19.2.0"
+    "@revenuecat/purchases-typescript-internal" "19.2.0"
 
 react-native-reanimated@4.5.1:
   version "4.5.1"

@@ -7,6 +7,8 @@ import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, Text, View
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { LISTING_STYLES, ListingStyle, api } from "@/src/api";
+import { useSession } from "@/src/auth";
+import { isExpoGo, nativeStoreAvailable, purchasePack, restorePack } from "@/src/iap";
 import { PackPreview } from "@/src/components/PackPreview";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { ScreenHeader } from "@/src/components/ScreenHeader";
@@ -56,6 +58,34 @@ export default function PackScreen() {
       setError("Paiement non confirmé pour le moment. Si vous avez payé, revenez dans quelques instants : le déblocage est automatique.");
     }
   }, [pack.dataUpdatedAt, pack.data?.unlocked, polling, queryClient]);
+
+  const { user } = useSession();
+  const nativeStore = nativeStoreAvailable();
+  // Mobile : achat intégré Apple/Google (règle App Store 3.1.1) ; web : Stripe Checkout.
+  const iap = useMutation({
+    mutationFn: () => purchasePack(id!, user!.id),
+    onMutate: () => setError(null),
+    onSuccess: async (outcome) => {
+      if (outcome.status === "unlocked") {
+        await queryClient.invalidateQueries({ queryKey: ["pack", id] });
+      } else if (outcome.status === "pending") {
+        pollCount.current = 0;
+        setPolling(true);
+      } else if (outcome.status === "error") {
+        setError(outcome.message);
+      }
+    },
+    onError: (e: Error) => setError(e.message),
+  });
+  const restore = useMutation({
+    mutationFn: () => restorePack(id!, user!.id),
+    onMutate: () => setError(null),
+    onSuccess: async (unlocked) => {
+      if (unlocked) await queryClient.invalidateQueries({ queryKey: ["pack", id] });
+      else setError("Aucun achat à restaurer pour ce bien.");
+    },
+    onError: (e: Error) => setError(e.message),
+  });
 
   const checkout = useMutation({
     mutationFn: () => {
@@ -169,20 +199,43 @@ export default function PackScreen() {
                 <Text style={[styles.warnText, { color: colors.error }]}>{error}</Text>
               </View>
             ) : null}
-            {!d.payments_available ? (
+            {nativeStore ? (
+              <>
+                <Pressable testID="pack-pay-button" accessibilityRole="button" disabled={iap.isPending || polling}
+                  onPress={() => iap.mutate()} style={({ pressed }) => [styles.payBtn, (pressed || iap.isPending) && { opacity: 0.85 }]}>
+                  {iap.isPending ? <ActivityIndicator color={colors.onBrandPrimary} /> : <CreditCardIcon size={20} color={colors.onBrandPrimary} weight="fill" />}
+                  <Text style={styles.payLabel}>Acheter · 49 €</Text>
+                </Pressable>
+                <Text style={styles.hint}>
+                  Paiement sécurisé par {Platform.OS === "ios" ? "l’App Store (Apple)" : "Google Play"} : achat unique pour ce bien, sans abonnement.
+                  Le déblocage est confirmé côté serveur après validation de la boutique.
+                </Text>
+                <Pressable testID="pack-restore-button" accessibilityRole="button" disabled={restore.isPending} onPress={() => restore.mutate()} style={styles.restoreBtn}>
+                  <Text style={styles.link}>{restore.isPending ? "Vérification…" : "Restaurer un achat déjà effectué"}</Text>
+                </Pressable>
+              </>
+            ) : isExpoGo() ? (
+              <Text style={styles.hint} testID="pack-expo-go">
+                L’achat intégré n’est disponible que dans l’application installée depuis l’App Store / Google Play (pas dans Expo Go).
+              </Text>
+            ) : Platform.OS !== "web" ? (
+              <Text style={styles.hint} testID="pack-unavailable">Achat intégré temporairement indisponible.</Text>
+            ) : !d.payments_available ? (
               <Text style={styles.hint} testID="pack-unavailable">Paiement temporairement indisponible.</Text>
             ) : (
-              <Pressable testID="pack-pay-button" accessibilityRole="button" disabled={checkout.isPending || polling}
-                onPress={() => checkout.mutate()} style={({ pressed }) => [styles.payBtn, (pressed || checkout.isPending) && { opacity: 0.85 }]}>
-                {checkout.isPending ? <ActivityIndicator color={colors.onBrandPrimary} /> : <CreditCardIcon size={20} color={colors.onBrandPrimary} weight="fill" />}
-                <Text style={styles.payLabel}>Payer 49 € et débloquer</Text>
-              </Pressable>
+              <>
+                <Pressable testID="pack-pay-button" accessibilityRole="button" disabled={checkout.isPending || polling}
+                  onPress={() => checkout.mutate()} style={({ pressed }) => [styles.payBtn, (pressed || checkout.isPending) && { opacity: 0.85 }]}>
+                  {checkout.isPending ? <ActivityIndicator color={colors.onBrandPrimary} /> : <CreditCardIcon size={20} color={colors.onBrandPrimary} weight="fill" />}
+                  <Text style={styles.payLabel}>Payer 49 € et débloquer</Text>
+                </Pressable>
+                <Text style={styles.hint}>
+                  Vous serez redirigé vers la page de paiement sécurisée Stripe, puis ramené automatiquement ici. Le déblocage est
+                  confirmé côté serveur après validation du paiement.{" "}
+                  <Text style={styles.link} onPress={() => Linking.openURL("https://stripe.com/fr/privacy")}>Confidentialité Stripe</Text>
+                </Text>
+              </>
             )}
-            <Text style={styles.hint}>
-              Vous serez redirigé vers la page de paiement sécurisée Stripe, puis ramené automatiquement ici. Le déblocage est
-              confirmé côté serveur après validation du paiement.{" "}
-              <Text style={styles.link} onPress={() => Linking.openURL("https://stripe.com/fr/privacy")}>Confidentialité Stripe</Text>
-            </Text>
           </>
         )}
       </ScrollView>
@@ -208,6 +261,7 @@ const useStyles = makeStyles((colors) => ({
   warn: { flexDirection: "row", gap: spacing.md, alignItems: "center", backgroundColor: colors.warningSoft, borderRadius: radius.md, padding: spacing.lg },
   warnText: { flex: 1, fontFamily: fonts.medium, fontSize: 13, lineHeight: 19, color: colors.warning },
   payBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, minHeight: 56, borderRadius: radius.md, backgroundColor: colors.brandPrimary },
+  restoreBtn: { minHeight: 44, justifyContent: "center", alignItems: "center" },
   payLabel: { fontFamily: fonts.semibold, fontSize: 17, color: colors.onBrandPrimary },
   unlockedCard: { flexDirection: "row", gap: spacing.md, alignItems: "center", backgroundColor: colors.successSoft, borderRadius: radius.lg, padding: spacing.lg },
   unlockedTitle: { fontFamily: fonts.semibold, fontSize: 15, color: colors.success },
