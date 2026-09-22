@@ -91,6 +91,9 @@ if __name__ == "__main__":
     if kind == "iphone":
         raw_dir, out_dir, size = ROOT / "raw", ROOT / "iphone-6.9", (1320, 2868)
         params = dict(scale=0.86, title_px=84, sub_px=44, radius=96)
+    elif kind == "iphone65":
+        raw_dir, out_dir, size = ROOT / "raw", ROOT / "iphone-6.5", (1284, 2778)
+        params = dict(scale=0.836, title_px=82, sub_px=43, radius=94)
     else:
         raw_dir, out_dir, size = ROOT / "raw-ipad", ROOT / "ipad-13", (2064, 2752)
         params = dict(scale=0.84, title_px=96, sub_px=50, radius=72)
