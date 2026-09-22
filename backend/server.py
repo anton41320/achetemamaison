@@ -24,6 +24,7 @@ import dvf_ingest
 import georisques
 import hedonic
 import jobs
+import legal
 import ml_model
 import model_store
 import notaire
@@ -947,6 +948,8 @@ async def validation(n: int = Query(default=40, ge=5, le=150)):
 
 
 app.include_router(public)
+app.include_router(legal.router, prefix="/api")  # https://<domaine>/api/privacy
+app.include_router(legal.router)  # https://<domaine>/privacy (hôte déployé : la racine est servie par l'API)
 app.include_router(auth.router)
 app.include_router(api, dependencies=[Depends(auth.require_user)])
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
