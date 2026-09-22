@@ -11,6 +11,9 @@ Tout ce qu'il faut copier-coller dans App Store Connect (Distribution → versio
 | iPhone — écran 6,9" (si l'emplacement est proposé) | `iphone-6.9/01-…07-*.png` | 1320 × 2868 px |
 | iPhone — écran 6,5" (emplacement affiché par défaut dans App Store Connect) | `iphone-6.5/01-…07-*.png` | 1284 × 2778 px |
 | iPad — écran 13" (obligatoire car l'app accepte l'iPad) | `ipad-13/01-…07-*.png` | 2064 × 2752 px |
+| **Google Play** — captures téléphone (ratio 9:16 imposé) | `play-phone/01-…07-*.png` | 1080 × 1920 px |
+| **Google Play** — image de présentation (obligatoire) | `play-feature-graphic-1024x500.png` | 1024 × 500 px |
+| **Google Play** — icône | `play-icon-512.png` | 512 × 512 px |
 
 Ordre conseillé (glisser-déposer dans cet ordre) :
 1. `01-welcome` — Estimez, préparez, vendez

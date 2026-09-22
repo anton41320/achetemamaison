@@ -91,6 +91,9 @@ if __name__ == "__main__":
     if kind == "iphone":
         raw_dir, out_dir, size = ROOT / "raw", ROOT / "iphone-6.9", (1320, 2868)
         params = dict(scale=0.86, title_px=84, sub_px=44, radius=96)
+    elif kind == "play":  # Google Play : ratio 9:16 obligatoire, côtés entre 320 et 3840 px
+        raw_dir, out_dir, size = ROOT / "raw", ROOT / "play-phone", (1080, 1920)
+        params = dict(scale=0.66, title_px=64, sub_px=34, radius=74)
     elif kind == "iphone65":
         raw_dir, out_dir, size = ROOT / "raw", ROOT / "iphone-6.5", (1284, 2778)
         params = dict(scale=0.836, title_px=82, sub_px=43, radius=94)
