@@ -12,7 +12,8 @@
       "bundleIdentifier": "com.emergent.estimatehome.ye2qdy",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Choisir les photos de votre bien à retoucher",
-        "NSCameraUsageDescription": "Photographier votre bien pour la retouche IA"
+        "NSCameraUsageDescription": "Photographier votre bien pour la retouche IA",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
