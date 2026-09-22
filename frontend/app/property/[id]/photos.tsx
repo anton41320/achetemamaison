@@ -65,7 +65,9 @@ export default function PhotosScreen() {
     setPermissionBlocked(null);
     const get = source === "camera" ? ImagePicker.getCameraPermissionsAsync : ImagePicker.getMediaLibraryPermissionsAsync;
     const ask = source === "camera" ? ImagePicker.requestCameraPermissionsAsync : ImagePicker.requestMediaLibraryPermissionsAsync;
-    let perm = await get();
+    // Android : le sélecteur de photos système (Photo Picker) ne requiert aucune autorisation ; seul l'appareil photo en a besoin.
+    const needsPermission = source === "camera" || Platform.OS !== "android";
+    let perm = needsPermission ? await get() : { granted: true, canAskAgain: true };
     if (!perm.granted) {
       if (!perm.canAskAgain && Platform.OS !== "web") {
         setPermissionBlocked(source);
