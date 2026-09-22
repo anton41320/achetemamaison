@@ -225,14 +225,62 @@ async def reset_password(body: ResetIn):
     return {"ok": True, "access_token": make_token(str(user["_id"])), "token_type": "bearer", "user": public_user(user)}
 
 
-@router.delete("/account")
-async def delete_account(body: DeleteIn, user: dict = Depends(require_user)):
-    """Suppression de compte (exigence App Store) : données du vendeur passées en suppression logique, compte effacé."""
-    if not passwords.verify(body.password, user["password_hash"]):
-        raise HTTPException(status_code=400, detail="Mot de passe incorrect")
+async def erase_user(user: dict) -> None:
+    """Données du vendeur passées en suppression logique, compte et jetons effacés (in-app et page web)."""
     uid = str(user["_id"])
     for coll in ("properties", "documents", "photos", "listings"):
         await _db[coll].update_many({"owner_id": uid, "deleted_at": None}, {"$set": {"deleted_at": now()}})
     await _db.password_resets.delete_many({"user_id": user["_id"]})
+    await _db.account_deletions.delete_many({"user_id": user["_id"]})
     await _db.users.delete_one({"_id": user["_id"]})
+
+
+@router.delete("/account")
+async def delete_account(body: DeleteIn, user: dict = Depends(require_user)):
+    """Suppression de compte (exigence App Store) depuis l'application."""
+    if not passwords.verify(body.password, user["password_hash"]):
+        raise HTTPException(status_code=400, detail="Mot de passe incorrect")
+    await erase_user(user)
     return {"ok": True}
+
+
+async def request_web_deletion(email: str, origin: str) -> None:
+    """Page web « supprimer mon compte » (exigence Google Play) : lien de confirmation par e-mail, valable 15 min."""
+    user = await _db.users.find_one({"email": email.lower().strip()})
+    if not user or not emailer.email_ready():
+        return
+    recent = await _db.account_deletions.count_documents({"user_id": user["_id"], "created_at": {"$gt": now() - timedelta(minutes=5)}})
+    if recent >= 3:
+        return
+    raw = secrets.token_urlsafe(32)
+    await _db.account_deletions.insert_one({"user_id": user["_id"], "token_hash": _digest(raw),
+                                            "expires_at": now() + timedelta(minutes=RESET_MINUTES), "created_at": now()})
+    link = f"{origin}/api/account/delete/confirm?token={raw}"
+    brand = escape(emailer.EMAIL_FROM_NAME)
+    html = (
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f6fb;padding:24px 0"><tr><td align="center">'
+        '<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;font-family:Arial,Helvetica,sans-serif;color:#0f1f3d">'
+        f'<tr><td style="padding:28px 32px 8px"><p style="margin:0;font-size:20px;font-weight:bold;color:#1656C9">{brand}</p>'
+        '<p style="margin:4px 0 0;font-size:13px;color:#6b7772">Suppression de votre compte</p></td></tr>'
+        '<tr><td style="padding:16px 32px"><p style="margin:0 0 12px;font-size:15px;line-height:22px">Vous avez demandé la suppression de votre compte et de toutes '
+        f'les données associées (biens, estimations, documents, photos, annonces). Cette action est définitive. Le lien expire dans {RESET_MINUTES} minutes.</p>'
+        f'<p style="margin:16px 0"><a href="{link}" style="display:inline-block;background:#D9342B;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:bold;font-size:14px">Confirmer la suppression définitive</a></p>'
+        '<p style="margin:0;font-size:13px;color:#6b7772">Si vous n’êtes pas à l’origine de cette demande, ignorez cet e-mail : rien ne sera supprimé.</p></td></tr>'
+        '</table></td></tr></table>'
+    )
+    try:
+        await emailer.send_email(to=user["email"], subject=f"{emailer.EMAIL_FROM_NAME} — confirmez la suppression de votre compte", html=html)
+    except Exception:  # noqa: BLE001
+        logger.exception("Account deletion email failed")
+
+
+async def confirm_web_deletion(token: str) -> bool:
+    row = await _db.account_deletions.find_one({"token_hash": _digest(token), "expires_at": {"$gt": now()}})
+    if not row:
+        return False
+    user = await _db.users.find_one({"_id": row["user_id"]})
+    if user:
+        await erase_user(user)
+    else:
+        await _db.account_deletions.delete_many({"user_id": row["user_id"]})
+    return True

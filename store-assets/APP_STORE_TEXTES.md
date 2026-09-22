@@ -92,19 +92,19 @@ estimation,immobilier,vendre,maison,appartement,prix,DVF,notaire,diagnostic,DPE,
 
 **URL d'assistance** (obligatoire)
 ```
-https://VOTRE-DOMAINE-PUBLIÉ/privacy
+https://estimate-home.emergent.host/api/privacy
 ```
 
 **URL marketing** (facultatif)
 ```
-https://VOTRE-DOMAINE-PUBLIÉ
+https://estimate-home.emergent.host/api/privacy
 ```
 
 **URL de la politique de confidentialité** (obligatoire — section « Informations sur l'app »)
 ```
-https://VOTRE-DOMAINE-PUBLIÉ/privacy
+https://estimate-home.emergent.host/api/privacy
 ```
-> Remplacez `VOTRE-DOMAINE-PUBLIÉ` par le domaine affiché dans votre panneau de déploiement Emergent (ex. `xxxx.emergent.host`). La page `/privacy` (politique + support) fait partie de l'app web déployée.
+> Domaine déployé : `estimate-home.emergent.host`. Les pages légales sont servies par le serveur : `/api/privacy` (politique + support) et `/api/account/delete` (suppression de compte, exigée par Google Play → « URL de suppression de compte »).
 
 **Nouveautés de cette version** (4000 car. max)
 ```
