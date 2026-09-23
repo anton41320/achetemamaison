@@ -16,6 +16,7 @@ STYLE_GUIDE = {
 }
 CONDITION = {"a_renover": "à rénover", "travaux": "travaux à prévoir", "correct": "état correct", "bon": "bon état", "tres_bon": "très bon état",
              "neuf_renove": "neuf ou entièrement rénové"}
+PARKING_LABELS = {"aucun": "aucun", "exterieur": "place extérieure", "interieur": "place intérieure / box"}
 
 SYSTEM = """Tu es un rédacteur d'annonces immobilières français. Tu rédiges UNIQUEMENT à partir des faits fournis.
 RÈGLES ABSOLUES :
@@ -47,6 +48,19 @@ def _facts(prop: PropertyDoc, include_price: bool, extra: str | None) -> str:
         from dossier import SANITATION_LABELS
 
         lines.append(f"Assainissement : {SANITATION_LABELS.get(san, san)}")
+    f = prop.features
+    if prop.property_type == "appartement":
+        if f.floor is not None:
+            lines.append(f"Étage : {'rez-de-chaussée' if f.floor == 0 else f'{f.floor}e'}" + ("" if f.elevator is None else f" · ascenseur : {'oui' if f.elevator else 'non'}"))
+        if f.parking:
+            lines.append(f"Parking : {PARKING_LABELS[f.parking]}")
+        if f.caretaker is not None:
+            lines.append(f"Gardien / concierge : {'oui' if f.caretaker else 'non'}")
+        if f.condo_fees is not None:
+            lines.append(f"Charges de copropriété : {f.condo_fees:g} €/mois")
+        heat = [x for x in (f.heating_mode and f"chauffage {f.heating_mode}", f.underfloor_heating and "chauffage au sol") if x]
+        if heat:
+            lines.append("Chauffage : " + ", ".join(heat))
     if include_price and est:
         lines.append(f"Prix indicatif : fourchette {int(est.low):,} € – {int(est.high):,} € (estimation Achètes ma maison)".replace(",", " "))
     if extra and extra.strip():

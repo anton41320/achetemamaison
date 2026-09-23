@@ -52,7 +52,7 @@ LAND_PRICE_PER_M2 = 12.0
 FEATURE_MAX_TOTAL = 0.25
 
 
-def feature_adjustments(ptype: str, f, value_base: float) -> list[Adjustment]:
+def feature_adjustments(ptype: str, f, value_base: float, surface: Optional[float] = None) -> list[Adjustment]:
     out: list[tuple[str, str, float]] = []
     if f is None:
         return []
@@ -122,10 +122,27 @@ def feature_adjustments(ptype: str, f, value_base: float) -> list[Adjustment]:
                 out.append(("feat_floor", f"{f.floor}e étage avec ascenseur", 0.02))
         if f.balcony:
             out.append(("feat_balcony", "Balcon / terrasse", 0.03))
-        if f.parking:
-            out.append(("feat_parking", "Parking / box", 0.04))
+        if f.parking == "interieur":
+            out.append(("feat_parking", "Parking intérieur / box", 0.05))
+        elif f.parking == "exterieur":
+            out.append(("feat_parking", "Parking extérieur", 0.03))
         if f.cellar:
             out.append(("feat_cellar", "Cave", 0.01))
+        if f.caretaker:
+            out.append(("feat_caretaker", "Gardien / concierge", 0.01))
+        if f.heating_mode == "collectif":
+            out.append(("feat_heating_mode", "Chauffage collectif", -0.01))
+        if f.underfloor_heating:
+            out.append(("feat_underfloor", "Chauffage au sol", 0.01))
+        if f.condo_fees is not None and surface:
+            per_m2 = f.condo_fees / surface  # €/m²/mois ; typique 2–3,5 €/m²/mois
+            fees = f"{f.condo_fees:g} €/mois"
+            if per_m2 > 5:
+                out.append(("feat_condo_fees", f"Charges de copropriété élevées ({fees})", -0.04))
+            elif per_m2 > 3.5:
+                out.append(("feat_condo_fees", f"Charges de copropriété supérieures à la moyenne ({fees})", -0.02))
+            elif per_m2 <= 2:
+                out.append(("feat_condo_fees", f"Charges de copropriété modérées ({fees})", 0.01))
     total = sum(p for _, _, p in out)
     scale = min(1.0, FEATURE_MAX_TOTAL / abs(total)) if abs(total) > FEATURE_MAX_TOTAL else 1.0
     return [Adjustment(key=k, label=lbl, pct=round(p * scale, 4), amount=value_base * p * scale) for k, lbl, p in out]
@@ -353,7 +370,7 @@ def estimate_from_candidates(cands: list[dict], *, surface: float, ptype: str, c
             y_pct, y_label = 0.05, "Construction récente (2005+)"
         adjustments.append(Adjustment(key="year", label=y_label, pct=y_pct, amount=value_base * y_pct))
 
-    adjustments.extend(feature_adjustments(ptype, features, value_base))
+    adjustments.extend(feature_adjustments(ptype, features, value_base, surface))
 
     land_amount = 0.0
     if ptype == "maison" and land_surface is not None:

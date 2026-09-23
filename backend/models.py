@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Annotated, Any, Literal, Optional
 
 from bson import ObjectId
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator
 
 
 def _coerce_object_id(v: Any) -> str:
@@ -70,8 +70,19 @@ class Features(BaseModel):
     floor: Optional[int] = Field(default=None, ge=0, le=60)
     elevator: Optional[bool] = None
     balcony: Optional[bool] = None
-    parking: Optional[bool] = None
+    parking: Optional[Literal["aucun", "exterieur", "interieur"]] = None
     cellar: Optional[bool] = None
+    caretaker: Optional[bool] = None  # gardien / concierge
+    condo_fees: Optional[float] = Field(default=None, ge=0, le=5000)  # charges mensuelles de copropriété (€)
+    heating_mode: Optional[Literal["collectif", "individuel"]] = None
+    underfloor_heating: Optional[bool] = None  # chauffage au sol
+
+    @field_validator("parking", mode="before")
+    @classmethod
+    def _legacy_parking(cls, v: Any) -> Any:
+        if isinstance(v, bool):  # stored before parking became exterior / interior
+            return "exterieur" if v else "aucun"
+        return v
 
 
 class PropertyIn(BaseModel):

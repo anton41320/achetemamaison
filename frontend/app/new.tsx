@@ -38,7 +38,7 @@ export default function NewPropertyScreen() {
   const [step, setStep] = useState(0);
   const [query, setQuery] = useState("");
   const [address, setAddress] = useState<GeocodeResult | null>(null);
-  const [propertyType, setPropertyType] = useState<PropertyType>("appartement");
+  const [propertyType, setPropertyType] = useState<PropertyType>("maison");
   const [surface, setSurface] = useState("");
   const [rooms, setRooms] = useState(3);
   const [bedrooms, setBedrooms] = useState(2);
@@ -218,14 +218,14 @@ export default function NewPropertyScreen() {
               onChange={setPropertyType}
               options={[
                 {
-                  value: "appartement",
-                  label: "Appartement",
-                  icon: <BuildingsIcon size={18} color={propertyType === "appartement" ? colors.onBrandPrimary : colors.onSurfaceSecondary} />,
-                },
-                {
                   value: "maison",
                   label: "Maison",
                   icon: <HouseIcon size={18} color={propertyType === "maison" ? colors.onBrandPrimary : colors.onSurfaceSecondary} />,
+                },
+                {
+                  value: "appartement",
+                  label: "Appartement",
+                  icon: <BuildingsIcon size={18} color={propertyType === "appartement" ? colors.onBrandPrimary : colors.onSurfaceSecondary} />,
                 },
               ]}
             />

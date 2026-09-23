@@ -1,7 +1,7 @@
 import { Text, View } from "react-native";
 
 import { Features, PropertyType } from "@/src/api";
-import { Segmented, Stepper } from "@/src/components/Form";
+import { Field, Segmented, Stepper } from "@/src/components/Form";
 import { fonts, makeStyles, spacing } from "@/src/theme";
 
 interface Props {
@@ -74,11 +74,37 @@ export function FeaturesForm({ propertyType, value, onChange }: Props) {
       {maison ? <Yn k="pantry" label="Cellier" testID="feat-pantry" /> : null}
       {maison ? <Yn k="dressing" label="Dressing indépendant" testID="feat-dressing" /> : null}
       <Stepper label="Salles de bain" value={value.bathrooms ?? 1} onChange={(v) => set("bathrooms", v)} min={0} max={6} testID="feat-bathrooms" />
-      {!maison ? <Stepper label="Étage" value={value.floor ?? 0} onChange={(v) => set("floor", v)} min={0} max={40} testID="feat-floor" /> : null}
-      {!maison ? <Yn k="elevator" label="Ascenseur" testID="feat-elevator" /> : null}
-      {!maison ? <Yn k="balcony" label="Balcon / terrasse" testID="feat-balcony" /> : null}
-      {!maison ? <Yn k="parking" label="Parking / box" testID="feat-parking" /> : null}
-      {!maison ? <Yn k="cellar" label="Cave" testID="feat-cellar" /> : null}
+      {!maison ? (
+        <>
+          <Stepper label="Étage de l’appartement" value={value.floor ?? 0} onChange={(v) => set("floor", v)} min={0} max={40} testID="feat-floor" />
+          <Yn k="elevator" label="Ascenseur" testID="feat-elevator" />
+          <Yn k="balcony" label="Balcon / terrasse" testID="feat-balcony" />
+          <Yn k="cellar" label="Cave" testID="feat-cellar" />
+
+          <Text style={styles.section}>Copropriété</Text>
+          <Field
+            label="Charges mensuelles de copropriété"
+            testID="feat-condo-fees"
+            placeholder="150"
+            suffix="€ / mois"
+            keyboardType="number-pad"
+            value={value.condo_fees === null ? "" : String(value.condo_fees)}
+            onChangeText={(t) => {
+              const n = Number(t.replace(/[^\d]/g, ""));
+              set("condo_fees", t.trim() === "" || Number.isNaN(n) ? null : Math.min(n, 5000));
+            }}
+          />
+          <Segmented
+            label="Parking"
+            testID="feat-parking"
+            scroll
+            value={value.parking ?? "na"}
+            onChange={(v) => set("parking", v === "na" ? null : (v as Features["parking"]))}
+            options={[{ value: "na", label: "—" }, { value: "aucun", label: "Aucun" }, { value: "exterieur", label: "Extérieur" }, { value: "interieur", label: "Intérieur / box" }]}
+          />
+          <Yn k="caretaker" label="Gardien / concierge" testID="feat-caretaker" />
+        </>
+      ) : null}
       {maison ? (
         <>
           <Text style={styles.section}>Chambres</Text>
@@ -105,6 +131,18 @@ export function FeaturesForm({ propertyType, value, onChange }: Props) {
           { value: "electrique", label: "Électrique" }, { value: "fioul", label: "Fioul" }, { value: "bois", label: "Bois / poêle" }, { value: "autre", label: "Autre" },
         ]}
       />
+      {!maison ? (
+        <>
+          <Segmented
+            label="Mode de chauffage"
+            testID="feat-heating-mode"
+            value={value.heating_mode ?? "na"}
+            onChange={(v) => set("heating_mode", v === "na" ? null : (v as Features["heating_mode"]))}
+            options={[{ value: "na", label: "—" }, { value: "collectif", label: "Collectif" }, { value: "individuel", label: "Individuel" }]}
+          />
+          <Yn k="underfloor_heating" label="Chauffage au sol" testID="feat-underfloor" />
+        </>
+      ) : null}
       <Segmented
         label="Classe DPE"
         testID="feat-dpe"

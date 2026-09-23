@@ -284,15 +284,19 @@ export interface Features {
   floor: number | null;
   elevator: boolean | null;
   balcony: boolean | null;
-  parking: boolean | null;
+  parking: "aucun" | "exterieur" | "interieur" | null;
   cellar: boolean | null;
+  caretaker: boolean | null;
+  condo_fees: number | null;
+  heating_mode: "collectif" | "individuel" | null;
+  underfloor_heating: boolean | null;
 }
 
 export const EMPTY_FEATURES: Features = {
   pool: null, fenced: null, motorized_gate: null, terrace: null, garage: null, outbuilding: null, orientation: null,
   single_storey: null, basement: null, convertible_attic: null, pantry: null, master_suite: null, master_suite_dressing: null, master_suite_bathroom: null, master_suite_wc: null, dressing: null, bathrooms: null, heating: null, sanitation: null, dpe: null,
   double_glazing: null, air_conditioning: null, solar_panels: null, floor: null, elevator: null, balcony: null,
-  parking: null, cellar: null,
+  parking: null, cellar: null, caretaker: null, condo_fees: null, heating_mode: null, underfloor_heating: null,
 };
 
 export interface PropertyUpdate {

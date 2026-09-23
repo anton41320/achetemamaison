@@ -231,6 +231,17 @@ def build_pack_pdf(prop: PropertyDoc, listing: dict, photos: list[tuple[bytes, b
         rows.append(["Piscine", f.pool.replace("_", " ")])
     if f.garage and f.garage != "aucun":
         rows.append(["Garage", "oui" if f.garage == "un" else "double ou plus"])
+    if prop.property_type == "appartement":
+        if f.floor is not None:
+            rows.append(["Étage", ("Rez-de-chaussée" if f.floor == 0 else f"{f.floor}e") + ("" if f.elevator is None else (" · avec ascenseur" if f.elevator else " · sans ascenseur"))])
+        if f.parking and f.parking != "aucun":
+            rows.append(["Parking", "intérieur / box" if f.parking == "interieur" else "extérieur"])
+        if f.caretaker:
+            rows.append(["Gardien", "oui"])
+        if f.condo_fees is not None:
+            rows.append(["Charges de copropriété", f"{f.condo_fees:g} €/mois"])
+        if f.heating_mode or f.underfloor_heating:
+            rows.append(["Mode de chauffage", ", ".join(x for x in (f.heating_mode, "au sol" if f.underfloor_heating else None) if x)])
     t = Table([[Paragraph(a, body), Paragraph(b, body)] for a, b in rows], colWidths=[60 * mm, max_w - 60 * mm])
     t.setStyle(TableStyle([("LINEBELOW", (0, 0), (-1, -1), 0.4, LINE), ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3)]))
     story.append(t)
