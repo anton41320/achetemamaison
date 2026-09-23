@@ -73,8 +73,6 @@ export function FeaturesForm({ propertyType, value, onChange }: Props) {
       {maison ? <Yn k="convertible_attic" label="Combles aménageables" testID="feat-attic" /> : null}
       {maison ? <Yn k="pantry" label="Cellier" testID="feat-pantry" /> : null}
       {maison ? <Yn k="dressing" label="Dressing indépendant" testID="feat-dressing" /> : null}
-        </>
-      ) : null}
       <Stepper label="Salles de bain" value={value.bathrooms ?? 1} onChange={(v) => set("bathrooms", v)} min={0} max={6} testID="feat-bathrooms" />
       {!maison ? <Stepper label="Étage" value={value.floor ?? 0} onChange={(v) => set("floor", v)} min={0} max={40} testID="feat-floor" /> : null}
       {!maison ? <Yn k="elevator" label="Ascenseur" testID="feat-elevator" /> : null}
@@ -92,6 +90,8 @@ export function FeaturesForm({ propertyType, value, onChange }: Props) {
               <Yn k="master_suite_wc" label="Avec WC" testID="feat-master-wc" />
             </View>
           ) : null}
+        </>
+      ) : null}
 
       <Text style={styles.section}>Confort & énergie</Text>
       <Segmented
