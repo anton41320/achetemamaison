@@ -3,7 +3,7 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  ArrowsOutIcon, CaretLeftIcon, CaretRightIcon, ChartBarIcon, FolderOpenIcon, ImagesIcon, ListBulletsIcon, PencilLineIcon,
+  ArrowsOutIcon, CaretLeftIcon, CaretRightIcon, ChartBarIcon, FolderOpenIcon, HandshakeIcon, ImagesIcon, ListBulletsIcon, PencilLineIcon,
   RulerIcon, SparkleIcon, TargetIcon, TrashIcon, WarningIcon,
 } from "phosphor-react-native";
 import { useState } from "react";
@@ -323,6 +323,16 @@ export default function PropertyDetailScreen() {
             >
               <PencilLineIcon size={20} color={colors.onBrandTertiary} />
               <Text style={styles.linkLabel}>Rédiger l’annonce avec l’IA</Text>
+              <CaretRightIcon size={18} color={colors.onBrandTertiary} />
+            </Pressable>
+            <Pressable
+              testID="visits-button"
+              accessibilityRole="button"
+              onPress={() => router.push(`/property/${id}/visites`)}
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.85 }]}
+            >
+              <HandshakeIcon size={20} color={colors.onBrandTertiary} />
+              <Text style={styles.linkLabel}>Conseils pour les visites</Text>
               <CaretRightIcon size={18} color={colors.onBrandTertiary} />
             </Pressable>
 

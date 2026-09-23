@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import { CreditCardIcon, FileTextIcon, ImagesIcon, LockOpenIcon, PencilLineIcon, SparkleIcon, WarningIcon } from "phosphor-react-native";
+import { CaretRightIcon, CreditCardIcon, FileTextIcon, HandshakeIcon, ImagesIcon, LockOpenIcon, PencilLineIcon, SparkleIcon, WarningIcon } from "phosphor-react-native";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -20,6 +20,7 @@ const INCLUDED = [
   { Icon: SparkleIcon, text: "Retouches photo IA illimitées pour ce bien, original toujours conservé" },
   { Icon: FileTextIcon, text: "Dossier de vente complet : ajout et lecture IA des documents, rappels d’expiration, export PDF pour le notaire" },
   { Icon: ImagesIcon, text: "PDF d’annonce premium avec photos retouchées en pleine page, régénérable à volonté" },
+  { Icon: HandshakeIcon, text: "Conseils pour réussir vos visites" },
 ];
 
 export default function PackScreen() {
@@ -128,6 +129,14 @@ export default function PackScreen() {
                 ) : null}
               </View>
             </View>
+            <Pressable testID="pack-visits-link" accessibilityRole="button" onPress={() => router.push(`/property/${id}/visites`)} style={styles.card}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+                <HandshakeIcon size={20} color={colors.brandPrimary} weight="duotone" />
+                <Text style={[styles.h3, { flex: 1 }]}>Conseils pour les visites</Text>
+                <CaretRightIcon size={18} color={colors.muted} />
+              </View>
+              <Text style={styles.p}>Préparer la maison, accueillir les visiteurs, répondre aux questions : nos conseils pour des visites sereines et convaincantes.</Text>
+            </Pressable>
             <View style={styles.card}>
               <Text style={styles.h3}>Générer le PDF de l’annonce</Text>
               <Text style={styles.p}>
