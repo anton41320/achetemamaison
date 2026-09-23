@@ -106,6 +106,10 @@ def build_report(prop: PropertyDoc, final: Optional[dict] = None, photos: Option
     rows.append(["Valeur centrale", eur(est.value)])
     story.append(_table(rows, [124 * mm, 50 * mm], body, bold_last=True))
 
+    # Copropriété (appartements) : charges et cadre de vie déclarés
+    if prop.property_type == "appartement":
+        story.extend(condo_section(prop, h2, body, small))
+
     # Market
     story.append(Paragraph("Marché local (3 dernières années)", h2))
     rows = [["Périmètre", "Ventes", "Prix/m² médian"]] + [
@@ -187,6 +191,34 @@ LEGAL_DISCLAIMER = (
 )
 
 LEVEL_FR = {"none": "Non concerné", "low": "Faible", "medium": "Moyen", "high": "Fort", "info": "Commune"}
+PARKING_FR = {"aucun": "Aucun", "exterieur": "Place extérieure", "interieur": "Place intérieure / box"}
+
+
+def condo_section(prop: PropertyDoc, h2: ParagraphStyle, body: ParagraphStyle, small: ParagraphStyle) -> list:
+    """« Copropriété & charges » : charges mensuelles / annuelles / au m², étage, parking, gardien, chauffage (déclaratif)."""
+    f = prop.features
+    rows = []
+    if f.condo_fees is not None:
+        annual = f.condo_fees * 12
+        rows.append(["Charges de copropriété", f"{eur(f.condo_fees)} / mois · soit {eur(annual)} / an "
+                                                f"({f.condo_fees / prop.surface:.1f} €/m²/mois)".replace(".", ",")])
+    if f.floor is not None:
+        rows.append(["Étage", ("Rez-de-chaussée" if f.floor == 0 else f"{f.floor}e étage")
+                     + ("" if f.elevator is None else (" · avec ascenseur" if f.elevator else " · sans ascenseur"))])
+    if f.parking:
+        rows.append(["Parking", PARKING_FR[f.parking]])
+    if f.caretaker is not None:
+        rows.append(["Gardien / concierge", "Oui" if f.caretaker else "Non"])
+    heat = [x for x in (f.heating_mode and f.heating_mode.capitalize(), f.underfloor_heating and "au sol") if x]
+    if heat:
+        rows.append(["Mode de chauffage", " · ".join(heat)])
+    if not rows:
+        return []
+    out = [Paragraph("Copropriété & charges", h2), _table([["Élément", "Déclaré par le vendeur"]] + rows, [60 * mm, 114 * mm], body)]
+    if f.condo_fees is not None:
+        out.append(Paragraph("Les charges indiquées sont déclaratives : le montant exact figure dans les appels de fonds et le pré-état daté "
+                             "fournis par le syndic. Repère usuel : 2 à 3,5 €/m²/mois en copropriété classique.", small))
+    return out
 
 
 def risks_section(risks: dict, h2: ParagraphStyle, body: ParagraphStyle, small: ParagraphStyle) -> list:

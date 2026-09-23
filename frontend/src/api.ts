@@ -326,10 +326,18 @@ export interface PropertyIn {
   features: Features;
 }
 
+export interface Completion {
+  pct: number;
+  filled: number;
+  total: number;
+  missing: string[];
+}
+
 export interface Property extends PropertyIn {
   id: string;
   features: Features;
   estimation: Estimation | null;
+  completion: Completion;
   created_at: string;
   updated_at: string;
 }

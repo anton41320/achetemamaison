@@ -19,6 +19,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 import auth
 import communes
+import completion
 import dossier as dossier_mod
 import dvf_ingest
 import georisques
@@ -66,7 +67,8 @@ iap.init(db)
 
 
 def _prop_response(doc: dict) -> dict:
-    return PropertyDoc.from_mongo(doc).model_dump(mode="json")
+    prop = PropertyDoc.from_mongo(doc)
+    return {**prop.model_dump(mode="json"), "completion": completion.profile_completion(prop)}
 
 
 def _oid(pid: str) -> ObjectId:
@@ -374,9 +376,9 @@ async def _next_steps_for(doc: dict) -> dict:
     def step(key: str, label: str, done: bool, route: str, detail: str = ""):
         steps.append({"key": key, "label": label, "done": done, "route": route, "detail": detail})
 
-    feats_filled = any(v is not None for v in prop.features.model_dump().values())
-    step("features", "Compléter les caractéristiques", feats_filled, f"/property/{pid}/edit",
-         "Piscine, chauffage, DPE, garage… affinent l'estimation")
+    comp = completion.profile_completion(prop)
+    step("features", "Compléter les caractéristiques", comp["pct"] >= 70, f"/property/{pid}/edit",
+         f"Profil complété à {comp['pct']} % · " + (", ".join(comp["missing"][:3]) + "…" if comp["missing"] else "tout est renseigné"))
     step("target", "Fixer votre prix cible", prop.target_price is not None, f"/property/{pid}",
          "Situez votre prix dans la fourchette et le marché")
 

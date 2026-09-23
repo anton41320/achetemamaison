@@ -3,6 +3,7 @@ import { Pressable, Text, View } from "react-native";
 
 import { Property, PropertyNextSteps, TYPE_LABELS, formatK } from "@/src/api";
 import { ConfidenceBadge } from "@/src/components/ConfidenceBadge";
+import { CompletionBadge } from "@/src/components/CompletionBadge";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
 interface Props {
@@ -43,7 +44,10 @@ export function PropertyCard({ property, onPress, testID, nextSteps, onStepPress
               <Text style={styles.range} testID={`${testID}-range`}>
                 {formatK(est.low)} – {formatK(est.high)}
               </Text>
-              <ConfidenceBadge level={est.confidence.level} />
+              <View style={styles.badges}>
+                <ConfidenceBadge level={est.confidence.level} />
+                {property.completion ? <CompletionBadge completion={property.completion} testID={`${testID}-completion`} /> : null}
+              </View>
             </>
           ) : (
             <Text style={styles.meta}>Estimation indisponible</Text>
@@ -99,6 +103,7 @@ const useStyles = makeStyles((colors) => ({
     justifyContent: "center",
   },
   body: { flex: 1, gap: 4 },
+  badges: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, alignItems: "center" },
   address: { fontFamily: fonts.semibold, fontSize: 15, color: colors.onSurfaceSecondary },
   meta: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
   range: { fontFamily: fonts.bold, fontSize: 20, color: colors.onSurfaceSecondary, marginTop: 2, marginBottom: 4 },

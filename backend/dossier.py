@@ -54,6 +54,13 @@ ITEMS: dict[str, dict] = {
                       "description": "Situation financière du lot dans la copropriété, fourni par le syndic."},
     "fiche_synthetique": {"label": "Fiche synthétique de copropriété", "category": "copropriete", "validity_months": None,
                           "description": "Données financières et techniques essentielles de la copropriété."},
+    "carnet_entretien": {"label": "Carnet d'entretien de l'immeuble", "category": "copropriete", "validity_months": None,
+                         "description": "Tenu par le syndic : travaux réalisés, contrats de maintenance, assurances. À remettre à l'acquéreur (loi ALUR)."},
+    "charges_copro": {"label": "Charges des deux derniers exercices", "category": "copropriete", "validity_months": None,
+                      "description": "Montant des charges courantes (budget prévisionnel) et hors budget payées par le vendeur sur les deux derniers exercices, "
+                                     "et sommes dues au syndicat. Décomptes / appels de fonds du syndic."},
+    "dtg": {"label": "Diagnostic technique global (DTG)", "category": "copropriete", "validity_months": None,
+            "description": "État général de l'immeuble et travaux à prévoir sur 10 ans. À remettre s'il a été réalisé (immeubles de plus de 15 ans)."},
 }
 
 
@@ -108,11 +115,17 @@ def build_checklist(prop: PropertyDoc, risks: Optional[dict] = None) -> list[dic
         add("audit_energetique", False, "Requis si DPE E, F ou G (maison / monopropriété)")
     add("carnet_logement", y is not None and y >= 2023, "Logement neuf (2023+)" if y and y >= 2023 else "Si rénovation énergétique depuis 2023")
     if not maison:
+        f = prop.features
         add("carrez", True, "Lot de copropriété")
         add("reglement_copro", True, "Lot de copropriété")
         add("pv_ag", True, "Lot de copropriété")
         add("pre_etat_date", True, "Lot de copropriété")
+        add("carnet_entretien", True, "Lot de copropriété (loi ALUR)")
+        add("charges_copro", True, f"Charges déclarées : {f.condo_fees:g} €/mois, à justifier par les décomptes du syndic"
+            if f.condo_fees is not None else "Lot de copropriété (loi ALUR)")
         add("fiche_synthetique", False, "Lot de copropriété (recommandé)")
+        old_building = y is None or y <= CURRENT_YEAR - 15
+        add("dtg", False, "Immeuble de plus de 15 ans : à joindre s'il existe" if old_building else "Immeuble récent : rarement réalisé")
     add("taxe_fonciere", False, "Recommandé pour le notaire et les acquéreurs")
     return items
 

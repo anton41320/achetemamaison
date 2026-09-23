@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { TYPE_LABELS, api, formatEuro, formatInt, formatK, formatPct } from "@/src/api";
 import { ConfidenceBadge, useConfidenceColor } from "@/src/components/ConfidenceBadge";
+import { CompletionBadge } from "@/src/components/CompletionBadge";
 import { FinalEstimateCard } from "@/src/components/FinalEstimateCard";
 import { HedonicCard } from "@/src/components/HedonicCard";
 import { MarketSignalCard } from "@/src/components/MarketSignalCard";
@@ -292,6 +293,12 @@ export default function PropertyDetailScreen() {
             <Animated.View entering={FadeInDown.delay(420).duration(320)}>
               <RisksCard propertyId={id!} />
             </Animated.View>
+
+            {data.completion ? (
+              <Animated.View entering={FadeInDown.delay(440).duration(320)}>
+                <CompletionBadge variant="card" completion={data.completion} testID="completion-card" onPress={() => router.push(`/property/${id}/edit`)} />
+              </Animated.View>
+            ) : null}
 
             <Pressable
               testID="dossier-button"
