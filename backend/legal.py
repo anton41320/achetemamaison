@@ -27,7 +27,7 @@ SECTIONS: list[tuple[str, list[str]]] = [
         "sur mobile). Aucun numéro de carte n'est stocké par l'application.",
         "Données techniques nécessaires au fonctionnement (journaux serveur, jeton de session)."]),
     ("3. Pourquoi nous les utilisons", [
-        "Calculer et expliquer l'estimation de votre bien à partir des ventes publiques (base DVF de l'État) et des risques publics (Géorisques).",
+        "Calculer et expliquer l'estimation de votre bien à partir des ventes immobilières publiques enregistrées et des risques publics (Géorisques).",
         "Constituer votre dossier de vente : checklist, lecture automatique des documents, rappels d'expiration, export pour le notaire.",
         "Fournir les outils IA du Pack premium (rédaction d'annonce, retouche photo, lecture de documents).",
         "Assurer le paiement, l'envoi de votre reçu et la gestion de votre compte (réinitialisation du mot de passe)."]),

@@ -4,7 +4,7 @@ import asyncio
 import logging
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Literal, Optional
 
@@ -50,6 +50,9 @@ mongo_url = os.environ["MONGO_URL"]
 db_name = os.environ["DB_NAME"]
 DVF_DEPARTMENTS = [d.strip() for d in os.environ["DVF_DEPARTMENTS"].split(",") if d.strip()]
 DVF_YEARS = [int(y) for y in os.environ["DVF_YEARS"].split(",") if y.strip()]
+# Les nouveaux millésimes sont intégrés automatiquement : la liste s'étend jusqu'à l'année en cours.
+DVF_YEARS = sorted(set(DVF_YEARS) | set(range(max(DVF_YEARS) + 1, datetime.now().year + 1)))
+DVF_REFRESH_DAYS = int(os.environ.get("DVF_REFRESH_DAYS", "30"))
 BAN_URL = os.environ["BAN_URL"]
 
 client = AsyncIOMotorClient(mongo_url)
@@ -121,6 +124,24 @@ async def _get_weights() -> Weights:
 
 def _ingest_running() -> bool:
     return dvf_ingest.is_running() or jobs.is_running()
+
+
+async def _dvf_refresh_loop() -> None:
+    """Toutes les 6 h : si le dernier rafraîchissement date de plus de DVF_REFRESH_DAYS jours, relance l'ingestion
+    (nouveaux millésimes / fichiers open data mis à jour) puis le réentraînement, en processus enfant basse priorité."""
+    await asyncio.sleep(15 * 60)  # laisse le démarrage (et une éventuelle première ingestion) se terminer
+    while True:
+        try:
+            if not _ingest_running() and await db.dvf_sales.estimated_document_count() > 0:
+                meta = await db.dvf_meta.find_one({"_id": "refresh"}) or {}
+                status = await db.dvf_meta.find_one({"_id": "status"}) or {}
+                last = meta.get("last_run") or status.get("finished_at")
+                due = last is None or last.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc) - timedelta(days=DVF_REFRESH_DAYS)
+                if due and jobs.start(jobs.refresh_dvf, mongo_url, db_name, DVF_DEPARTMENTS, DVF_YEARS):
+                    logger.info("DVF refresh job started (last run: %s)", last)
+        except Exception:  # noqa: BLE001
+            logger.exception("DVF refresh scheduler error")
+        await asyncio.sleep(6 * 3600)
 
 
 @public.get("/health")
@@ -962,6 +983,8 @@ app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=["*"], 
 
 @app.on_event("startup")
 async def startup():
+    if os.environ.get("DVF_AUTO_REFRESH", "1") == "1":
+        asyncio.create_task(_dvf_refresh_loop())
     await db.properties.create_index([("deleted_at", 1), ("created_at", -1)])
     await db.photos.create_index([("property_id", 1), ("deleted_at", 1)])
     try:

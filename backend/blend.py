@@ -24,7 +24,7 @@ def market_estimate(est: Estimation, surface: float) -> Optional[MarketEstimate]
 
 def blend(est: Estimation, weights: Weights) -> dict:
     comps = [
-        {"key": "comparables", "label": "Comparables DVF", "value": est.value, "low": est.low, "high": est.high,
+        {"key": "comparables", "label": "Ventes comparables", "value": est.value, "low": est.low, "high": est.high,
          "weight": weights.comparables, "available": True},
         {"key": "hedonic", "label": "Modèle hédonique", "value": est.hedonic.value if est.hedonic else None,
          "low": est.hedonic.low if est.hedonic else None, "high": est.hedonic.high if est.hedonic else None,

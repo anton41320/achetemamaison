@@ -48,7 +48,7 @@ export default function ComparablesScreen() {
     <View style={styles.screen} testID="comparables-screen">
       <ScreenHeader
         title="Ventes comparables"
-        subtitle={data?.estimation ? `${comps.length} ventes DVF · ${data.estimation.confidence.radius_label}` : "DVF"}
+        subtitle={data?.estimation ? `${comps.length} ventes réelles · ${data.estimation.confidence.radius_label}` : "Ventes comparables"}
         onBack={() => router.back()}
       />
       {isLoading ? (

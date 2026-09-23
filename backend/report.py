@@ -58,7 +58,7 @@ def build_report(prop: PropertyDoc, final: Optional[dict] = None, photos: Option
 
     story = []
     story.append(brand_header(f"{APP_NAME} · Rapport d'estimation", h1,
-                              f"Édité le {datetime.now().strftime('%d/%m/%Y')} · Méthode : comparables DVF"
+                              f"Édité le {datetime.now().strftime('%d/%m/%Y')} · Méthode : ventes comparables"
                               + (" + modèle hédonique" if est.hedonic else ""), small))
     story.append(Spacer(1, 8))
 
@@ -126,7 +126,7 @@ def build_report(prop: PropertyDoc, final: Optional[dict] = None, photos: Option
         h = est.hedonic
         story.append(Paragraph("Pourquoi cette estimation ? (modèle hédonique)", h2))
         story.append(Paragraph(
-            f"Modèle log(prix) entraîné sur {h.model_n:,} ventes DVF. Valeur hédonique : <b>{eur(h.value)}</b> "
+            f"Modèle log(prix) entraîné sur {h.model_n:,} ventes réelles. Valeur hédonique : <b>{eur(h.value)}</b> "
             f"(plage {eur(h.low)} – {eur(h.high)}), soit {pct(h.delta_vs_comparables_pct)} vs comparables — {AGREEMENT[h.agreement]}."
             .replace(",", "\u202f"), body))
         rows = [["Facteur", "Effet", "Détail"]] + [[f.label, pct(f.pct), f.detail + ("" if f.learned else " — déclaré")] for f in h.factors]
@@ -134,7 +134,7 @@ def build_report(prop: PropertyDoc, final: Optional[dict] = None, photos: Option
         story.append(_table(rows, [52 * mm, 24 * mm, 98 * mm], body))
 
     # Comparables
-    story.append(Paragraph("Meilleures ventes comparables (DVF)", h2))
+    story.append(Paragraph("Meilleures ventes comparables", h2))
     rows = [["Date", "Distance", "Commune", "Surface", "Prix", "Prix/m²"]]
     for c in est.comparables[:10]:
         rows.append([c.date[:7], f"{c.distance_m} m", c.commune, f"{c.surface:g} m²" + (f" · {c.rooms} p." if c.rooms else ""),
@@ -167,7 +167,7 @@ def build_report(prop: PropertyDoc, final: Optional[dict] = None, photos: Option
 
     story.append(Spacer(1, 10))
     story.append(Paragraph(
-        "Estimation indicative fondée sur les Demandes de Valeurs Foncières (DVF, data.gouv.fr) et la Base Adresse Nationale. "
+        "Estimation indicative fondée sur les ventes réelles enregistrées à proximité et la Base Adresse Nationale. "
         "Elle ne tient pas compte des caractéristiques non renseignées. Visuel et valeurs non contractuels.", small))
     story.append(Spacer(1, 8))
     story.append(Paragraph("Avertissement", ParagraphStyle("legal_h", parent=small, fontName="Helvetica-Bold", textColor=INK)))

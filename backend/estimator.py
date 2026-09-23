@@ -315,7 +315,7 @@ def estimate_from_candidates(cands: list[dict], *, surface: float, ptype: str, c
         level_label = "10 km — toutes surfaces"
         notes.append("Données insuffisantes : très peu de ventes comparables. Fourchette élargie.")
         if not selected:
-            raise NoDataError("Aucune vente DVF de ce type de bien dans un rayon de 10 km.")
+            raise NoDataError("Aucune vente de référence de ce type de bien dans un rayon de 10 km.")
 
     comps, weights, se_median = _prepared(selected)
     base_pm2 = weighted_median([c["pm2_adj"] for c in comps], weights)
@@ -430,7 +430,7 @@ async def estimate(db, *, lat: float, lon: float, code_commune: str, ptype: str,
                    exclude_mutation_id: Optional[str] = None, features=None) -> Estimation:
     cands = await fetch_candidates(db, lat, lon, code_commune, ptype, exclude_mutation_id)
     if not cands:
-        raise NoDataError("Aucune vente DVF de ce type de bien dans la zone couverte (rayon 10 km).")
+        raise NoDataError("Aucune vente de référence de ce type de bien dans la zone couverte (rayon 10 km).")
     populations = await communes.load_populations(db)
     return estimate_from_candidates(cands, surface=surface, ptype=ptype, condition=condition,
                                     year_built=year_built, land_surface=land_surface, code_commune=code_commune,

@@ -70,7 +70,7 @@ export default function DataScreen() {
 
   return (
     <View style={styles.screen} testID="data-screen">
-      <ScreenHeader title="Données DVF" subtitle="Source : data.gouv.fr · Demandes de valeurs foncières" onBack={() => router.back()} />
+      <ScreenHeader title="Données de marché" subtitle="Ventes réelles enregistrées · mise à jour automatique" onBack={() => router.back()} />
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xl }]}>
         {status.isLoading ? (
           <ActivityIndicator color={colors.brandPrimary} />
@@ -256,7 +256,7 @@ export default function DataScreen() {
                     <AggBlock key={k} title={LEVEL_LABELS[k] ?? k} agg={v} testID={`validation-agg-${k}`} />
                   ))}
                   <Text style={styles.muted}>
-                    MAPE globale : {pct(validation.data.mape)}. Les ventes DVF incluent des cas atypiques (état, travaux, ventes
+                    MAPE globale : {pct(validation.data.mape)}. Les ventes enregistrées incluent des cas atypiques (état, travaux, ventes
                     entre proches) que le modèle ne peut pas connaître : l’erreur médiane est l’indicateur le plus lisible.
                   </Text>
                 </View>

@@ -36,21 +36,42 @@ def is_running() -> bool:
     return _running
 
 
-def download(dept: str, year: int) -> Path:
+class NotPublished(Exception):
+    """Le millésime n'est pas (encore) publié en open data (fichier 404)."""
+
+
+def download(dept: str, year: int, force: bool = False) -> tuple[Path, bool]:
+    """Télécharge le fichier s'il manque (ou si `force` et que la version distante a changé). Retourne (chemin, modifié)."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     path = DATA_DIR / f"{dept}_{year}.csv.gz"
-    if path.exists() and path.stat().st_size > 1000:
-        return path
+    exists = path.exists() and path.stat().st_size > 1000
+    if exists and not force:
+        return path, False
     url = BASE_URL.format(year=year, dept=dept)
+    if exists:  # rafraîchissement : ne re-télécharger que si la taille distante diffère
+        try:
+            head = requests.head(url, timeout=60, allow_redirects=True)
+            if head.status_code == 404:
+                raise NotPublished(url)
+            remote = int(head.headers.get("Content-Length") or -1)
+            if remote == path.stat().st_size:
+                return path, False
+        except requests.RequestException:
+            return path, False
     logger.info("Downloading %s", url)
     with requests.get(url, timeout=180, stream=True) as r:
+        if r.status_code == 404:
+            raise NotPublished(url)
         r.raise_for_status()
         tmp = path.with_suffix(".part")
         with open(tmp, "wb") as f:
             for chunk in r.iter_content(chunk_size=1 << 20):
                 f.write(chunk)
+        if exists and tmp.stat().st_size == path.stat().st_size:
+            tmp.unlink()
+            return path, False
         tmp.replace(path)
-    return path
+    return path, True
 
 
 def parse_file(path: Path, dept: str, year: int) -> list[dict]:
@@ -116,11 +137,13 @@ def ensure_indexes(db) -> None:
     db.dvf_sales.create_index([("mutation_id", ASCENDING)])
 
 
-def ingest_all(mongo_url: str, db_name: str, depts: list[str], years: list[int]) -> None:
+def ingest_all(mongo_url: str, db_name: str, depts: list[str], years: list[int], force: bool = False) -> int:
+    """Ingestion (ou rafraîchissement si `force`). Retourne le nombre de fichiers (dept, année) réellement mis à jour."""
     global _running
+    changed_files = 0
     with _lock:
         if _running:
-            return
+            return 0
         _running = True
     client = MongoClient(mongo_url)
     db = client[db_name]
@@ -138,12 +161,19 @@ def ingest_all(mongo_url: str, db_name: str, depts: list[str], years: list[int])
         for dept in depts:
             for year in years:
                 try:
-                    path = download(dept, year)
-                    docs = parse_file(path, dept, year)
-                    db.dvf_sales.delete_many({"dept": dept, "year": year})
-                    for i in range(0, len(docs), 5000):
-                        db.dvf_sales.insert_many(docs[i:i + 5000])
-                    logger.info("Ingested %s/%s: %d sales", dept, year, len(docs))
+                    path, changed = download(dept, year, force=force)
+                    already = force and not changed and db.dvf_sales.count_documents({"dept": dept, "year": year}, limit=1) > 0
+                    if already:
+                        logger.info("Unchanged %s/%s", dept, year)
+                    else:
+                        docs = parse_file(path, dept, year)
+                        db.dvf_sales.delete_many({"dept": dept, "year": year})
+                        for i in range(0, len(docs), 5000):
+                            db.dvf_sales.insert_many(docs[i:i + 5000])
+                        changed_files += 1
+                        logger.info("Ingested %s/%s: %d sales", dept, year, len(docs))
+                except NotPublished:
+                    logger.info("Not published yet: %s/%s", dept, year)
                 except Exception as exc:  # noqa: BLE001
                     logger.exception("Failed %s/%s", dept, year)
                     meta.update_one({"_id": "status"}, {"$set": {"error": f"{dept}/{year}: {exc}"}})
@@ -156,3 +186,4 @@ def ingest_all(mongo_url: str, db_name: str, depts: list[str], years: list[int])
     finally:
         _running = False
         client.close()
+    return changed_files

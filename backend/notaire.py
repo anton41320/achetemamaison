@@ -80,7 +80,7 @@ def build_cover(prop: PropertyDoc, final: Optional[dict], dossier: dict, attachm
     if est:
         story.append(Paragraph(f"Estimation {APP_NAME}", st["h2"]))
         rows = [["Indicateur", "Valeur"],
-                ["Fourchette comparables DVF", f"{eur(est.low)} – {eur(est.high)}"],
+                ["Fourchette ventes comparables", f"{eur(est.low)} – {eur(est.high)}"],
                 ["Valeur centrale comparables", eur(est.value)],
                 ["Confiance", f"{LEVEL_LABELS[est.confidence.level]} ({est.confidence.score}/100)"]]
         if final and len([c for c in final["components"] if c["effective_weight"] > 0]) > 1:
@@ -88,7 +88,7 @@ def build_cover(prop: PropertyDoc, final: Optional[dict], dossier: dict, attachm
         if target:
             rows.append(["Prix cible du vendeur", f"{eur(target['target_price'])} — {target['label']}"])
         story.append(_table(rows, [80 * mm, 94 * mm], st["body"]))
-        story.append(Paragraph("Estimation indicative fondée sur les DVF (data.gouv.fr) ; le rapport d'estimation détaillé est disponible séparément.", st["small"]))
+        story.append(Paragraph("Estimation indicative fondée sur les ventes réelles enregistrées ; le rapport d'estimation détaillé est disponible séparément.", st["small"]))
 
     prog = dossier["progress"]
     story.append(Paragraph("État du dossier de diagnostic technique et pièces", st["h2"]))

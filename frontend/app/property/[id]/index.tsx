@@ -347,7 +347,7 @@ export default function PropertyDetailScreen() {
               style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.85 }]}
             >
               <ListBulletsIcon size={20} color={colors.onBrandTertiary} />
-              <Text style={styles.linkLabel}>Voir les {est.comparables.length} ventes comparables DVF</Text>
+              <Text style={styles.linkLabel}>Voir les {est.comparables.length} ventes comparables</Text>
               <CaretRightIcon size={18} color={colors.onBrandTertiary} />
             </Pressable>
 
@@ -383,7 +383,7 @@ export default function PropertyDetailScreen() {
             </View>
 
             <Text style={styles.disclaimer}>
-              Estimation indicative fondée sur les Demandes de Valeurs Foncières (DVF, data.gouv.fr) et la Base Adresse
+              Estimation indicative fondée sur les ventes réelles enregistrées à proximité et la Base Adresse
               Nationale. Elle ne constitue pas une expertise et ne tient pas compte des spécificités non renseignées.
             </Text>
           </View>

@@ -29,7 +29,7 @@ const SECTIONS: { title: string; body: string[] }[] = [
   {
     title: "3. Pourquoi nous les utilisons",
     body: [
-      "Calculer et expliquer l’estimation de votre bien à partir des ventes publiques (base DVF de l’État).",
+      "Calculer et expliquer l’estimation de votre bien à partir des ventes immobilières publiques enregistrées et des risques publics (Géorisques).",
       "Constituer votre dossier de vente : checklist, lecture automatique des documents, rappels d’expiration, export pour le notaire.",
       "Fournir les outils IA du Pack premium (rédaction d’annonce, retouche photo, lecture de documents).",
       "Assurer le paiement, l’envoi de votre reçu et la gestion de votre compte (réinitialisation du mot de passe).",

@@ -57,8 +57,8 @@ export function MarketSignalCard({ propertyId }: Props) {
             </View>
           ))}
           <Text style={styles.detail}>
-            {data.scope} · calculé au dernier point de données DVF ({data.as_of ? formatMonth(data.as_of) : "—"}). Les
-            données DVF sont publiées avec ~6 mois de décalage.
+            {data.scope} · calculé à la dernière vente enregistrée ({data.as_of ? formatMonth(data.as_of) : "—"}). Les
+            données de ventes sont publiées avec ~6 mois de décalage.
           </Text>
         </>
       )}

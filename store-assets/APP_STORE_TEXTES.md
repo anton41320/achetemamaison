@@ -56,7 +56,7 @@ Estimez et vendez votre bien
 
 **Texte promotionnel** (170 car. max, modifiable sans nouvelle version) — 157 car.
 ```
-Estimation gratuite fondée sur les ventes réelles DVF, dossier de vente guidé et outils IA (annonce, photos, documents) avec le Pack premium à 49 € par bien.
+Estimation gratuite fondée sur les ventes réelles enregistrées, dossier de vente guidé et outils IA (annonce, photos, documents) avec le Pack premium à 49 € par bien.
 ```
 
 **Description** (4000 car. max) — ≈ 1 900 car.
@@ -64,7 +64,7 @@ Estimation gratuite fondée sur les ventes réelles DVF, dossier de vente guidé
 Achètes ma maison accompagne les particuliers de l'estimation de leur logement jusqu'au rendez-vous chez le notaire.
 
 UNE ESTIMATION QUE VOUS POUVEZ EXPLIQUER
-• Fourchette de prix calculée à partir des ventes réelles publiées par l'État (base DVF), autour de chez vous et dans les communes de taille comparable.
+• Fourchette de prix calculée à partir des ventes réelles enregistrées autour de chez vous et dans les communes de taille comparable.
 • Niveau de confiance explicite : nombre de ventes retenues, homogénéité des prix, ancienneté du marché.
 • « Pourquoi ce prix ? » : chaque critère (surface, pièces, terrain, état, équipements, localisation) est chiffré et commenté.
 • Prix cible : positionnez votre prix de vente dans la fourchette et suivez le signal du marché.
@@ -91,7 +91,7 @@ Les estimations sont fournies à titre indicatif et ne constituent ni une expert
 
 **Mots-clés** (100 car. max, séparés par des virgules, sans espace) — 96 car.
 ```
-estimation,immobilier,vendre,maison,appartement,prix,DVF,notaire,diagnostic,DPE,annonce,logement
+estimation,immobilier,vendre,maison,appartement,prix,notaire,diagnostic,DPE,annonce,logement,vente
 ```
 
 **URL d'assistance** (obligatoire)
@@ -113,7 +113,7 @@ https://estimate-home.emergent.host/api/privacy
 **Nouveautés de cette version** (4000 car. max)
 ```
 Première version publique :
-• Estimation fondée sur les ventes réelles (DVF) avec niveau de confiance et explication critère par critère
+• Estimation fondée sur les ventes réelles enregistrées avec niveau de confiance et explication critère par critère
 • Prix cible et signal de marché
 • Dossier de vente : checklist des diagnostics, rappels d'expiration, export notaire
 • Pack premium (49 € par bien) : annonce IA, retouche photo IA, lecture automatique des documents, PDF premium
@@ -138,9 +138,9 @@ Achètes ma maison aide un particulier à estimer puis préparer la vente de son
 Parcours à tester avec le compte de démonstration :
 1. Accueil « Mes biens » : ouvrir un bien pour voir l'estimation, la fourchette et le niveau de confiance ; « Ventes comparables » liste les ventes DVF utilisées.
 2. « Dossier de vente » : checklist des diagnostics ; un document peut être ajouté (photo ou PDF) puis validé manuellement.
-3. « Pack premium » : présentation de l'offre à 49 € et aperçu (exemple réel avant/après de retouche, exemple d'annonce).
+3. « Pack premium » : présentation de l'offre à 49 € et aperçu (exemple réel avant/après de retouche, exemple d'annonce). Le Pack est un achat intégré consommable `pack_premium_49`, testable avec un compte Sandbox.
 
-Les estimations reposent sur des données publiques ouvertes (DVF, data.gouv.fr) et sont fournies à titre indicatif.
+Les estimations reposent sur des données publiques de ventes immobilières et sont fournies à titre indicatif.
 La suppression du compte est disponible dans « Mon compte » → « Supprimer mon compte ».
 ```
 

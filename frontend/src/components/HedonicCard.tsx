@@ -29,7 +29,7 @@ export function HedonicCard({ hedonic, comparablesValue }: Props) {
         <Text style={styles.h3}>Pourquoi cette estimation ?</Text>
       </View>
       <Text style={styles.p}>
-        Modèle hédonique (régression log-prix) entraîné sur {formatInt(hedonic.model_n)} ventes DVF. Il décompose la
+        Modèle hédonique (régression log-prix) entraîné sur {formatInt(hedonic.model_n)} ventes réelles. Il décompose la
         valeur en facteurs à partir d’un bien type, à titre de comparaison avec les comparables.
       </Text>
 

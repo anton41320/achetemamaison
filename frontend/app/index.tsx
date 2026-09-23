@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { useFocusEffect, useRouter } from "expo-router";
-import { DatabaseIcon, PlusIcon, UserCircleIcon } from "phosphor-react-native";
+import { PlusIcon, UserCircleIcon } from "phosphor-react-native";
 import { useCallback } from "react";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
@@ -50,19 +50,10 @@ export default function HomeScreen() {
     <View style={styles.screen} testID="home-screen">
       <ScreenHeader
         title="Mes biens"
-        subtitle="Achètes ma maison · Estimations DVF · Centre-Val de Loire"
+        subtitle="Achètes ma maison · Estimations · Centre-Val de Loire"
         leading={<BrandLogo size={40} wordmark="none" testID="home-logo" />}
         right={
           <View style={{ flexDirection: "row", gap: spacing.sm }}>
-            <Pressable
-              testID="home-data-button"
-              accessibilityRole="button"
-              accessibilityLabel="Données DVF"
-              onPress={() => router.push("/data")}
-              style={styles.iconBtn}
-            >
-              <DatabaseIcon size={20} color={colors.onSurface} />
-            </Pressable>
             <Pressable
               testID="home-account-button"
               accessibilityRole="button"
@@ -96,7 +87,7 @@ export default function HomeScreen() {
           <Text style={styles.emptyTitle}>Aucune estimation pour le moment</Text>
           <Text style={styles.emptyText}>
             Renseignez l’adresse et les caractéristiques de votre bien : Achètes ma maison calcule une fourchette de valeur à
-            partir des ventes réelles (DVF) autour de chez vous, avec un niveau de confiance explicite.
+            partir des ventes réelles enregistrées autour de chez vous, avec un niveau de confiance explicite.
           </Text>
           <PrimaryButton title="Nouvelle estimation" onPress={goNew} testID="home-empty-cta" />
         </View>

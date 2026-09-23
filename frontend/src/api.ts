@@ -175,7 +175,7 @@ export interface BlendResult {
 /** Mirrors backend blend.py so sliders update instantly. */
 export function blendEstimation(est: Estimation, weights: Weights): BlendResult {
   const components: BlendComponent[] = [
-    { key: "comparables", label: "Comparables DVF", value: est.value, low: est.low, high: est.high, weight: weights.comparables, available: true, effective_weight: 0 },
+    { key: "comparables", label: "Ventes comparables", value: est.value, low: est.low, high: est.high, weight: weights.comparables, available: true, effective_weight: 0 },
     { key: "hedonic", label: "Modèle hédonique", value: est.hedonic?.value ?? null, low: est.hedonic?.low ?? null, high: est.hedonic?.high ?? null, weight: weights.hedonic, available: !!est.hedonic, effective_weight: 0 },
     { key: "market", label: est.market_estimate?.label ?? "Marché local", value: est.market_estimate?.value ?? null, low: est.market_estimate?.low ?? null, high: est.market_estimate?.high ?? null, weight: weights.market, available: !!est.market_estimate, effective_weight: 0 },
     { key: "ml", label: "Machine learning (LightGBM)", value: est.ml?.value ?? null, low: est.ml?.low ?? null, high: est.ml?.high ?? null, weight: weights.ml, available: !!est.ml?.promoted, effective_weight: 0 },

@@ -10,7 +10,7 @@ import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
 const SLIDES = [
   { key: "estimation", Icon: ChartLineUpIcon, title: "Estimez votre bien au juste prix",
-    text: "Une fourchette fiable fondée sur les ventes réelles autour de chez vous (données DVF), expliquée critère par critère." },
+    text: "Une fourchette fiable fondée sur les ventes réelles enregistrées autour de chez vous, expliquée critère par critère." },
   { key: "annonce", Icon: SparkleIcon, title: "Une annonce qui donne envie",
     text: "Texte rédigé par l’IA dans le style de votre choix et photos retouchées, prêts à publier." },
   { key: "dossier", Icon: FolderOpenIcon, title: "Un dossier de vente complet",

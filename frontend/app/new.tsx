@@ -200,7 +200,7 @@ export default function NewPropertyScreen() {
               <View style={styles.warnBanner} testID="address-uncovered-warning">
                 <WarningIcon size={18} color={colors.warning} weight="fill" />
                 <Text style={styles.warnText}>
-                  Cette adresse est hors des départements ingérés (41, 37, 45). Aucune vente DVF n’est disponible
+                  Cette adresse est hors des départements ingérés (41, 37, 45). Aucune vente de référence n’est disponible
                   pour l’estimer.
                 </Text>
               </View>

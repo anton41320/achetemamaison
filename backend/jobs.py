@@ -79,3 +79,26 @@ def start(target, *args) -> bool:
     _proc.start()
     logger.info("Background job %s started (pid %s)", target.__name__, _proc.pid)
     return True
+
+
+def refresh_dvf(mongo_url: str, db_name: str, depts: list[str], years: list[int]) -> None:
+    """Rafraîchissement périodique des ventes (nouveaux millésimes / mises à jour open data), puis réentraînement si besoin."""
+    import dvf_ingest
+    from datetime import datetime, timezone
+    from pymongo import MongoClient
+
+    logging.basicConfig(level=logging.INFO)
+    _low_priority(0.0)
+    changed = dvf_ingest.ingest_all(mongo_url, db_name, depts, years, force=True)
+    if changed:
+        import hedonic
+        hedonic.train(mongo_url, db_name)
+        import ml_model
+        ml_model.train(mongo_url, db_name)
+    client = MongoClient(mongo_url)
+    try:
+        client[db_name].dvf_meta.replace_one({"_id": "refresh"}, {"_id": "refresh", "last_run": datetime.now(timezone.utc),
+                                                                  "changed_files": changed, "years": years}, upsert=True)
+    finally:
+        client.close()
+    logging.getLogger("jobs").info("DVF refresh done: %d file(s) updated", changed)
