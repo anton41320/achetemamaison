@@ -55,6 +55,7 @@ class Features(BaseModel):
     bathrooms: Optional[int] = Field(default=None, ge=0, le=10)
     # Confort / énergie
     heating: Optional[Literal["pompe_a_chaleur", "gaz", "electrique", "fioul", "bois", "autre"]] = None
+    sanitation: Optional[Literal["tout_a_l_egout", "fosse_septique", "fosse_toutes_eaux", "microstation"]] = None
     dpe: Optional[Literal["A", "B", "C", "D", "E", "F", "G"]] = None
     double_glazing: Optional[bool] = None
     air_conditioning: Optional[bool] = None

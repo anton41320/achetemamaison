@@ -270,6 +270,7 @@ export interface Features {
   convertible_attic: boolean | null;
   bathrooms: number | null;
   heating: "pompe_a_chaleur" | "gaz" | "electrique" | "fioul" | "bois" | "autre" | null;
+  sanitation: "tout_a_l_egout" | "fosse_septique" | "fosse_toutes_eaux" | "microstation" | null;
   dpe: "A" | "B" | "C" | "D" | "E" | "F" | "G" | null;
   double_glazing: boolean | null;
   air_conditioning: boolean | null;
@@ -283,7 +284,7 @@ export interface Features {
 
 export const EMPTY_FEATURES: Features = {
   pool: null, fenced: null, motorized_gate: null, terrace: null, garage: null, outbuilding: null, orientation: null,
-  single_storey: null, basement: null, convertible_attic: null, bathrooms: null, heating: null, dpe: null,
+  single_storey: null, basement: null, convertible_attic: null, bathrooms: null, heating: null, sanitation: null, dpe: null,
   double_glazing: null, air_conditioning: null, solar_panels: null, floor: null, elevator: null, balcony: null,
   parking: null, cellar: null,
 };

@@ -42,6 +42,11 @@ def _facts(prop: PropertyDoc, include_price: bool, extra: str | None) -> str:
         lines.append(f"Année de construction : {prop.year_built}")
     if prop.property_type == "maison" and prop.land_surface:
         lines.append(f"Terrain : {prop.land_surface:g} m²")
+    san = getattr(getattr(prop, "features", None), "sanitation", None)
+    if prop.property_type == "maison" and san:
+        from dossier import SANITATION_LABELS
+
+        lines.append(f"Assainissement : {SANITATION_LABELS.get(san, san)}")
     if include_price and est:
         lines.append(f"Prix indicatif : fourchette {int(est.low):,} € – {int(est.high):,} € (estimation Achètes ma maison)".replace(",", " "))
     if extra and extra.strip():

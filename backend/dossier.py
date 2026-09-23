@@ -57,6 +57,10 @@ ITEMS: dict[str, dict] = {
 }
 
 
+SANITATION_LABELS = {"tout_a_l_egout": "tout-à-l'égout", "fosse_septique": "fosse septique", "fosse_toutes_eaux": "fosse toutes eaux",
+                     "microstation": "micro-station"}
+
+
 def build_checklist(prop: PropertyDoc, risks: Optional[dict] = None) -> list[dict]:
     y = prop.year_built
     maison = prop.property_type == "maison"
@@ -87,7 +91,13 @@ def build_checklist(prop: PropertyDoc, risks: Optional[dict] = None) -> list[dic
     add("termites", False, "Selon arrêté préfectoral de votre commune")
     add("merules", False, "Selon zone à risque")
     if maison:
-        add("assainissement", False, "Si non raccordée au tout-à-l'égout")
+        san = getattr(prop.features, "sanitation", None) if getattr(prop, "features", None) else None
+        if san == "tout_a_l_egout":
+            add("assainissement", False, "Raccordée au tout-à-l'égout : non requis (certificat de raccordement conseillé)")
+        elif san in ("fosse_septique", "fosse_toutes_eaux", "microstation"):
+            add("assainissement", True, f"Assainissement non collectif ({SANITATION_LABELS[san]}) : contrôle SPANC de moins de 3 ans obligatoire")
+        else:
+            add("assainissement", False, "Si non raccordée au tout-à-l'égout")
         if flags.get("geotechnique_required"):
             add("geotechnique", True, f"Zone d'exposition argile « {(risks or {}).get('argile', {}).get('label', 'moyenne ou forte').lower()} » (Géorisques)")
         elif prop.land_surface and prop.land_surface > 0:

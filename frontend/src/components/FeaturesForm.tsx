@@ -98,6 +98,19 @@ export function FeaturesForm({ propertyType, value, onChange }: Props) {
         onChange={(v) => set("dpe", v === "na" ? null : (v as Features["dpe"]))}
         options={[{ value: "na", label: "—" }, ...(["A", "B", "C", "D", "E", "F", "G"] as const).map((d) => ({ value: d, label: d }))]}
       />
+      {maison ? (
+        <Segmented
+          label="Assainissement"
+          testID="feat-sanitation"
+          scroll
+          value={value.sanitation ?? "na"}
+          onChange={(v) => set("sanitation", v === "na" ? null : (v as Features["sanitation"]))}
+          options={[
+            { value: "na", label: "—" }, { value: "tout_a_l_egout", label: "Tout-à-l’égout" }, { value: "fosse_septique", label: "Fosse septique" },
+            { value: "fosse_toutes_eaux", label: "Fosse toutes eaux" }, { value: "microstation", label: "Micro-station" },
+          ]}
+        />
+      ) : null}
       <Yn k="double_glazing" label="Double vitrage" testID="feat-glazing" />
       <Yn k="air_conditioning" label="Climatisation" testID="feat-ac" />
       <Yn k="solar_panels" label="Panneaux solaires" testID="feat-solar" />

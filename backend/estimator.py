@@ -89,6 +89,12 @@ def feature_adjustments(ptype: str, f, value_base: float) -> list[Adjustment]:
     if f.heating in heating:
         label, pct = heating[f.heating]
         out.append(("feat_heating", label, pct))
+    sanitation = {"fosse_septique": ("Fosse septique (assainissement non collectif)", -0.02),
+                  "fosse_toutes_eaux": ("Fosse toutes eaux (assainissement non collectif)", -0.01),
+                  "microstation": ("Micro-station d'épuration", -0.005)}
+    if ptype == "maison" and getattr(f, "sanitation", None) in sanitation:
+        label, pct = sanitation[f.sanitation]
+        out.append(("feat_sanitation", label, pct))
     dpe = {"A": 0.06, "B": 0.06, "C": 0.03, "D": 0.0, "E": -0.04, "F": -0.09, "G": -0.14}
     if f.dpe in dpe and dpe[f.dpe] != 0:
         out.append(("feat_dpe", f"DPE {f.dpe}", dpe[f.dpe]))
