@@ -125,7 +125,7 @@ export default function PhotosScreen() {
             accessibilityRole="button"
             disabled={exporter.busyKey !== null}
             onPress={() => exportOrUnlock(() => exporter.saveMany(
-              retouched.map((p) => ({ uri: fileUrl(p.retouched_path!), fileName: exportName(photos.data!.indexOf(p), true) })),
+              retouched.map((p) => ({ uri: api.photoExportUrl(p.id), fileName: exportName(photos.data!.indexOf(p), true) })),
             ))}
             style={({ pressed }) => [styles.saveAll, pressed && { opacity: 0.85 }]}
           >
@@ -235,7 +235,7 @@ export default function PhotosScreen() {
                       testID={`photo-save-${i}`}
                       accessibilityRole="button"
                       disabled={exporter.busyKey !== null}
-                      onPress={() => exportOrUnlock(() => exporter.save(uri, exportName(i, !!after), `save-${p.id}`))}
+                      onPress={() => exportOrUnlock(() => exporter.save(api.photoExportUrl(p.id, after ? "retouched" : "original"), exportName(i, !!after), `save-${p.id}`))}
                       style={({ pressed }) => [styles.exportBtn, pressed && { opacity: 0.85 }]}
                     >
                       {exporter.busyKey === `save-${p.id}` ? <ActivityIndicator color={colors.onBrandTertiary} /> : pack.unlocked ? <DownloadSimpleIcon size={16} color={colors.onBrandTertiary} weight="bold" /> : <LockKeyIcon size={16} color={colors.onBrandTertiary} weight="fill" />}
@@ -245,7 +245,7 @@ export default function PhotosScreen() {
                       testID={`photo-share-${i}`}
                       accessibilityRole="button"
                       disabled={exporter.busyKey !== null}
-                      onPress={() => exportOrUnlock(() => exporter.share(uri, exportName(i, !!after), `share-${p.id}`))}
+                      onPress={() => exportOrUnlock(() => exporter.share(api.photoExportUrl(p.id, after ? "retouched" : "original"), exportName(i, !!after), `share-${p.id}`))}
                       style={({ pressed }) => [styles.exportBtn, pressed && { opacity: 0.85 }]}
                     >
                       {exporter.busyKey === `share-${p.id}` ? <ActivityIndicator color={colors.onBrandTertiary} /> : pack.unlocked ? <ShareNetworkIcon size={16} color={colors.onBrandTertiary} weight="bold" /> : <LockKeyIcon size={16} color={colors.onBrandTertiary} weight="fill" />}

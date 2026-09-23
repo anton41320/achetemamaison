@@ -5,8 +5,9 @@ import base64
 import io
 import os
 import uuid
+from pathlib import Path
 
-from PIL import Image, ImageOps
+from PIL import Image, ImageFilter, ImageOps
 
 MODEL = "gemini-3.1-flash-image-preview"
 MAX_SIDE = 1600
@@ -32,6 +33,29 @@ def normalize(data: bytes) -> tuple[bytes, str]:
     img.thumbnail((MAX_SIDE, MAX_SIDE))
     out = io.BytesIO()
     img.save(out, format="JPEG", quality=88, optimize=True)
+    return out.getvalue(), "image/jpeg"
+
+
+LOGO_PATH = Path(__file__).parent / "data" / "logo.png"
+
+
+def watermark(data: bytes) -> tuple[bytes, str]:
+    """Discreet brand signature: rounded logo, ~9 % of the shortest side, bottom-right, 80 % opacity, soft shadow."""
+    img = Image.open(io.BytesIO(data)).convert("RGBA")
+    w, h = img.size
+    size = max(56, int(min(w, h) * 0.09))
+    logo = Image.open(LOGO_PATH).convert("RGBA").resize((size, size), Image.LANCZOS)
+    alpha = logo.getchannel("A").point(lambda a: int(a * 0.8))
+    logo.putalpha(alpha)
+    margin = max(12, int(min(w, h) * 0.025))
+    x, y = w - size - margin, h - size - margin
+    shadow = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    shadow.paste(Image.new("RGBA", (size, size), (0, 0, 0, 90)), (x + 2, y + 3), logo.getchannel("A"))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(4))
+    img = Image.alpha_composite(img, shadow)
+    img.paste(logo, (x, y), logo)
+    out = io.BytesIO()
+    img.convert("RGB").save(out, format="JPEG", quality=90, optimize=True)
     return out.getvalue(), "image/jpeg"
 
 

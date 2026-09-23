@@ -511,6 +511,24 @@ async def retouch_photo(photo_id: str):
     return PhotoDoc.from_mongo(saved).model_dump(mode="json")
 
 
+@api.get("/photos/{photo_id}/export.jpg")
+async def export_photo(photo_id: str, version: Literal["retouched", "original"] = Query(default="retouched")):
+    """Signed export (Pack premium): the retouched (or original) photo with the brand watermark, ready to download/share."""
+    doc = await db.photos.find_one({"_id": _oid(photo_id), "deleted_at": None, **auth.own()})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Photo introuvable")
+    await pack.require_unlocked(db, doc["property_id"], "Le téléchargement des photos")
+    path = doc.get("retouched_path") if version == "retouched" and doc.get("retouched_path") else doc["original_path"]
+    try:
+        data, _ = await asyncio.to_thread(storage.get_object, path)
+    except storage.StorageError as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+    out, mime = await asyncio.to_thread(photo_ai.watermark, data)
+    filename = f"achetesmamaison-{doc['property_id'][-6:]}-{photo_id[-6:]}{'-retouchee' if path != doc['original_path'] else ''}.jpg"
+    return Response(content=out, media_type=mime,
+                    headers={"Content-Disposition": f'attachment; filename="{filename}"', "Cache-Control": "private, max-age=3600"})
+
+
 @api.delete("/photos/{photo_id}")
 async def delete_photo(photo_id: str):
     res = await db.photos.update_one({"_id": _oid(photo_id), "deleted_at": None}, {"$set": {"deleted_at": utcnow()}})

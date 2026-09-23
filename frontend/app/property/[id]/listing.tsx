@@ -1,20 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Clipboard from "expo-clipboard";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { CheckIcon, CopyIcon, SparkleIcon, TrashIcon, WarningIcon } from "phosphor-react-native";
+import { CheckIcon, CopyIcon, ShareNetworkIcon, SparkleIcon, TrashIcon, WarningIcon } from "phosphor-react-native";
 import { useState } from "react";
-import { Platform, Pressable, Switch, Text, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, Switch, Text, View } from "react-native";
 import { KeyboardAwareScrollView, KeyboardStickyView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { LISTING_STYLES, Listing, ListingStyle, api, formatMonth } from "@/src/api";
 import { Field, Segmented } from "@/src/components/Form";
 import { PremiumGate, usePackUnlocked } from "@/src/components/PremiumGate";
+import { usePhotoExport } from "@/src/photoExport";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { ScreenHeader } from "@/src/components/ScreenHeader";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
 const CTA_HEIGHT = 92;
+
+const listingText = (l: Listing) => `${l.title}\n\n${l.hook}\n\n${l.description}\n\n${l.highlights.map((h) => `• ${h}`).join("\n")}`;
 
 export default function ListingScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -43,10 +46,22 @@ export default function ListingScreen() {
   });
 
   const copy = async (l: Listing) => {
-    const text = `${l.title}\n\n${l.hook}\n\n${l.description}\n\n${l.highlights.map((h) => `• ${h}`).join("\n")}`;
-    await Clipboard.setStringAsync(text);
+    await Clipboard.setStringAsync(listingText(l));
     setCopied(l.id);
     setTimeout(() => setCopied(null), 2000);
+  };
+
+  const photos = useQuery({ queryKey: ["photos", id], queryFn: () => api.listPhotos(id!), enabled: !!id && pack.unlocked });
+  const retouched = (photos.data ?? []).filter((p) => p.status === "done" && p.retouched_path);
+  const exporter = usePhotoExport();
+  const [exportedId, setExportedId] = useState<string | null>(null);
+  const exportAll = (l: Listing) => {
+    setExportedId(l.id);
+    return exporter.shareListing(
+      listingText(l),
+      retouched.map((p, i) => ({ uri: api.photoExportUrl(p.id), fileName: `achetesmamaison-${id!.slice(-6)}-photo-${i + 1}-retouchee.jpg` })),
+      `export-${l.id}`,
+    );
   };
 
   return (
@@ -117,6 +132,25 @@ export default function ListingScreen() {
                   <Text style={[styles.actionLabel, { color: colors.error }]}>Supprimer</Text>
                 </Pressable>
               </View>
+              <Pressable
+                testID={`listing-export-${i}`}
+                accessibilityRole="button"
+                disabled={exporter.busyKey !== null}
+                onPress={() => (pack.unlocked ? exportAll(l) : router.push(`/property/${id}/pack`))}
+                style={({ pressed }) => [styles.exportBtn, pressed && { opacity: 0.85 }]}
+              >
+                {exporter.busyKey === `export-${l.id}` ? <ActivityIndicator color={colors.onBrandPrimary} /> : <ShareNetworkIcon size={18} color={colors.onBrandPrimary} weight="bold" />}
+                <Text style={styles.exportLabel}>
+                  {retouched.length ? `Exporter l’annonce complète · texte + ${retouched.length} photo${retouched.length > 1 ? "s" : ""}` : "Exporter l’annonce (texte)"}
+                </Text>
+              </Pressable>
+              <Text style={styles.exportHint}>Leboncoin, SeLoger, WhatsApp… : le texte est copié et partagé, les photos retouchées (signées du logo) sont enregistrées dans votre galerie.</Text>
+              {exporter.status && exporter.busyKey === null && exportedId === l.id ? (
+                <View style={[styles.statusRow, exporter.status.kind === "saved" ? styles.statusOk : styles.statusWarn]} testID={`listing-export-status-${i}`}>
+                  {exporter.status.kind === "saved" ? <CheckIcon size={16} color={colors.success} weight="bold" /> : <WarningIcon size={16} color={colors.warning} weight="fill" />}
+                  <Text style={[styles.statusText, { color: exporter.status.kind === "saved" ? colors.success : colors.warning }]}>{exporter.status.message}</Text>
+                </View>
+              ) : null}
             </View>
           ))
         )}
@@ -162,6 +196,13 @@ const useStyles = makeStyles((colors) => ({
   actions: { flexDirection: "row", gap: spacing.md, borderTopWidth: 1, borderTopColor: colors.divider, paddingTop: spacing.md },
   actionBtn: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 44, paddingHorizontal: spacing.md, borderRadius: radius.md, backgroundColor: colors.brandTertiary },
   actionLabel: { fontFamily: fonts.semibold, fontSize: 13, color: colors.onBrandTertiary },
+  exportBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, minHeight: 48, borderRadius: radius.md, backgroundColor: colors.brandPrimary, paddingHorizontal: spacing.md },
+  exportLabel: { fontFamily: fonts.semibold, fontSize: 14, color: colors.onBrandPrimary, textAlign: "center" },
+  exportHint: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted },
+  statusRow: { flexDirection: "row", gap: spacing.sm, alignItems: "flex-start", borderRadius: radius.md, padding: spacing.md },
+  statusOk: { backgroundColor: colors.successSoft },
+  statusWarn: { backgroundColor: colors.warningSoft },
+  statusText: { flex: 1, fontFamily: fonts.medium, fontSize: 12, lineHeight: 17 },
   cta: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.divider },
   sparkle: { position: "absolute", right: spacing.xl, top: 120 },
 }));

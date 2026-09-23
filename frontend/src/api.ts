@@ -703,6 +703,7 @@ export const api = {
   deleteListing: (id: string, lid: string) => request<{ deleted: boolean }>(`/properties/${id}/listings/${lid}`, { method: "DELETE" }),
   listPhotos: (id: string) => request<Photo[]>(`/properties/${id}/photos`),
   retouchPhoto: (photoId: string) => request<Photo>(`/photos/${photoId}/retouch`, { method: "POST" }),
+  photoExportUrl: (photoId: string, version: "retouched" | "original" = "retouched") => withToken(`${BASE}/photos/${photoId}/export.jpg?version=${version}`),
   deletePhoto: (photoId: string) => request<{ deleted: boolean }>(`/photos/${photoId}`, { method: "DELETE" }),
   dossier: (id: string) => request<Dossier>(`/properties/${id}/dossier`),
   overrideItem: (id: string, key: string, body: { status_override: "non_applicable" | null; note?: string | null }) =>
