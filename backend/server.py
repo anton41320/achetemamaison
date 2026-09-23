@@ -643,6 +643,7 @@ async def _dossier(pid: str) -> dict:
                 done += 1
     unassigned = by_item.get("autre", [])
     return {"property_id": pid, "items": items, "unassigned": unassigned,
+            "locked": not await pack.is_unlocked(db, pid),
             "risks": georisques.to_json(risks) if risks else None,
             "progress": {"done": done, "total_required": total_required,
                          "pct": round(done / total_required * 100) if total_required else 100}}
@@ -671,6 +672,7 @@ async def notaire_export(pid: str):
     doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()})
     if not doc:
         raise HTTPException(status_code=404, detail="Bien introuvable")
+    await pack.require_unlocked(db, pid, "Le dossier de vente et l’export notaire")
     prop = PropertyDoc.from_mongo(doc)
     dossier = await _dossier(pid)
     attachments = notaire.attached_documents(dossier)
@@ -695,6 +697,7 @@ async def notaire_export(pid: str):
 async def override_item(pid: str, item_key: str, body: ChecklistOverride):
     if item_key not in dossier_mod.ITEMS:
         raise HTTPException(status_code=404, detail="Élément de checklist inconnu")
+    await pack.require_unlocked(db, pid, "Le dossier de vente")
     await db.checklist_state.replace_one(
         {"property_id": pid, "item_key": item_key},
         {"property_id": pid, "item_key": item_key, "status_override": body.status_override, "note": body.note,
@@ -709,6 +712,7 @@ async def upload_document(pid: str, file: UploadFile = File(...), item_key: str 
     doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()})
     if not doc:
         raise HTTPException(status_code=404, detail="Bien introuvable")
+    await pack.require_unlocked(db, pid, "Le dossier de vente")
     raw = await file.read()
     if len(raw) > 20 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="Fichier trop lourd (20 Mo max)")
@@ -730,10 +734,6 @@ async def upload_document(pid: str, file: UploadFile = File(...), item_key: str 
                            filename=file.filename or f"document.{ext}", size=len(data))
     res = await db.documents.insert_one({**document.to_mongo(), "deleted_at": None, "ocr": None, "validated_fields": None, **auth.own(),
                                          "expiry_date": None})
-    if not await pack.is_unlocked(db, pid):
-        # Storage is free; the AI reading (OCR) is part of the premium pack. The seller can still fill the fields by hand.
-        await db.documents.update_one({"_id": res.inserted_id}, {"$set": {"ocr_status": "locked"}})
-        return _doc_out(await db.documents.find_one({"_id": res.inserted_id}))
     try:
         ocr = await dossier_mod.ocr_document(data, mime, item_key)
         expiry = ocr.get("validity_date") or dossier_mod.expiry_for(item_key, ocr.get("document_date"))
@@ -775,6 +775,7 @@ async def validate_document(did: str, body: DocumentValidate):
     d = await db.documents.find_one({"_id": _oid(did), "deleted_at": None, **auth.own()})
     if not d:
         raise HTTPException(status_code=404, detail="Document introuvable")
+    await pack.require_unlocked(db, d["property_id"], "Le dossier de vente")
     fields = body.fields.model_dump()
     item_key = fields["document_type"] if fields["document_type"] in dossier_mod.ITEMS else d["item_key"]
     expiry = fields.get("validity_date") or dossier_mod.expiry_for(item_key, fields.get("document_date"))

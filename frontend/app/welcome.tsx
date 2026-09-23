@@ -66,7 +66,7 @@ export default function WelcomeScreen() {
       <View style={styles.actions}>
         <PrimaryButton title="Créer un compte" onPress={() => router.push("/sign-up")} testID="welcome-signup-button" />
         <PrimaryButton title="J’ai déjà un compte" variant="secondary" onPress={() => router.push("/sign-in")} testID="welcome-signin-button" />
-        <Text style={styles.legal}>Estimation et dossier de vente gratuits ; outils IA avec le Pack premium (49 € par bien). Vos données restent privées et liées à votre compte.</Text>
+        <Text style={styles.legal}>Estimation gratuite ; dossier de vente et outils IA avec le Pack premium (49 € par bien). Vos données restent privées et liées à votre compte.</Text>
       </View>
     </View>
   );

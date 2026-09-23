@@ -33,8 +33,8 @@ export function PremiumGate({ propertyId, feature, testID = "premium-gate" }: Pr
       <View style={{ flex: 1, gap: spacing.sm }}>
         <Text style={styles.title}>Outil IA réservé au Pack premium</Text>
         <Text style={styles.text}>
-          Débloquez {feature} pour ce bien, ainsi que tous les autres outils IA (annonce, retouches photo illimitées, lecture des
-          documents, PDF d’annonce premium). Paiement unique de 49 €, sans abonnement.
+          Débloquez {feature} pour ce bien, ainsi que tout le reste du pack (annonce IA, retouches photo illimitées, dossier de vente
+          complet avec lecture IA des documents et export notaire, PDF d’annonce premium). Paiement unique de 49 €, sans abonnement.
         </Text>
         <PrimaryButton title="Débloquer le Pack premium · 49 €" onPress={() => router.push(`/property/${propertyId}/pack`)} testID={`${testID}-button`} />
       </View>

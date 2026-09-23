@@ -18,7 +18,7 @@ import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 const INCLUDED = [
   { Icon: PencilLineIcon, text: "Annonce rédigée par l’IA (style au choix), titre, accroche et points forts" },
   { Icon: SparkleIcon, text: "Retouches photo IA illimitées pour ce bien, original toujours conservé" },
-  { Icon: FileTextIcon, text: "Lecture automatique de vos documents (diagnostics, titre, taxe foncière) par l’IA" },
+  { Icon: FileTextIcon, text: "Dossier de vente complet : ajout et lecture IA des documents, rappels d’expiration, export PDF pour le notaire" },
   { Icon: ImagesIcon, text: "PDF d’annonce premium avec photos retouchées en pleine page, régénérable à volonté" },
 ];
 
@@ -177,7 +177,7 @@ export default function PackScreen() {
                 </View>
               ))}
               <Text style={styles.hint}>
-                Restent gratuits : l’estimation détaillée, le prix cible, la checklist du dossier de vente (saisie manuelle) et l’export notaire.
+                Restent gratuits : l’estimation détaillée, les ventes comparables, les risques Géorisques, le prix cible et l’aperçu de la checklist du dossier de vente.
               </Text>
             </View>
             <PackPreview />

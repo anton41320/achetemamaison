@@ -551,6 +551,7 @@ export interface Dossier {
   property_id: string;
   items: ChecklistItem[];
   unassigned: SaleDocument[];
+  locked: boolean;
   risks: Risks | null;
   progress: { done: number; total_required: number; pct: number };
 }

@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ChecklistItem, ItemStatus, SaleDocument, api, formatMonth, uploadDocument } from "@/src/api";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
+import { PremiumGate } from "@/src/components/PremiumGate";
 import { ScreenHeader } from "@/src/components/ScreenHeader";
 import { ShareReportButton } from "@/src/components/ShareReportButton";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
@@ -115,6 +116,9 @@ export default function DossierScreen() {
                 Chaque document importé est lu par l’IA (Gemini 3 Flash, Pack premium) puis doit être vérifié et validé par vous avant de
                 compter dans le dossier.
               </Text>
+              {d.locked ? (
+                <PremiumGate propertyId={id!} feature="le dossier de vente complet (ajout et lecture IA des documents, validation, rappels d’expiration, export PDF pour le notaire)" testID="dossier-premium-gate" />
+              ) : null}
               {d.risks ? (
                 <Text style={styles.hint} testID="dossier-risks-note">
                   Checklist ajustée avec les risques Géorisques de l’adresse
@@ -149,6 +153,7 @@ export default function DossierScreen() {
                     <ItemCard
                       key={it.key}
                       item={it}
+                      locked={d.locked}
                       open={!!open[it.key]}
                       onToggle={() => setOpen((o) => ({ ...o, [it.key]: !o[it.key] }))}
                       uploading={uploadingKey === it.key}
@@ -163,6 +168,13 @@ export default function DossierScreen() {
               );
             })}
 
+            {d.locked ? (
+              <View style={styles.exportCard} testID="notaire-export-locked">
+                <Text style={styles.exportTitle}>Export pour le notaire</Text>
+                <Text style={styles.hint}>Disponible avec le Pack premium : un seul PDF regroupant la synthèse du bien, l’état de la checklist et vos documents validés.</Text>
+                <PrimaryButton title="Débloquer le Pack premium · 49 €" onPress={() => router.push(`/property/${id}/pack`)} testID="notaire-export-unlock" />
+              </View>
+            ) : (
             <View style={styles.exportCard} testID="notaire-export-card">
               <Text style={styles.exportTitle}>Export pour le notaire</Text>
               <Text style={styles.hint}>
@@ -179,6 +191,7 @@ export default function DossierScreen() {
                 testID="notaire-export-button"
               />
             </View>
+            )}
             <Text style={styles.hint}>
               Liste indicative fondée sur la réglementation française (dossier de diagnostic technique, loi ALUR). Votre
               notaire reste l’interlocuteur de référence.
@@ -212,6 +225,7 @@ function StatusChip({ status }: { status: ItemStatus | SaleDocument["status"] })
 
 interface ItemCardProps {
   item: ChecklistItem;
+  locked: boolean;
   open: boolean;
   uploading: boolean;
   onToggle: () => void;
@@ -222,7 +236,7 @@ interface ItemCardProps {
   onOpenDoc: (doc: SaleDocument) => void;
 }
 
-function ItemCard({ item, open, uploading, onToggle, onCamera, onLibrary, onFile, onNa, onOpenDoc }: ItemCardProps) {
+function ItemCard({ item, locked, open, uploading, onToggle, onCamera, onLibrary, onFile, onNa, onOpenDoc }: ItemCardProps) {
   const styles = useStyles();
   const { colors } = useTheme();
   const na = item.status === "non_applicable";
@@ -252,7 +266,9 @@ function ItemCard({ item, open, uploading, onToggle, onCamera, onLibrary, onFile
               <CaretRightIcon size={14} color={colors.muted} />
             </Pressable>
           ))}
-          {uploading ? (
+          {locked ? (
+            <Text style={styles.hint} testID={`checklist-locked-${item.key}`}>Ajout de documents, lecture IA et validation disponibles avec le Pack premium.</Text>
+          ) : uploading ? (
             <View style={styles.uploading} testID={`document-uploading-${item.key}`}>
               <ActivityIndicator color={colors.brandPrimary} />
               <Text style={styles.hint}>Envoi et lecture du document…</Text>
@@ -275,10 +291,12 @@ function ItemCard({ item, open, uploading, onToggle, onCamera, onLibrary, onFile
               </Pressable>
             </View>
           ) : null}
-          <Pressable testID={`checklist-na-${item.key}`} accessibilityRole="button" onPress={() => onNa(!na)} style={styles.naBtn}>
-            <ProhibitIcon size={14} color={colors.muted} />
-            <Text style={styles.naLabel}>{na ? "Rétablir cet élément" : "Non applicable à mon bien"}</Text>
-          </Pressable>
+          {!locked ? (
+            <Pressable testID={`checklist-na-${item.key}`} accessibilityRole="button" onPress={() => onNa(!na)} style={styles.naBtn}>
+              <ProhibitIcon size={14} color={colors.muted} />
+              <Text style={styles.naLabel}>{na ? "Rétablir cet élément" : "Non applicable à mon bien"}</Text>
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
     </View>
