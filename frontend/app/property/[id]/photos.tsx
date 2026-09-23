@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Photo, api, fileUrl, uploadPhoto } from "@/src/api";
 import { PremiumGate, usePackUnlocked } from "@/src/components/PremiumGate";
+import { PhotoTutorialCard } from "@/src/components/PhotoTutorialCard";
 import { usePhotoExport } from "@/src/photoExport";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { ScreenHeader } from "@/src/components/ScreenHeader";
@@ -118,6 +119,7 @@ export default function PhotosScreen() {
         onBack={() => router.back()}
       />
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xl }]}>
+        <PhotoTutorialCard />
         <View style={styles.pickRow}>
           <Pressable testID="photos-pick-library" accessibilityRole="button" onPress={() => pick("library")} style={styles.pickBtn} disabled={upload.isPending}>
             <ImagesIcon size={22} color={colors.onBrandTertiary} weight="duotone" />
