@@ -41,6 +41,7 @@ CONDITION_ADJ = {
     "travaux": (-0.06, "Travaux à prévoir"),
     "correct": (0.0, "État correct"),
     "bon": (0.04, "Bon état"),
+    "tres_bon": (0.07, "Très bon état"),
     "neuf_renove": (0.10, "Neuf / rénové"),
 }
 
@@ -82,6 +83,13 @@ def feature_adjustments(ptype: str, f, value_base: float) -> list[Adjustment]:
         out.append(("feat_basement", "Sous-sol / cave", 0.015))
     if maison and f.convertible_attic:
         out.append(("feat_attic", "Combles aménageables", 0.02))
+    if maison and f.pantry:
+        out.append(("feat_pantry", "Cellier", 0.005))
+    if maison and f.master_suite:
+        extras = [lbl for flag, lbl in ((f.master_suite_dressing, "dressing"), (f.master_suite_bathroom, "salle d'eau"), (f.master_suite_wc, "WC")) if flag]
+        out.append(("feat_master_suite", "Suite parentale" + (f" ({', '.join(extras)})" if extras else ""), 0.015 + 0.005 * len(extras)))
+    if maison and f.dressing:
+        out.append(("feat_dressing", "Dressing indépendant", 0.005))
     if f.bathrooms is not None and f.bathrooms >= 2:
         out.append(("feat_bathrooms", f"{f.bathrooms} salles de bain", 0.015))
     heating = {"pompe_a_chaleur": ("Pompe à chaleur", 0.03), "electrique": ("Chauffage électrique", -0.02),

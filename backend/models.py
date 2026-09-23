@@ -36,7 +36,7 @@ class BaseDocument(BaseModel):
 
 
 PropertyType = Literal["appartement", "maison"]
-Condition = Literal["a_renover", "travaux", "correct", "bon", "neuf_renove"]
+Condition = Literal["a_renover", "travaux", "correct", "bon", "tres_bon", "neuf_renove"]
 
 
 class Features(BaseModel):
@@ -52,6 +52,12 @@ class Features(BaseModel):
     single_storey: Optional[bool] = None
     basement: Optional[bool] = None
     convertible_attic: Optional[bool] = None
+    pantry: Optional[bool] = None  # cellier (maison)
+    master_suite: Optional[bool] = None  # suite parentale (maison)
+    master_suite_dressing: Optional[bool] = None
+    master_suite_bathroom: Optional[bool] = None  # salle d'eau attenante
+    master_suite_wc: Optional[bool] = None
+    dressing: Optional[bool] = None  # dressing indépendant (maison)
     bathrooms: Optional[int] = Field(default=None, ge=0, le=10)
     # Confort / énergie
     heating: Optional[Literal["pompe_a_chaleur", "gaz", "electrique", "fioul", "bois", "autre"]] = None

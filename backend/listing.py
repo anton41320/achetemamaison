@@ -14,7 +14,7 @@ STYLE_GUIDE = {
     "premium": "Ton premium et élégant, vocabulaire soigné, mise en valeur de la qualité — sans inventer de prestations.",
     "familial": "Ton familial et rassurant, orienté vie quotidienne (espace, chambres, extérieur si présent).",
 }
-CONDITION = {"a_renover": "à rénover", "travaux": "travaux à prévoir", "correct": "état correct", "bon": "bon état",
+CONDITION = {"a_renover": "à rénover", "travaux": "travaux à prévoir", "correct": "état correct", "bon": "bon état", "tres_bon": "très bon état",
              "neuf_renove": "neuf ou entièrement rénové"}
 
 SYSTEM = """Tu es un rédacteur d'annonces immobilières français. Tu rédiges UNIQUEMENT à partir des faits fournis.

@@ -15,7 +15,7 @@ export function withToken(url: string): string {
 }
 
 export type PropertyType = "appartement" | "maison";
-export type Condition = "a_renover" | "travaux" | "correct" | "bon" | "neuf_renove";
+export type Condition = "a_renover" | "travaux" | "correct" | "bon" | "tres_bon" | "neuf_renove";
 export type ConfidenceLevel = "eleve" | "moyen" | "faible";
 
 export interface GeocodeResult {
@@ -268,6 +268,12 @@ export interface Features {
   single_storey: boolean | null;
   basement: boolean | null;
   convertible_attic: boolean | null;
+  pantry: boolean | null;
+  master_suite: boolean | null;
+  master_suite_dressing: boolean | null;
+  master_suite_bathroom: boolean | null;
+  master_suite_wc: boolean | null;
+  dressing: boolean | null;
   bathrooms: number | null;
   heating: "pompe_a_chaleur" | "gaz" | "electrique" | "fioul" | "bois" | "autre" | null;
   sanitation: "tout_a_l_egout" | "fosse_septique" | "fosse_toutes_eaux" | "microstation" | null;
@@ -284,7 +290,7 @@ export interface Features {
 
 export const EMPTY_FEATURES: Features = {
   pool: null, fenced: null, motorized_gate: null, terrace: null, garage: null, outbuilding: null, orientation: null,
-  single_storey: null, basement: null, convertible_attic: null, bathrooms: null, heating: null, sanitation: null, dpe: null,
+  single_storey: null, basement: null, convertible_attic: null, pantry: null, master_suite: null, master_suite_dressing: null, master_suite_bathroom: null, master_suite_wc: null, dressing: null, bathrooms: null, heating: null, sanitation: null, dpe: null,
   double_glazing: null, air_conditioning: null, solar_panels: null, floor: null, elevator: null, balcony: null,
   parking: null, cellar: null,
 };
@@ -772,6 +778,7 @@ export const CONDITION_LABELS: Record<Condition, string> = {
   travaux: "Travaux",
   correct: "Correct",
   bon: "Bon état",
+  tres_bon: "Très bon état",
   neuf_renove: "Neuf / rénové",
 };
 

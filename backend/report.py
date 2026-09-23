@@ -25,7 +25,7 @@ MUTED = colors.HexColor("#6B7C99")
 LINE = colors.HexColor("#DCE5F2")
 
 CONDITION_LABELS = {"a_renover": "À rénover", "travaux": "Travaux à prévoir", "correct": "État correct",
-                    "bon": "Bon état", "neuf_renove": "Neuf / rénové"}
+                    "bon": "Bon état", "tres_bon": "Très bon état", "neuf_renove": "Neuf / rénové"}
 LEVEL_LABELS = {"eleve": "Confiance élevée", "moyen": "Confiance moyenne", "faible": "Confiance faible"}
 AGREEMENT = {"convergent": "Les deux approches convergent", "ecart_modere": "Écart modéré entre les approches",
              "divergent": "Écart important entre les approches"}

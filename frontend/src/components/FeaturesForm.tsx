@@ -71,12 +71,27 @@ export function FeaturesForm({ propertyType, value, onChange }: Props) {
       {maison ? <Yn k="single_storey" label="Plain-pied" testID="feat-single-storey" /> : null}
       {maison ? <Yn k="basement" label="Sous-sol / cave" testID="feat-basement" /> : null}
       {maison ? <Yn k="convertible_attic" label="Combles aménageables" testID="feat-attic" /> : null}
+      {maison ? <Yn k="pantry" label="Cellier" testID="feat-pantry" /> : null}
+      {maison ? <Yn k="dressing" label="Dressing indépendant" testID="feat-dressing" /> : null}
+        </>
+      ) : null}
       <Stepper label="Salles de bain" value={value.bathrooms ?? 1} onChange={(v) => set("bathrooms", v)} min={0} max={6} testID="feat-bathrooms" />
       {!maison ? <Stepper label="Étage" value={value.floor ?? 0} onChange={(v) => set("floor", v)} min={0} max={40} testID="feat-floor" /> : null}
       {!maison ? <Yn k="elevator" label="Ascenseur" testID="feat-elevator" /> : null}
       {!maison ? <Yn k="balcony" label="Balcon / terrasse" testID="feat-balcony" /> : null}
       {!maison ? <Yn k="parking" label="Parking / box" testID="feat-parking" /> : null}
       {!maison ? <Yn k="cellar" label="Cave" testID="feat-cellar" /> : null}
+      {maison ? (
+        <>
+          <Text style={styles.section}>Chambres</Text>
+          <Yn k="master_suite" label="Suite parentale" testID="feat-master-suite" />
+          {value.master_suite ? (
+            <View style={styles.sub}>
+              <Yn k="master_suite_dressing" label="Avec dressing" testID="feat-master-dressing" />
+              <Yn k="master_suite_bathroom" label="Avec salle d’eau" testID="feat-master-bathroom" />
+              <Yn k="master_suite_wc" label="Avec WC" testID="feat-master-wc" />
+            </View>
+          ) : null}
 
       <Text style={styles.section}>Confort & énergie</Text>
       <Segmented
@@ -121,4 +136,5 @@ export function FeaturesForm({ propertyType, value, onChange }: Props) {
 const useStyles = makeStyles((colors) => ({
   wrap: { gap: spacing.lg },
   section: { fontFamily: fonts.semibold, fontSize: 13, color: colors.muted, textTransform: "uppercase", letterSpacing: 0.6, marginTop: spacing.sm },
+  sub: { paddingLeft: spacing.lg, gap: spacing.sm },
 }));
