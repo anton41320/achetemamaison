@@ -168,11 +168,23 @@ def build_report(prop: PropertyDoc, final: Optional[dict] = None, photos: Option
     story.append(Spacer(1, 10))
     story.append(Paragraph(
         "Estimation indicative fondée sur les Demandes de Valeurs Foncières (DVF, data.gouv.fr) et la Base Adresse Nationale. "
-        "Elle ne constitue pas une expertise immobilière et ne tient pas compte des caractéristiques non renseignées. "
-        "Visuel et valeurs non contractuels.", small))
+        "Elle ne tient pas compte des caractéristiques non renseignées. Visuel et valeurs non contractuels.", small))
+    story.append(Spacer(1, 8))
+    story.append(Paragraph("Avertissement", ParagraphStyle("legal_h", parent=small, fontName="Helvetica-Bold", textColor=INK)))
+    for para in LEGAL_DISCLAIMER:
+        story.append(Paragraph(para, ParagraphStyle("legal", parent=small, textColor=INK, leading=11)))
     doc.build(story)
     return buf.getvalue()
 
+
+LEGAL_DISCLAIMER = (
+    "La présente estimation constitue un avis de valeur établi à partir des informations et éléments communiqués à la date de sa "
+    "réalisation. Elle est donnée à titre indicatif et ne constitue ni une expertise immobilière au sens juridique du terme, ni une "
+    "garantie du prix de vente qui pourra être effectivement obtenu.",
+    "La valeur estimée est susceptible d’évoluer en fonction de l’état du bien, de son environnement, des conditions du marché "
+    "immobilier et de tout élément nouveau porté à notre connaissance. Cette estimation ne saurait engager la responsabilité de son "
+    "auteur en cas d’écart entre la valeur estimée et le prix de vente finalement réalisé.",
+)
 
 LEVEL_FR = {"none": "Non concerné", "low": "Faible", "medium": "Moyen", "high": "Fort", "info": "Commune"}
 
