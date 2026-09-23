@@ -12,6 +12,7 @@
       "bundleIdentifier": "com.emergent.estimatehome.ye2qdy",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Choisir les photos de votre bien à retoucher",
+        "NSPhotoLibraryAddUsageDescription": "Enregistrer vos photos retouchées dans la galerie",
         "NSCameraUsageDescription": "Photographier votre bien pour la retouche IA",
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -29,8 +30,7 @@
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.READ_MEDIA_VIDEO",
         "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE"
+        "android.permission.READ_EXTERNAL_STORAGE"
       ]
     },
     "web": {
@@ -55,13 +55,23 @@
         "expo-image-picker",
         {
           "photosPermission": "Choisir les photos de votre bien à retoucher",
-          "cameraPermission": "Photographier votre bien pour la retouche IA"
+          "cameraPermission": "Photographier votre bien pour la retouche IA",
+          "microphonePermission": false
         }
       ],
       "expo-secure-store",
       "expo-web-browser",
       "expo-status-bar",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Choisir les photos de votre bien à retoucher",
+          "savePhotosPermission": "Enregistrer vos photos retouchées dans la galerie",
+          "isAccessMediaLocationEnabled": false,
+          "granularPermissions": []
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

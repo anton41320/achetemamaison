@@ -2,13 +2,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { CameraIcon, ImagesIcon, LockKeyIcon, SparkleIcon, TrashIcon, WarningIcon } from "phosphor-react-native";
+import { CameraIcon, CheckCircleIcon, DownloadSimpleIcon, ImagesIcon, LockKeyIcon, ShareNetworkIcon, SparkleIcon, TrashIcon, WarningIcon } from "phosphor-react-native";
 import { useState } from "react";
 import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Photo, api, fileUrl, uploadPhoto } from "@/src/api";
 import { PremiumGate, usePackUnlocked } from "@/src/components/PremiumGate";
+import { usePhotoExport } from "@/src/photoExport";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { ScreenHeader } from "@/src/components/ScreenHeader";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
@@ -59,6 +60,11 @@ export default function PhotosScreen() {
     mutationFn: (photoId: string) => api.deletePhoto(photoId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["photos", id] }),
   });
+
+  const exporter = usePhotoExport();
+  const retouched = (photos.data ?? []).filter((p) => p.status === "done" && p.retouched_path);
+  const exportName = (index: number, after: boolean) => `achetesmamaison-${id!.slice(-6)}-photo-${index + 1}${after ? "-retouchee" : ""}.jpg`;
+  const exportOrUnlock = (fn: () => void) => (pack.unlocked ? fn() : router.push(`/property/${id}/pack`));
 
   const pick = async (source: Source) => {
     setUploadError(null);
@@ -113,6 +119,36 @@ export default function PhotosScreen() {
         </Text>
         {!pack.loading && !pack.unlocked ? <PremiumGate propertyId={id!} feature="la retouche photo par l’IA" testID="photos-premium-gate" /> : null}
 
+        {retouched.length >= 2 ? (
+          <Pressable
+            testID="photos-save-all"
+            accessibilityRole="button"
+            disabled={exporter.busyKey !== null}
+            onPress={() => exportOrUnlock(() => exporter.saveMany(
+              retouched.map((p) => ({ uri: fileUrl(p.retouched_path!), fileName: exportName(photos.data!.indexOf(p), true) })),
+            ))}
+            style={({ pressed }) => [styles.saveAll, pressed && { opacity: 0.85 }]}
+          >
+            {exporter.busyKey === "all" ? <ActivityIndicator color={colors.onBrandTertiary} /> : pack.unlocked ? <DownloadSimpleIcon size={20} color={colors.onBrandTertiary} weight="bold" /> : <LockKeyIcon size={20} color={colors.onBrandTertiary} weight="fill" />}
+            <Text style={styles.saveAllLabel}>
+              {pack.unlocked ? `Enregistrer les ${retouched.length} photos retouchées dans la galerie` : "Télécharger les photos retouchées · Pack premium"}
+            </Text>
+          </Pressable>
+        ) : null}
+        {exporter.status ? (
+          <View style={[styles.warn, exporter.status.kind === "saved" && styles.ok]} testID="photos-export-status">
+            {exporter.status.kind === "saved" ? <CheckCircleIcon size={18} color={colors.success} weight="fill" /> : <WarningIcon size={18} color={exporter.status.kind === "error" ? colors.error : colors.warning} weight="fill" />}
+            <View style={{ flex: 1, gap: spacing.sm }}>
+              <Text style={[styles.warnText, exporter.status.kind === "saved" && { color: colors.success }, exporter.status.kind === "error" && { color: colors.error }]}>
+                {exporter.status.message}
+              </Text>
+              {exporter.status.kind === "blocked" && Platform.OS !== "web" ? (
+                <PrimaryButton title="Ouvrir les réglages" variant="secondary" onPress={() => Linking.openSettings()} testID="photos-export-open-settings" />
+              ) : null}
+            </View>
+          </View>
+        ) : null}
+
         {permissionBlocked ? (
           <View style={styles.warn} testID="photos-permission-blocked">
             <WarningIcon size={18} color={colors.warning} weight="fill" />
@@ -157,7 +193,7 @@ export default function PhotosScreen() {
           </View>
         ) : (
           photos.data.map((p, i) => {
-            const after = !!showAfter[p.id] && p.status === "done" && p.retouched_path;
+            const after = (showAfter[p.id] ?? true) && p.status === "done" && !!p.retouched_path;
             const uri = fileUrl(after ? p.retouched_path! : p.original_path);
             return (
               <View key={p.id} style={styles.card} testID={`photo-card-${i}`}>
@@ -191,6 +227,30 @@ export default function PhotosScreen() {
                         </Pressable>
                       );
                     })}
+                  </View>
+                ) : null}
+                {p.status === "done" && p.retouched_path ? (
+                  <View style={styles.exportRow}>
+                    <Pressable
+                      testID={`photo-save-${i}`}
+                      accessibilityRole="button"
+                      disabled={exporter.busyKey !== null}
+                      onPress={() => exportOrUnlock(() => exporter.save(uri, exportName(i, !!after), `save-${p.id}`))}
+                      style={({ pressed }) => [styles.exportBtn, pressed && { opacity: 0.85 }]}
+                    >
+                      {exporter.busyKey === `save-${p.id}` ? <ActivityIndicator color={colors.onBrandTertiary} /> : pack.unlocked ? <DownloadSimpleIcon size={16} color={colors.onBrandTertiary} weight="bold" /> : <LockKeyIcon size={16} color={colors.onBrandTertiary} weight="fill" />}
+                      <Text style={styles.exportLabel}>{Platform.OS === "web" ? "Télécharger" : "Enregistrer dans la galerie"}</Text>
+                    </Pressable>
+                    <Pressable
+                      testID={`photo-share-${i}`}
+                      accessibilityRole="button"
+                      disabled={exporter.busyKey !== null}
+                      onPress={() => exportOrUnlock(() => exporter.share(uri, exportName(i, !!after), `share-${p.id}`))}
+                      style={({ pressed }) => [styles.exportBtn, pressed && { opacity: 0.85 }]}
+                    >
+                      {exporter.busyKey === `share-${p.id}` ? <ActivityIndicator color={colors.onBrandTertiary} /> : pack.unlocked ? <ShareNetworkIcon size={16} color={colors.onBrandTertiary} weight="bold" /> : <LockKeyIcon size={16} color={colors.onBrandTertiary} weight="fill" />}
+                      <Text style={styles.exportLabel}>Partager</Text>
+                    </Pressable>
                   </View>
                 ) : null}
                 {p.status === "error" ? (
@@ -251,4 +311,10 @@ const useStyles = makeStyles((colors) => ({
   actionLocked: { backgroundColor: colors.brandTertiary, borderWidth: 1, borderColor: colors.brandSecondary },
   actionLockedLabel: { color: colors.onBrandTertiary },
   actionBtn: { width: 48, height: 48, borderRadius: radius.md, backgroundColor: colors.errorSoft, alignItems: "center", justifyContent: "center" },
+  exportRow: { flexDirection: "row", gap: spacing.md, paddingHorizontal: spacing.lg, paddingTop: spacing.md },
+  exportBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, minHeight: 44, borderRadius: radius.md, backgroundColor: colors.brandTertiary, paddingHorizontal: spacing.sm },
+  exportLabel: { fontFamily: fonts.semibold, fontSize: 13, color: colors.onBrandTertiary, textAlign: "center" },
+  saveAll: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, minHeight: 52, borderRadius: radius.md, backgroundColor: colors.brandTertiary, borderWidth: 1, borderColor: colors.brandSecondary, paddingHorizontal: spacing.lg },
+  saveAllLabel: { fontFamily: fonts.semibold, fontSize: 14, color: colors.onBrandTertiary, textAlign: "center" },
+  ok: { backgroundColor: colors.successSoft },
 }));
