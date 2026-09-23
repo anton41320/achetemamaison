@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { CameraIcon, CheckCircleIcon, DownloadSimpleIcon, ImagesIcon, LockKeyIcon, ShareNetworkIcon, SparkleIcon, TrashIcon, WarningIcon } from "phosphor-react-native";
+import { ArrowDownIcon, ArrowUpIcon, CameraIcon, CheckCircleIcon, DownloadSimpleIcon, ImagesIcon, LockKeyIcon, ShareNetworkIcon, SparkleIcon, StarIcon, TrashIcon, WarningIcon } from "phosphor-react-native";
 import { useState } from "react";
 import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -62,6 +62,23 @@ export default function PhotosScreen() {
   });
 
   const exporter = usePhotoExport();
+
+  const reorder = useMutation({
+    mutationFn: (ids: string[]) => api.reorderPhotos(id!, ids),
+    onMutate: (ids) => {
+      const byId = new Map((photos.data ?? []).map((p) => [p.id, p]));
+      queryClient.setQueryData<Photo[]>(["photos", id], ids.map((x) => byId.get(x)!).filter(Boolean));
+    },
+    onSuccess: (data) => queryClient.setQueryData(["photos", id], data),
+    onError: () => queryClient.invalidateQueries({ queryKey: ["photos", id] }),
+  });
+  const move = (index: number, delta: -1 | 1) => {
+    const ids = (photos.data ?? []).map((p) => p.id);
+    const [moved] = ids.splice(index, 1);
+    ids.splice(index + delta, 0, moved);
+    reorder.mutate(ids);
+  };
+  const setCover = (photoId: string) => reorder.mutate([photoId, ...(photos.data ?? []).map((p) => p.id).filter((x) => x !== photoId)]);
   const retouched = (photos.data ?? []).filter((p) => p.status === "done" && p.retouched_path);
   const exportName = (index: number, after: boolean) => `achetesmamaison-${id!.slice(-6)}-photo-${index + 1}${after ? "-retouchee" : ""}.jpg`;
   const exportOrUnlock = (fn: () => void) => (pack.unlocked ? fn() : router.push(`/property/${id}/pack`));
@@ -115,7 +132,8 @@ export default function PhotosScreen() {
         </View>
         <Text style={styles.hint}>
           La retouche améliore lumière, contraste et perspective, et efface uniquement de petits objets. Aucun élément n’est
-          ajouté : le visuel retouché reste une représentation fidèle du bien.
+          ajouté : le visuel retouché reste une représentation fidèle du bien. La première photo sert de couverture dans
+          l’annonce et les PDF : utilisez les flèches ou « Couverture » pour ordonner vos photos.
         </Text>
         {!pack.loading && !pack.unlocked ? <PremiumGate propertyId={id!} feature="la retouche photo par l’IA" testID="photos-premium-gate" /> : null}
 
@@ -204,6 +222,12 @@ export default function PhotosScreen() {
                       <Text style={styles.badgeText}>Visuel retouché par IA · non contractuel</Text>
                     </View>
                   ) : null}
+                  {i === 0 ? (
+                    <View style={styles.coverBadge} testID="photo-cover-badge">
+                      <StarIcon size={12} color={colors.onBrandPrimary} weight="fill" />
+                      <Text style={styles.coverText}>Photo de couverture</Text>
+                    </View>
+                  ) : null}
                   {p.status === "processing" ? (
                     <View style={styles.overlay} testID={`photo-processing-${i}`}>
                       <ActivityIndicator color={colors.onHero} />
@@ -211,6 +235,25 @@ export default function PhotosScreen() {
                     </View>
                   ) : null}
                 </View>
+                {photos.data!.length > 1 ? (
+                  <View style={styles.orderRow}>
+                    <Text style={styles.orderPos}>Photo {i + 1}/{photos.data!.length}</Text>
+                    <View style={styles.orderBtns}>
+                      {i > 0 ? (
+                        <Pressable testID={`photo-cover-${i}`} accessibilityRole="button" accessibilityLabel="Mettre en couverture" disabled={reorder.isPending} onPress={() => setCover(p.id)} style={styles.orderBtn}>
+                          <StarIcon size={16} color={colors.onBrandTertiary} />
+                          <Text style={styles.orderLabel}>Couverture</Text>
+                        </Pressable>
+                      ) : null}
+                      <Pressable testID={`photo-up-${i}`} accessibilityRole="button" accessibilityLabel="Monter la photo" disabled={i === 0 || reorder.isPending} onPress={() => move(i, -1)} style={[styles.orderIcon, i === 0 && styles.orderDisabled]}>
+                        <ArrowUpIcon size={18} color={colors.onBrandTertiary} weight="bold" />
+                      </Pressable>
+                      <Pressable testID={`photo-down-${i}`} accessibilityRole="button" accessibilityLabel="Descendre la photo" disabled={i === photos.data!.length - 1 || reorder.isPending} onPress={() => move(i, 1)} style={[styles.orderIcon, i === photos.data!.length - 1 && styles.orderDisabled]}>
+                        <ArrowDownIcon size={18} color={colors.onBrandTertiary} weight="bold" />
+                      </Pressable>
+                    </View>
+                  </View>
+                ) : null}
                 {p.status === "done" && p.retouched_path ? (
                   <View style={styles.toggle}>
                     {(["Original", "Retouchée"] as const).map((label, j) => {
@@ -297,6 +340,15 @@ const useStyles = makeStyles((colors) => ({
   image: { width: "100%", height: "100%" },
   badge: { position: "absolute", left: spacing.md, bottom: spacing.md, backgroundColor: colors.scrimBottom, paddingHorizontal: spacing.md, height: 26, borderRadius: radius.pill, justifyContent: "center" },
   badgeText: { fontFamily: fonts.semibold, fontSize: 11, color: colors.onHero },
+  coverBadge: { position: "absolute", left: spacing.md, top: spacing.md, flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.brandPrimary, paddingHorizontal: spacing.md, height: 26, borderRadius: radius.pill },
+  coverText: { fontFamily: fonts.semibold, fontSize: 11, color: colors.onBrandPrimary },
+  orderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.lg, paddingTop: spacing.md, gap: spacing.sm },
+  orderPos: { fontFamily: fonts.medium, fontSize: 13, color: colors.muted },
+  orderBtns: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  orderBtn: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 44, paddingHorizontal: spacing.md, borderRadius: radius.md, backgroundColor: colors.brandTertiary },
+  orderLabel: { fontFamily: fonts.semibold, fontSize: 13, color: colors.onBrandTertiary },
+  orderIcon: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.brandTertiary, alignItems: "center", justifyContent: "center" },
+  orderDisabled: { opacity: 0.35 },
   overlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: colors.scrimBottom, alignItems: "center", justifyContent: "center", gap: spacing.sm },
   overlayText: { fontFamily: fonts.medium, fontSize: 14, color: colors.onHero },
   toggle: { flexDirection: "row", margin: spacing.lg, marginBottom: 0, backgroundColor: colors.surfaceTertiary, borderRadius: radius.md, padding: 3 },

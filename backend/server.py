@@ -457,10 +457,41 @@ async def delete_listing(pid: str, lid: str):
     return {"deleted": True}
 
 
+PHOTO_ORDER = [("position", 1), ("created_at", 1)]
+
+
 @api.get("/properties/{pid}/photos")
 async def list_photos(pid: str):
-    docs = await db.photos.find({"property_id": pid, "deleted_at": None}).sort("created_at", -1).to_list(100)
+    docs = await db.photos.find({"property_id": pid, "deleted_at": None}).sort(PHOTO_ORDER).to_list(100)
     return [PhotoDoc.from_mongo(d).model_dump(mode="json") for d in docs]
+
+
+class PhotoOrder(BaseModel):
+    ids: list[str] = Field(min_length=1, max_length=100)
+
+
+@api.put("/properties/{pid}/photos/order")
+async def reorder_photos(pid: str, body: PhotoOrder):
+    """Full order of the bien's photos (first = couverture). Photos omitted from `ids` are appended, in their current order."""
+    docs = await db.photos.find({"property_id": pid, "deleted_at": None, **auth.own()}).sort(PHOTO_ORDER).to_list(100)
+    if not docs:
+        raise HTTPException(status_code=404, detail="Aucune photo pour ce bien")
+    known = {str(d["_id"]) for d in docs}
+    ordered = [i for i in dict.fromkeys(body.ids) if i in known] + [str(d["_id"]) for d in docs if str(d["_id"]) not in body.ids]
+    await asyncio.gather(*(db.photos.update_one({"_id": _oid(photo_id)}, {"$set": {"position": pos}}) for pos, photo_id in enumerate(ordered)))
+    return await list_photos(pid)
+
+
+@api.post("/photos/{photo_id}/cover")
+async def set_cover_photo(photo_id: str):
+    """Make this photo the couverture (position 0) ; the others keep their relative order."""
+    doc = await db.photos.find_one({"_id": _oid(photo_id), "deleted_at": None, **auth.own()})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Photo introuvable")
+    docs = await db.photos.find({"property_id": doc["property_id"], "deleted_at": None}).sort(PHOTO_ORDER).to_list(100)
+    ordered = [photo_id] + [str(d["_id"]) for d in docs if str(d["_id"]) != photo_id]
+    await asyncio.gather(*(db.photos.update_one({"_id": _oid(i)}, {"$set": {"position": pos}}) for pos, i in enumerate(ordered)))
+    return await list_photos(doc["property_id"])
 
 
 @api.post("/properties/{pid}/photos", status_code=201)
@@ -481,6 +512,7 @@ async def upload_photo(pid: str, file: UploadFile = File(...)):
     except storage.StorageError as exc:
         raise HTTPException(status_code=exc.status if exc.status in (402, 503) else 502, detail=str(exc))
     photo = PhotoDoc(property_id=pid, original_path=path, original_mime=mime, original_size=len(data))
+    photo.position = await db.photos.count_documents({"property_id": pid, "deleted_at": None})  # appended after existing photos
     res = await db.photos.insert_one({**photo.to_mongo(), "deleted_at": None, "retouched_path": None, **auth.own()})
     saved = await db.photos.find_one({"_id": res.inserted_id})
     return PhotoDoc.from_mongo(saved).model_dump(mode="json")
@@ -873,8 +905,8 @@ async def property_trend(pid: str):
 
 
 async def _property_photos(pid: str, limit: int = 30) -> list[tuple[bytes, bool]]:
-    """(bytes, retouched?) for every photo of the bien, retouched version preferred, in upload order."""
-    photo_docs = await db.photos.find({"property_id": pid, "deleted_at": None}).sort("created_at", 1).to_list(limit)
+    """(bytes, retouched?) for every photo of the bien, retouched version preferred, in the seller's order (couverture first)."""
+    photo_docs = await db.photos.find({"property_id": pid, "deleted_at": None}).sort(PHOTO_ORDER).to_list(limit)
 
     def _fetch(p: dict):
         path = p.get("retouched_path") if p.get("status") == "done" and p.get("retouched_path") else p["original_path"]

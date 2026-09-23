@@ -269,6 +269,7 @@ class PhotoDoc(BaseDocument):
     status: Literal["original", "processing", "done", "error"] = "original"
     error: Optional[str] = None
     model: Optional[str] = None
+    position: int = 0  # display order ; position 0 = photo de couverture (annonce, PDF)
     created_at: datetime = Field(default_factory=utcnow)
     retouched_at: Optional[datetime] = None
     deleted_at: Optional[datetime] = None

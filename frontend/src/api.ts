@@ -462,6 +462,7 @@ export interface Photo {
   status: "original" | "processing" | "done" | "error";
   error: string | null;
   model: string | null;
+  position: number;
   created_at: string;
   retouched_at: string | null;
 }
@@ -702,6 +703,8 @@ export const api = {
     request<Listing>(`/properties/${id}/listings`, { method: "POST", body: JSON.stringify(body) }),
   deleteListing: (id: string, lid: string) => request<{ deleted: boolean }>(`/properties/${id}/listings/${lid}`, { method: "DELETE" }),
   listPhotos: (id: string) => request<Photo[]>(`/properties/${id}/photos`),
+  reorderPhotos: (id: string, ids: string[]) => request<Photo[]>(`/properties/${id}/photos/order`, { method: "PUT", body: JSON.stringify({ ids }) }),
+  setCoverPhoto: (photoId: string) => request<Photo[]>(`/photos/${photoId}/cover`, { method: "POST" }),
   retouchPhoto: (photoId: string) => request<Photo>(`/photos/${photoId}/retouch`, { method: "POST" }),
   photoExportUrl: (photoId: string, version: "retouched" | "original" = "retouched") => withToken(`${BASE}/photos/${photoId}/export.jpg?version=${version}`),
   deletePhoto: (photoId: string) => request<{ deleted: boolean }>(`/photos/${photoId}`, { method: "DELETE" }),
