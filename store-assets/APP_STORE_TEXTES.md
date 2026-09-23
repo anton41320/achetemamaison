@@ -136,7 +136,7 @@ Mot de passe : Estimo2026!
 Achètes ma maison aide un particulier à estimer puis préparer la vente de son logement en France.
 
 Parcours à tester avec le compte de démonstration :
-1. Accueil « Mes biens » : ouvrir un bien pour voir l'estimation, la fourchette et le niveau de confiance ; « Ventes comparables » liste les ventes DVF utilisées.
+1. Accueil « Mes biens » : ouvrir un bien pour voir l'estimation, la fourchette et le niveau de confiance ; « Ventes comparables » liste les ventes réelles utilisées.
 2. « Dossier de vente » : checklist des diagnostics ; un document peut être ajouté (photo ou PDF) puis validé manuellement.
 3. « Pack premium » : présentation de l'offre à 49 € et aperçu (exemple réel avant/après de retouche, exemple d'annonce). Le Pack est un achat intégré consommable `pack_premium_49`, testable avec un compte Sandbox.
 
