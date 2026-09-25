@@ -17,6 +17,7 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+import auth
 import emailer
 from models import PropertyDoc, utcnow
 from report import APP_NAME, BRAND, BRAND_SOFT, CONDITION_LABELS, INK, LINE, MUTED, eur
@@ -84,8 +85,16 @@ async def send_receipt(db, order: dict) -> bool:
     return True
 
 
+def comp_emails() -> set[str]:
+    """Comptes « invités » (testeurs, proches) : le pack est offert sur tous leurs biens. PREMIUM_COMP_EMAILS=a@x.fr,b@y.fr"""
+    return {e.strip().lower() for e in os.environ.get("PREMIUM_COMP_EMAILS", "").split(",") if e.strip()}
+
+
 async def is_unlocked(db, pid: str) -> bool:
-    return await db.orders.find_one({"property_id": pid, "status": "paid"}, {"_id": 1}) is not None
+    if await db.orders.find_one({"property_id": pid, "status": "paid"}, {"_id": 1}) is not None:
+        return True
+    user = auth.current_user_var.get()
+    return bool(user) and (user.get("email") or "").lower() in comp_emails()
 
 
 PAYWALL_DETAIL = "Pack annonce premium requis (49 €)"
