@@ -3,6 +3,7 @@ import { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { ReportProblemButton } from "@/src/components/ReportProblemButton";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
 interface Props {
@@ -38,6 +39,7 @@ export function ScreenHeader({ title, subtitle, onBack, right, leading, testID }
           <Text style={styles.title} numberOfLines={1}>{title}</Text>
           {subtitle ? <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
         </View>
+        <ReportProblemButton />
         {right}
       </View>
     </View>

@@ -21,6 +21,7 @@ import auth
 import communes
 import completion
 import dossier as dossier_mod
+import feedback
 import dvf_ingest
 import georisques
 import hedonic
@@ -64,6 +65,7 @@ api = APIRouter(prefix="/api")          # routes protégées (connexion requise)
 public = APIRouter(prefix="/api")       # routes publiques
 auth.init(db)
 iap.init(db)
+feedback.init(db)
 
 
 def _prop_response(doc: dict) -> dict:
@@ -652,6 +654,8 @@ async def get_file(path: str):
     if not known:
         known = await db.documents.find_one({"file_path": path}, {"_id": 1})
     if not known:
+        known = await db.feedback.find_one({"screenshot_path": path}, {"_id": 1})
+    if not known:
         raise HTTPException(status_code=404, detail="Fichier introuvable")
     try:
         data, mime = await asyncio.to_thread(storage.get_object, path)
@@ -1028,6 +1032,7 @@ app.include_router(legal.router, prefix="/api")  # https://<domaine>/api/privacy
 app.include_router(legal.router)  # https://<domaine>/privacy (hôte déployé : la racine est servie par l'API)
 app.include_router(auth.router)
 app.include_router(iap.router, prefix="/api")
+app.include_router(feedback.router, prefix="/api", dependencies=[Depends(auth.require_user)])
 app.include_router(iap.webhook_router, prefix="/api")
 app.include_router(api, dependencies=[Depends(auth.require_user)])
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])

@@ -483,20 +483,63 @@ export function fileUrl(path: string): string {
   return `${BASE}/files/${path}`;
 }
 
-export async function uploadPhoto(propertyId: string, uri: string, name: string, type: string): Promise<Photo> {
+export async function uploadPhoto(propertyId: string, uri: string, name: string, type: string, onProgress?: (pct: number) => void): Promise<Photo> {
   const form = new FormData();
   await appendFile(form, uri, name, type);
-  const res = await fetch(`${BASE}/properties/${propertyId}/photos`, { method: "POST", body: form, headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} });
-  if (!res.ok) {
-    let message = `Erreur ${res.status}`;
-    try {
-      const body = await res.json();
-      if (typeof body?.detail === "string") message = body.detail;
-    } catch {
-      // keep default
-    }
-    throw new Error(message);
+  if (!onProgress) {
+    const res = await fetch(`${BASE}/properties/${propertyId}/photos`, { method: "POST", body: form, headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} });
+    if (!res.ok) throw new Error(await errorMessage(res));
+    return res.json();
   }
+  // XMLHttpRequest: the only path exposing upload progress on both React Native and the web.
+  return new Promise<Photo>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${BASE}/properties/${propertyId}/photos`);
+    if (authToken) xhr.setRequestHeader("Authorization", `Bearer ${authToken}`);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        onProgress(100);
+        resolve(JSON.parse(xhr.responseText));
+      } else {
+        let message = `Erreur ${xhr.status}`;
+        try {
+          const body = JSON.parse(xhr.responseText);
+          if (typeof body?.detail === "string") message = body.detail;
+        } catch {
+          // keep default
+        }
+        reject(new Error(message));
+      }
+    };
+    xhr.onerror = () => reject(new Error("Connexion interrompue pendant l’envoi"));
+    xhr.ontimeout = () => reject(new Error("Envoi trop long, réessayez"));
+    xhr.timeout = 120000;
+    xhr.send(form);
+  });
+}
+
+async function errorMessage(res: Response): Promise<string> {
+  try {
+    const body = await res.json();
+    if (typeof body?.detail === "string") return body.detail;
+  } catch {
+    // keep default
+  }
+  return `Erreur ${res.status}`;
+}
+
+export async function sendFeedback(p: { message: string; screen: string; platform: string; appVersion: string; screenshot?: { uri: string; name: string; type: string } | null }): Promise<{ ok: boolean; emailed: boolean }> {
+  const form = new FormData();
+  form.append("message", p.message);
+  form.append("screen", p.screen);
+  form.append("platform", p.platform);
+  form.append("app_version", p.appVersion);
+  if (p.screenshot) await appendFile(form, p.screenshot.uri, p.screenshot.name, p.screenshot.type);
+  const res = await fetch(`${BASE}/feedback`, { method: "POST", body: form, headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} });
+  if (!res.ok) throw new Error(await errorMessage(res));
   return res.json();
 }
 

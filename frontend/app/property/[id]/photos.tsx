@@ -26,7 +26,6 @@ export default function PhotosScreen() {
   const queryClient = useQueryClient();
 
   const [permissionBlocked, setPermissionBlocked] = useState<Source | null>(null);
-  const [uploadError, setUploadError] = useState<string | null>(null);
   const [showAfter, setShowAfter] = useState<Record<string, boolean>>({});
 
   const photos = useQuery({
@@ -36,12 +35,27 @@ export default function PhotosScreen() {
     refetchInterval: (q) => (q.state.data?.some((p) => p.status === "processing") ? 3000 : false),
   });
 
-  const upload = useMutation({
-    mutationFn: (asset: ImagePicker.ImagePickerAsset) =>
-      uploadPhoto(id!, asset.uri, asset.fileName ?? `photo-${Date.now()}.jpg`, asset.mimeType ?? "image/jpeg"),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["photos", id] }),
-    onError: (e: Error) => setUploadError(e.message),
-  });
+  type QueueItem = { key: string; name: string; pct: number; status: "waiting" | "uploading" | "done" | "error"; error?: string };
+  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const uploading = queue.some((q) => q.status === "waiting" || q.status === "uploading");
+  const patchQueue = (key: string, patch: Partial<QueueItem>) => setQueue((q) => q.map((it) => (it.key === key ? { ...it, ...patch } : it)));
+
+  /** Sequential uploads (one connection at a time on mobile networks), each with its own progress bar. */
+  const uploadAll = async (assets: ImagePicker.ImagePickerAsset[]) => {
+    const items = assets.map((a, i) => ({ asset: a, key: `${Date.now()}-${i}`, name: a.fileName ?? `photo-${i + 1}.jpg` }));
+    setQueue(items.map(({ key, name }) => ({ key, name, pct: 0, status: "waiting" as const })));
+    for (const it of items) {
+      patchQueue(it.key, { status: "uploading" });
+      try {
+        await uploadPhoto(id!, it.asset.uri, it.name, it.asset.mimeType ?? "image/jpeg", (pct) => patchQueue(it.key, { pct }));
+        patchQueue(it.key, { status: "done", pct: 100 });
+        queryClient.invalidateQueries({ queryKey: ["photos", id] });
+      } catch (e) {
+        patchQueue(it.key, { status: "error", error: (e as Error).message });
+      }
+    }
+    setTimeout(() => setQueue((q) => (q.some((x) => x.status === "error") ? q : [])), 1500);
+  };
 
   const retouch = useMutation({
     mutationFn: (photoId: string) => api.retouchPhoto(photoId),
@@ -85,7 +99,6 @@ export default function PhotosScreen() {
   const exportOrUnlock = (fn: () => void) => (pack.unlocked ? fn() : router.push(`/property/${id}/pack`));
 
   const pick = async (source: Source) => {
-    setUploadError(null);
     setPermissionBlocked(null);
     const get = source === "camera" ? ImagePicker.getCameraPermissionsAsync : ImagePicker.getMediaLibraryPermissionsAsync;
     const ask = source === "camera" ? ImagePicker.requestCameraPermissionsAsync : ImagePicker.requestMediaLibraryPermissionsAsync;
@@ -106,9 +119,9 @@ export default function PhotosScreen() {
     const result =
       source === "camera"
         ? await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.85 })
-        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.85, allowsMultipleSelection: false });
-    if (result.canceled || !result.assets?.[0]) return;
-    upload.mutate(result.assets[0]);
+        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.85, allowsMultipleSelection: true, selectionLimit: 20, orderedSelection: true });
+    if (result.canceled || !result.assets?.length) return;
+    uploadAll(result.assets);
   };
 
   return (
@@ -121,12 +134,12 @@ export default function PhotosScreen() {
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xl }]}>
         <PhotoTutorialCard />
         <View style={styles.pickRow}>
-          <Pressable testID="photos-pick-library" accessibilityRole="button" onPress={() => pick("library")} style={styles.pickBtn} disabled={upload.isPending}>
+          <Pressable testID="photos-pick-library" accessibilityRole="button" onPress={() => pick("library")} style={styles.pickBtn} disabled={uploading}>
             <ImagesIcon size={22} color={colors.onBrandTertiary} weight="duotone" />
             <Text style={styles.pickLabel}>Galerie</Text>
           </Pressable>
           {Platform.OS !== "web" ? (
-            <Pressable testID="photos-pick-camera" accessibilityRole="button" onPress={() => pick("camera")} style={styles.pickBtn} disabled={upload.isPending}>
+            <Pressable testID="photos-pick-camera" accessibilityRole="button" onPress={() => pick("camera")} style={styles.pickBtn} disabled={uploading}>
               <CameraIcon size={22} color={colors.onBrandTertiary} weight="duotone" />
               <Text style={styles.pickLabel}>Appareil photo</Text>
             </Pressable>
@@ -181,16 +194,28 @@ export default function PhotosScreen() {
             </View>
           </View>
         ) : null}
-        {upload.isPending ? (
-          <View style={styles.loadingRow} testID="photos-uploading">
-            <ActivityIndicator color={colors.brandPrimary} />
-            <Text style={styles.hint}>Envoi de la photo…</Text>
-          </View>
-        ) : null}
-        {uploadError ? (
-          <View style={styles.warn} testID="photos-upload-error">
-            <WarningIcon size={18} color={colors.error} weight="fill" />
-            <Text style={[styles.warnText, { color: colors.error }]}>{uploadError}</Text>
+        {queue.length ? (
+          <View style={styles.queue} testID="photos-upload-queue">
+            <Text style={styles.queueTitle}>
+              {uploading ? `Envoi ${queue.filter((q) => q.status === "done").length + 1}/${queue.length}…` : `${queue.filter((q) => q.status === "done").length}/${queue.length} photo(s) envoyée(s)`}
+            </Text>
+            {queue.map((q, i) => (
+              <View key={q.key} style={styles.queueRow} testID={`photos-upload-item-${i}`}>
+                <View style={styles.queueHead}>
+                  <Text style={styles.queueName} numberOfLines={1}>{q.name}</Text>
+                  {q.status === "done" ? <CheckCircleIcon size={16} color={colors.success} weight="fill" />
+                    : q.status === "error" ? <WarningIcon size={16} color={colors.error} weight="fill" />
+                    : <Text style={styles.queuePct}>{q.status === "waiting" ? "En attente" : `${q.pct} %`}</Text>}
+                </View>
+                <View style={styles.track}>
+                  <View style={[styles.fill, { width: `${q.status === "done" ? 100 : q.pct}%`, backgroundColor: q.status === "error" ? colors.error : colors.brandPrimary }]} />
+                </View>
+                {q.error ? <Text style={styles.queueError}>{q.error}</Text> : null}
+              </View>
+            ))}
+            {!uploading && queue.some((q) => q.status === "error") ? (
+              <PrimaryButton title="Masquer" variant="ghost" onPress={() => setQueue([])} testID="photos-upload-dismiss" />
+            ) : null}
           </View>
         ) : null}
         {paywall ? (
@@ -333,7 +358,15 @@ const useStyles = makeStyles((colors) => ({
   hint: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 19, color: colors.muted },
   warn: { flexDirection: "row", gap: spacing.md, alignItems: "flex-start", backgroundColor: colors.warningSoft, borderRadius: radius.md, padding: spacing.lg },
   warnText: { flex: 1, fontFamily: fonts.medium, fontSize: 13, lineHeight: 19, color: colors.warning },
-  loadingRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  queue: { gap: spacing.sm, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.lg },
+  queueTitle: { fontFamily: fonts.semibold, fontSize: 14, color: colors.onSurface },
+  queueRow: { gap: 4 },
+  queueHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
+  queueName: { flex: 1, fontFamily: fonts.regular, fontSize: 12, color: colors.onSurfaceSecondary },
+  queuePct: { fontFamily: fonts.semibold, fontSize: 12, color: colors.brandPrimary },
+  queueError: { fontFamily: fonts.regular, fontSize: 11, color: colors.error },
+  track: { height: 6, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary, overflow: "hidden" },
+  fill: { height: 6, borderRadius: radius.pill },
   skeleton: { height: 260, borderRadius: radius.lg, backgroundColor: colors.skeleton },
   empty: { alignItems: "center", gap: spacing.sm, paddingVertical: spacing.xxl },
   emptyTitle: { fontFamily: fonts.semibold, fontSize: 17, color: colors.onSurface },
