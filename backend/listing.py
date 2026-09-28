@@ -61,7 +61,10 @@ def _facts(prop: PropertyDoc, include_price: bool, extra: str | None) -> str:
         heat = [x for x in (f.heating_mode and f"chauffage {f.heating_mode}", f.underfloor_heating and "chauffage au sol") if x]
         if heat:
             lines.append("Chauffage : " + ", ".join(heat))
-    if include_price and est:
+    if include_price and prop.target_price:
+        lines.append(f"Prix de vente : {int(prop.target_price):,} € — prix fixé par le vendeur : l'annonce affiche exactement ce montant "
+                     "(jamais de fourchette, jamais le mot « estimation »).".replace(",", " "))
+    elif include_price and est:
         lines.append(f"Prix indicatif : fourchette {int(est.low):,} € – {int(est.high):,} € (estimation Achètes ma maison)".replace(",", " "))
     if extra and extra.strip():
         lines.append(f"Précisions fournies par le vendeur (utilisables telles quelles) : {extra.strip()}")

@@ -7,7 +7,7 @@ import { ActivityIndicator, Platform, Pressable, Switch, Text, View } from "reac
 import { KeyboardAwareScrollView, KeyboardStickyView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { LISTING_STYLES, Listing, ListingStyle, api, formatMonth } from "@/src/api";
+import { LISTING_STYLES, Listing, ListingStyle, api, formatK, formatMonth } from "@/src/api";
 import { Field, Segmented } from "@/src/components/Form";
 import { PremiumGate, usePackUnlocked } from "@/src/components/PremiumGate";
 import { usePhotoExport } from "@/src/photoExport";
@@ -33,10 +33,30 @@ export default function ListingScreen() {
   const [copied, setCopied] = useState<string | null>(null);
 
   const listings = useQuery({ queryKey: ["listings", id], queryFn: () => api.listListings(id!), enabled: !!id });
+  const prop = useQuery({ queryKey: ["property", id], queryFn: () => api.getProperty(id!), enabled: !!id });
   const pack = usePackUnlocked(id);
 
+  // Prix de vente souhaité : c'est le prix cible du bien (partagé avec la fiche) ; l'annonce l'affiche tel quel au lieu de la fourchette.
+  const target = useQuery({ queryKey: ["target", id], queryFn: () => api.getTarget(id!), enabled: !!id });
+  const [priceInput, setPriceInput] = useState<string | null>(null);
+  const priceText = priceInput ?? (target.data?.target_price ? String(Math.round(target.data.target_price)) : "");
+  const parsedPrice = Number(priceText.replace(/[^\d]/g, ""));
+  const priceValid = priceText.trim() === "" || (parsedPrice >= 10_000 && parsedPrice <= 20_000_000);
+  const savePrice = useMutation({
+    mutationFn: (value: number | null) => api.putTarget(id!, value),
+    onSuccess: (r) => {
+      queryClient.setQueryData(["target", id], r);
+      queryClient.invalidateQueries({ queryKey: ["next-steps"] });
+      setPriceInput(null);
+    },
+  });
+  const priceDirty = priceInput !== null && priceText.trim() !== (target.data?.target_price ? String(Math.round(target.data.target_price)) : "");
+
   const generate = useMutation({
-    mutationFn: () => api.createListing(id!, { style, extra_facts: extra.trim() || null, include_price: includePrice }),
+    mutationFn: async () => {
+      if (includePrice && priceDirty && priceValid) await savePrice.mutateAsync(priceText.trim() === "" ? null : parsedPrice);
+      return api.createListing(id!, { style, extra_facts: extra.trim() || null, include_price: includePrice });
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["listings", id] }),
   });
 
@@ -86,7 +106,7 @@ export default function ListingScreen() {
           hint="Seuls les faits ci-dessus et ceux du bien seront utilisés. Rien d’autre ne sera inventé."
         />
         <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>Mentionner la fourchette de prix estimée</Text>
+          <Text style={styles.switchLabel}>Mentionner le prix dans l’annonce</Text>
           <Switch
             testID="listing-include-price"
             value={includePrice}
@@ -95,6 +115,46 @@ export default function ListingScreen() {
             thumbColor={Platform.OS === "android" ? colors.surfaceSecondary : undefined}
           />
         </View>
+        {includePrice ? (
+          <View style={styles.priceBox} testID="listing-price-box">
+            <Field
+              label="Prix de vente souhaité"
+              testID="listing-price-input"
+              placeholder={prop.data?.estimation ? String(Math.round(prop.data.estimation.value / 1000) * 1000) : "250000"}
+              suffix="€"
+              keyboardType="number-pad"
+              value={priceText}
+              onChangeText={(t) => setPriceInput(t.replace(/[^\d]/g, ""))}
+              error={priceValid ? undefined : "Prix entre 10 000 € et 20 000 000 €"}
+              hint={
+                priceText.trim()
+                  ? `L’annonce affichera « ${Number(priceText).toLocaleString("fr-FR")} € » à la place de la fourchette d’estimation.`
+                  : prop.data?.estimation
+                    ? `Sans prix saisi, l’annonce mentionne la fourchette estimée (${formatK(prop.data.estimation.low)} – ${formatK(prop.data.estimation.high)}).`
+                    : "Sans prix saisi, l’annonce mentionne la fourchette estimée."
+              }
+            />
+            {prop.data?.estimation ? (
+              <View style={styles.chips}>
+                {[prop.data.estimation.low, prop.data.estimation.value, prop.data.estimation.high].map((v, i) => (
+                  <Pressable key={i} testID={`listing-price-chip-${i}`} accessibilityRole="button" onPress={() => setPriceInput(String(Math.round(v / 1000) * 1000))} style={styles.chip}>
+                    <Text style={styles.chipText}>{["Bas", "Central", "Haut"][i]} · {formatK(v)}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+            {priceDirty && priceValid ? (
+              <PrimaryButton
+                title={priceText.trim() === "" ? "Retirer le prix" : "Enregistrer ce prix"}
+                variant="secondary"
+                loading={savePrice.isPending}
+                onPress={() => savePrice.mutate(priceText.trim() === "" ? null : parsedPrice)}
+                testID="listing-price-save"
+              />
+            ) : null}
+            {savePrice.isError ? <Text style={styles.priceError} testID="listing-price-error">{(savePrice.error as Error).message}</Text> : null}
+          </View>
+        ) : null}
         {generate.isError ? (
           <View style={styles.warn} testID="listing-error">
             <WarningIcon size={18} color={colors.error} weight="fill" />
@@ -181,6 +241,11 @@ const useStyles = makeStyles((colors) => ({
   p: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.onSurfaceTertiary },
   switchRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md, minHeight: 44 },
   switchLabel: { flex: 1, fontFamily: fonts.medium, fontSize: 14, color: colors.onSurface },
+  priceBox: { gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.lg },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  chip: { minHeight: 36, paddingHorizontal: spacing.md, borderRadius: radius.pill, backgroundColor: colors.brandTertiary, justifyContent: "center" },
+  chipText: { fontFamily: fonts.semibold, fontSize: 12, color: colors.onBrandTertiary },
+  priceError: { fontFamily: fonts.medium, fontSize: 12, color: colors.error },
   warn: { flexDirection: "row", gap: spacing.md, alignItems: "flex-start", backgroundColor: colors.errorSoft, borderRadius: radius.md, padding: spacing.lg },
   warnText: { flex: 1, fontFamily: fonts.medium, fontSize: 13, lineHeight: 19, color: colors.error },
   sectionTitle: { fontFamily: fonts.semibold, fontSize: 13, color: colors.muted, textTransform: "uppercase", letterSpacing: 0.6 },
