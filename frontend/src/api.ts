@@ -1,4 +1,16 @@
+import { Platform } from "react-native";
+
 const BASE = `${process.env.EXPO_PUBLIC_BACKEND_URL}/api`;
+
+/** Multipart file part: a Blob on the web, the React Native `{ uri, name, type }` descriptor on iOS/Android.
+ *  (Never sniff `document`: it exists in Expo's native runtime too, and a Blob makes iOS throw "Unsupported FormDataPart".) */
+async function appendFile(form: FormData, uri: string, name: string, type: string) {
+  if (Platform.OS === "web") {
+    form.append("file", await (await fetch(uri)).blob(), name);
+  } else {
+    form.append("file", { uri, name, type } as any);
+  }
+}
 
 // Session token (set by SessionProvider); sent as Bearer header, or as ?t= for links opened by the OS.
 let authToken: string | null = null;
@@ -473,12 +485,7 @@ export function fileUrl(path: string): string {
 
 export async function uploadPhoto(propertyId: string, uri: string, name: string, type: string): Promise<Photo> {
   const form = new FormData();
-  if (typeof window !== "undefined" && typeof document !== "undefined") {
-    const blob = await (await fetch(uri)).blob();
-    form.append("file", blob, name);
-  } else {
-    form.append("file", { uri, name, type } as any);
-  }
+  await appendFile(form, uri, name, type);
   const res = await fetch(`${BASE}/properties/${propertyId}/photos`, { method: "POST", body: form, headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} });
   if (!res.ok) {
     let message = `Erreur ${res.status}`;
@@ -653,12 +660,7 @@ export interface PackStatus {
 
 export async function uploadDocument(propertyId: string, itemKey: string, uri: string, name: string, type: string): Promise<SaleDocument> {
   const form = new FormData();
-  if (typeof window !== "undefined" && typeof document !== "undefined") {
-    const blob = await (await fetch(uri)).blob();
-    form.append("file", blob, name);
-  } else {
-    form.append("file", { uri, name, type } as any);
-  }
+  await appendFile(form, uri, name, type);
   form.append("item_key", itemKey);
   const res = await fetch(`${BASE}/properties/${propertyId}/documents`, { method: "POST", body: form, headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} });
   if (!res.ok) {
