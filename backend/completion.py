@@ -5,7 +5,7 @@ from models import PropertyDoc
 
 COMMON = [("year_built", "année de construction"), ("bathrooms", "salles de bain"), ("heating", "chauffage"), ("dpe", "DPE"),
           ("double_glazing", "double vitrage"), ("terrace", "terrasse"), ("garage", "garage"), ("orientation", "exposition"),
-          ("air_conditioning", "climatisation"), ("solar_panels", "panneaux solaires")]
+          ("air_conditioning", "climatisation"), ("fireplace", "cheminée / poêle"), ("solar_panels", "panneaux solaires")]
 MAISON = [("land_surface", "surface du terrain"), ("pool", "piscine"), ("fenced", "terrain clos"), ("motorized_gate", "portail motorisé"),
           ("outbuilding", "dépendance"), ("single_storey", "plain-pied"), ("basement", "sous-sol"), ("convertible_attic", "combles"),
           ("pantry", "cellier"), ("dressing", "dressing"), ("master_suite", "suite parentale"), ("sanitation", "assainissement")]

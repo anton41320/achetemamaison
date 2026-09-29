@@ -16,6 +16,8 @@ STYLE_GUIDE = {
 }
 CONDITION = {"a_renover": "à rénover", "travaux": "travaux à prévoir", "correct": "état correct", "bon": "bon état", "tres_bon": "très bon état",
              "neuf_renove": "neuf ou entièrement rénové"}
+FIREPLACE_LABELS = {"aucune": "aucune", "insert": "cheminée avec insert", "foyer_ouvert": "cheminée à foyer ouvert",
+                    "poele_bois": "poêle à bois", "poele_granules": "poêle à granulés"}
 PARKING_LABELS = {"aucun": "aucun", "exterieur": "place extérieure", "interieur": "place intérieure / box"}
 
 SYSTEM = """Tu es un rédacteur d'annonces immobilières français. Tu rédiges UNIQUEMENT à partir des faits fournis.
@@ -49,6 +51,8 @@ def _facts(prop: PropertyDoc, include_price: bool, extra: str | None) -> str:
 
         lines.append(f"Assainissement : {SANITATION_LABELS.get(san, san)}")
     f = prop.features
+    if f.fireplace and f.fireplace != "aucune":
+        lines.append(f"Chauffage d'appoint / cheminée : {FIREPLACE_LABELS[f.fireplace]}")
     if prop.property_type == "appartement":
         if f.floor is not None:
             lines.append(f"Étage : {'rez-de-chaussée' if f.floor == 0 else f'{f.floor}e'}" + ("" if f.elevator is None else f" · ascenseur : {'oui' if f.elevator else 'non'}"))

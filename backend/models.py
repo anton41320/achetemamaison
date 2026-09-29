@@ -65,6 +65,7 @@ class Features(BaseModel):
     dpe: Optional[Literal["A", "B", "C", "D", "E", "F", "G"]] = None
     double_glazing: Optional[bool] = None
     air_conditioning: Optional[bool] = None
+    fireplace: Optional[Literal["aucune", "insert", "foyer_ouvert", "poele_bois", "poele_granules"]] = None
     solar_panels: Optional[bool] = None
     # Appartement
     floor: Optional[int] = Field(default=None, ge=0, le=60)

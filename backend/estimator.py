@@ -110,6 +110,10 @@ def feature_adjustments(ptype: str, f, value_base: float, surface: Optional[floa
         out.append(("feat_glazing", "Double vitrage", 0.01))
     if f.air_conditioning:
         out.append(("feat_ac", "Climatisation", 0.015))
+    if f.fireplace and f.fireplace != "aucune":
+        fire = {"insert": ("Cheminée avec insert", 0.015), "foyer_ouvert": ("Cheminée à foyer ouvert", 0.005),
+                "poele_bois": ("Poêle à bois", 0.015), "poele_granules": ("Poêle à granulés", 0.02)}[f.fireplace]
+        out.append(("feat_fireplace", *fire))
     if f.solar_panels:
         out.append(("feat_solar", "Panneaux solaires", 0.02))
     if not maison:

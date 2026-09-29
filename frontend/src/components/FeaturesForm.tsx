@@ -166,6 +166,30 @@ export function FeaturesForm({ propertyType, value, onChange }: Props) {
       ) : null}
       <Yn k="double_glazing" label="Double vitrage" testID="feat-glazing" />
       <Yn k="air_conditioning" label="Climatisation" testID="feat-ac" />
+      <Segmented
+        label="Cheminée / poêle"
+        testID="feat-fireplace"
+        value={value.fireplace === null ? "na" : value.fireplace === "aucune" ? "non" : "oui"}
+        onChange={(v) => set("fireplace", v === "na" ? null : v === "non" ? "aucune" : value.fireplace && value.fireplace !== "aucune" ? value.fireplace : "insert")}
+        options={[{ value: "na", label: "—" }, { value: "non", label: "Non" }, { value: "oui", label: "Oui" }]}
+      />
+      {value.fireplace && value.fireplace !== "aucune" ? (
+        <View style={styles.sub}>
+          <Segmented
+            label="Type"
+            testID="feat-fireplace-type"
+            scroll
+            value={value.fireplace}
+            onChange={(v) => set("fireplace", v as Features["fireplace"])}
+            options={[
+              { value: "insert", label: "Insert" },
+              { value: "foyer_ouvert", label: "Foyer ouvert" },
+              { value: "poele_bois", label: "Poêle à bois" },
+              { value: "poele_granules", label: "Poêle à granulés" },
+            ]}
+          />
+        </View>
+      ) : null}
       <Yn k="solar_panels" label="Panneaux solaires" testID="feat-solar" />
     </View>
   );

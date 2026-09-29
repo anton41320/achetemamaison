@@ -236,6 +236,10 @@ def build_pack_pdf(prop: PropertyDoc, listing: dict, photos: list[tuple[bytes, b
         rows.append(["DPE", f.dpe])
     if f.heating:
         rows.append(["Chauffage", f.heating.replace("_", " ")])
+    if f.fireplace and f.fireplace != "aucune":
+        from listing import FIREPLACE_LABELS
+
+        rows.append(["Cheminée / poêle", FIREPLACE_LABELS[f.fireplace]])
     if f.pool and f.pool != "aucune":
         rows.append(["Piscine", f.pool.replace("_", " ")])
     if f.garage and f.garage != "aucun":
