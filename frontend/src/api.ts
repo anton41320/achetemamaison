@@ -841,12 +841,6 @@ export const CONDITION_LABELS: Record<Condition, string> = {
   neuf_renove: "Neuf / rénové",
 };
 
-export const CONFIDENCE_LABELS: Record<ConfidenceLevel, string> = {
-  eleve: "Confiance élevée",
-  moyen: "Confiance moyenne",
-  faible: "Confiance faible",
-};
-
 export const TYPE_LABELS: Record<PropertyType, string> = {
   appartement: "Appartement",
   maison: "Maison",

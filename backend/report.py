@@ -26,7 +26,6 @@ LINE = colors.HexColor("#DCE5F2")
 
 CONDITION_LABELS = {"a_renover": "À rénover", "travaux": "Travaux à prévoir", "correct": "État correct",
                     "bon": "Bon état", "tres_bon": "Très bon état", "neuf_renove": "Neuf / rénové"}
-LEVEL_LABELS = {"eleve": "Confiance élevée", "moyen": "Confiance moyenne", "faible": "Confiance faible"}
 AGREEMENT = {"convergent": "Les deux approches convergent", "ecart_modere": "Écart modéré entre les approches",
              "divergent": "Écart important entre les approches"}
 
@@ -74,10 +73,10 @@ def build_report(prop: PropertyDoc, final: Optional[dict] = None, photos: Option
 
     # Headline
     head = Table([
-        [Paragraph("Fourchette estimée", small), Paragraph("Valeur centrale", small), Paragraph("Prix / m²", small), Paragraph("Confiance", small)],
+        [Paragraph("Fourchette estimée", small), Paragraph("Valeur centrale", small), Paragraph("Prix / m²", small), Paragraph("Ventes comparables", small)],
         [Paragraph(f"{eur(est.low)} – {eur(est.high)}", big), Paragraph(eur(est.value), ParagraphStyle("m", parent=body, fontName="Helvetica-Bold", fontSize=14, leading=18)),
          Paragraph(f"{eur(est.price_m2)}/m²", ParagraphStyle("m2", parent=body, fontName="Helvetica-Bold", fontSize=14, leading=18)),
-         Paragraph(f"{LEVEL_LABELS[est.confidence.level]}<br/>{est.confidence.score}/100", ParagraphStyle("c", parent=body, fontName="Helvetica-Bold", fontSize=11, leading=14))],
+         Paragraph(f"{est.confidence.n_comparables}<br/>{est.confidence.radius_label}", ParagraphStyle("c", parent=body, fontName="Helvetica-Bold", fontSize=11, leading=14))],
     ], colWidths=[70 * mm, 36 * mm, 34 * mm, 34 * mm])
     head.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), BRAND_SOFT), ("BOX", (0, 0), (-1, -1), 0.5, LINE),
                               ("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("TOPPADDING", (0, 0), (-1, -1), 6),
@@ -89,10 +88,8 @@ def build_report(prop: PropertyDoc, final: Optional[dict] = None, photos: Option
     for n in est.notes:
         story.append(Paragraph(f"• {n}", small))
 
-    # Confidence
-    story.append(Paragraph("Niveau de confiance", h2))
-    rows = [["Critère", "Score", "Détail"]] + [[d.label, f"{d.score:.0f}/{d.max_score:.0f}", d.hint] for d in est.confidence.details]
-    story.append(_table(rows, [55 * mm, 22 * mm, 97 * mm], body))
+    # Périmètre de l'analyse
+    story.append(Paragraph("Périmètre de l’analyse", h2))
     story.append(Paragraph(f"Périmètre retenu : {est.confidence.radius_label} · {est.confidence.n_comparables} ventes retenues · "
                            f"dispersion ±{est.confidence.dispersion_pct:g} % · âge médian {est.confidence.median_age_months} mois", small))
 

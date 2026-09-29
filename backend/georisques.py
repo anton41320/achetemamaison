@@ -16,6 +16,7 @@ logger = logging.getLogger("georisques")
 
 BASE = "https://georisques.gouv.fr/api/v1"
 CACHE_DAYS = 30
+PARTIAL_RETRY_MINUTES = 60  # a degraded snapshot is retried at most once an hour, never on every screen open
 ICPE_RADIUS_M = 1000
 _session = requests.Session()
 _session.headers.update({"Accept": "application/json", "User-Agent": "achetesmamaison/1.0", "Connection": "close"})
@@ -46,10 +47,10 @@ ARGILE_LABELS = {"0": ("none", "Exposition nulle"), "1": ("low", "Exposition fai
                  "3": ("high", "Exposition forte")}
 
 
-def _get(path: str, params: dict, timeout: int = 20) -> Optional[dict]:
+def _get(path: str, params: dict, timeout: int = 8) -> Optional[dict]:
     import time
 
-    for attempt in range(3):
+    for attempt in range(2):
         try:
             r = _session.get(f"{BASE}{path}", params=params, timeout=timeout)
             if r.status_code == 404:
@@ -179,19 +180,60 @@ def summary_lines(risks: dict) -> list[str]:
     return lines
 
 
+def _age(cached: Optional[dict]) -> Optional[timedelta]:
+    if not cached or not cached.get("fetched_at"):
+        return None
+    return datetime.now(timezone.utc) - cached["fetched_at"].replace(tzinfo=timezone.utc)
+
+
+def is_fresh(cached: Optional[dict]) -> bool:
+    """True when the snapshot needs no network call: complete and < 30 days, or degraded but retried < 1 h ago."""
+    age = _age(cached)
+    if age is None:
+        return False
+    if cached.get("partial"):
+        return age < timedelta(minutes=PARTIAL_RETRY_MINUTES)
+    return age < timedelta(days=CACHE_DAYS)
+
+
+async def get_cached(db, prop) -> Optional[dict]:
+    return await db.risks.find_one({"_id": prop.id})
+
+
 async def get_for_property(db, prop, force: bool = False) -> dict:
     """Cached Géorisques snapshot for a property (30 days)."""
     import asyncio
 
-    cached = await db.risks.find_one({"_id": prop.id})
-    fresh = cached and cached.get("fetched_at") and cached["fetched_at"].replace(tzinfo=timezone.utc) > datetime.now(timezone.utc) - timedelta(days=CACHE_DAYS)
-    if cached and fresh and not force and not cached.get("partial"):
+    cached = await get_cached(db, prop)
+    if cached and is_fresh(cached) and not force:
         return cached
     data = await asyncio.to_thread(fetch, prop.lat, prop.lon, prop.code_commune)
-    if data["partial"] and cached:  # keep the better snapshot rather than a degraded one
+    if data["partial"] and cached and not cached.get("partial"):  # keep the better snapshot rather than a degraded one
         return cached
     await db.risks.replace_one({"_id": prop.id}, {"_id": prop.id, "property_id": prop.id, **data}, upsert=True)
     return {"_id": prop.id, "property_id": prop.id, **data}
+
+
+_refreshing: set[str] = set()
+
+
+async def refresh_in_background(db, prop) -> None:
+    """Fire-and-forget refresh so screens never wait on georisques.gouv.fr."""
+    import asyncio
+
+    if prop.id in _refreshing:
+        return
+    _refreshing.add(prop.id)
+
+    async def _run():
+        try:
+            await get_for_property(db, prop)
+        except Exception:  # noqa: BLE001
+            logger.exception("Géorisques background refresh failed")
+        finally:
+            _refreshing.discard(prop.id)
+
+    asyncio.create_task(_run())
 
 
 def to_json(doc: dict) -> dict:

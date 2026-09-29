@@ -2,7 +2,6 @@ import { ArrowRightIcon, BuildingsIcon, CaretRightIcon, CheckCircleIcon, CheckIc
 import { Pressable, Text, View } from "react-native";
 
 import { NextStep, Property, PropertyNextSteps, TYPE_LABELS, formatEuro, formatK } from "@/src/api";
-import { ConfidenceBadge } from "@/src/components/ConfidenceBadge";
 import { CompletionBadge } from "@/src/components/CompletionBadge";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
@@ -65,10 +64,11 @@ export function PropertyCard({ property, onPress, testID, nextSteps, onStepPress
               <Text style={styles.range} testID={`${testID}-range`}>
                 Fourchette {formatK(est.low)} – {formatK(est.high)}
               </Text>
-              <View style={styles.badges}>
-                <ConfidenceBadge level={est.confidence.level} />
-                {property.completion ? <CompletionBadge completion={property.completion} testID={`${testID}-completion`} /> : null}
-              </View>
+              {property.completion ? (
+                <View style={styles.badges}>
+                  <CompletionBadge completion={property.completion} testID={`${testID}-completion`} />
+                </View>
+              ) : null}
             </>
           ) : (
             <Text style={styles.meta}>Estimation indisponible</Text>

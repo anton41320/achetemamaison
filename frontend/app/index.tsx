@@ -87,7 +87,7 @@ export default function HomeScreen() {
           <Text style={styles.emptyTitle}>Aucune estimation pour le moment</Text>
           <Text style={styles.emptyText}>
             Renseignez l’adresse et les caractéristiques de votre bien : Achètes ma maison calcule une fourchette de valeur à
-            partir des ventes réelles enregistrées autour de chez vous, avec un niveau de confiance explicite.
+            partir des ventes réelles enregistrées autour de chez vous.
           </Text>
           <PrimaryButton title="Nouvelle estimation" onPress={goNew} testID="home-empty-cta" />
         </View>

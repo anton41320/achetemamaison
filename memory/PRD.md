@@ -47,6 +47,11 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 
 - [x] Comparables élargis aux **communes de taille comparable** (v4, demande utilisateur) : populations INSEE via geo.api.gouv.fr (`communes.py`, collection `communes`, rafraîchies au démarrage / à l'ingestion) ; recherche jusqu'à **10 km** ; niveaux 500 m → 1,5 km → commune → 5 km → 10 km, les deux derniers restreints aux communes dont la population est dans 0,4×–2,5× celle du bien ; poids supplémentaire de similarité de taille ; on continue d'élargir tant que l'erreur-type de la médiane pondérée baisse d'au moins 5 % (les ventes lointaines renforcent la base sans noyer le local grâce aux poids distance 1/(1+d/1 km) et taille) ; MIN_COMPS 12 ; score de proximité fondé sur la distance médiane pondérée ; notes explicites (rayon, population cible, plage de population des autres communes) ; population affichée sur chaque comparable. Back-test 150 ventes : erreur médiane 17,9 % → 15,8 % (maisons 21 % → 16,6 %).
 
+- [x] Retrait du « niveau de confiance » côté utilisateur (demande utilisateur, 2026-06) : badge, carte score/100 et détails supprimés de la fiche bien, des cartes de l'accueil et des PDF (rapport, notaire) ; `ConfidenceBadge.tsx` supprimé. Le score reste calculé en interne (largeur de fourchette, blend) et visible sur l'écran admin `data.tsx`. Les métriques périmètre / ventes comparables / dispersion sont conservées.
+- [x] Dossier de vente rapide : `_dossier` ne bloque plus sur georisques.gouv.fr (cache utilisé même périmé, rafraîchissement en tâche de fond `georisques.refresh_in_background`, snapshot partiel réessayé au plus 1×/h, timeouts 8 s × 2) ; requêtes Mongo en parallèle + index `documents`, `checklist_state`, `orders`. Temps de réponse 60 s → ~0,2 s. Squelette de chargement sur l'écran dossier.
+- [x] Aperçu Pack premium : `demo-before.jpg` régénéré via Nano Banana (script `backend/scripts/make_demo_before.py`) — même cuisine, sombre, jaunâtre, penchée et encombrée — pour contraster avec la version retouchée.
+
+
 ## Backlog priorisé
 - P2 Home staging IA (mobilier virtuel dans pièce vide, styles) — différé sur demande utilisateur
 - P2 Photos dans le rapport PDF d'estimation

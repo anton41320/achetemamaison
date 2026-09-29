@@ -1,0 +1,33 @@
+{
+  "summary": "Iter 22 verified: (1) confidence badge/score fully removed from mobile UI (property card, detail page, dossier) and from report PDF; (2) dossier endpoint is now fast (140-272 ms per call, well under the 2 s ceiling) across 3 consecutive calls on both target properties; (3) pack preview 'Photo originale' image is now the dark, cluttered kitchen (dishes on counter, fridge magnets), and toggling back to 'Voir la retouche' shows the clean bright kitchen. Non-regression on GET /api/properties and GET /api/properties/{id} confirmed (estimation present). Backend: 6/6 pytest cases green (iter22_confidence_dossier.xml). Frontend: home has no 'Confiance élevée/moyenne/faible' badge, property detail has no 'confidence-badge' / 'confidence-breakdown' testIDs, no 'Niveau de confiance' text, and 'Périmètre retenu' / 'Ventes comparables' / 'Dispersion des prix/m²' + 'Comment est calculée la fourchette ?' are all still rendered. Dossier button navigates and 'dossier-progress' (Documents obligatoires validés) shows in ~0.15 s. Note on '/100': the only remaining occurrence is the MarketSignalCard 'Bon moment pour vendre ? 86/100' (testID market-signal-card / market-signal-score), which is a distinct feature (market timing) and not the confidence badge — flagged for the main agent to confirm scope but treated as expected. No red-screen JS errors during the run.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter22_confidence_dossier.py",
+    "/app/test_reports/pytest/iter22_confidence_dossier.xml"
+  ],
+  "action_items": [
+    "None required for the three targeted changes; they all pass. AMBIGUITY: the request lists '/100' in the confidence-related strings that should be absent. The only remaining '/100' on the property detail is the MarketSignalCard score (\"Bon moment pour vendre ? 86/100\" — testID market-signal-card). This is the market timing indicator, not the confidence badge, and appears intentional. If the main agent intended to remove that score too, MarketSignalCard needs adjustment (component at /app/frontend/src/components/MarketSignalCard.tsx, line 39 uses testID market-signal-score)."
+  ],
+  "critical_code_review_comments": [
+    "PackPreview correctly uses the new demo-before.jpg (dark cluttered kitchen) and demo-after.jpg (clean kitchen); toggle state and testIDs (pack-preview, pack-preview-toggle, pack-preview-badge) all working; image src verified to swap between demo-before.jpg and demo-after.jpg.",
+    "property/[id]/index.tsx no longer imports/renders any 'confidence-badge' or 'confidence-breakdown' testID; only the three metric fields (radius_label, n_comparables, dispersion_pct) remain, each with proper labels — this matches the intended UI.",
+    "dossier.tsx correctly renders <View testID=\"dossier-skeleton\"> during isLoading and <View testID=\"dossier-progress\"> once data resolves; skeleton renders on the first frame so no white screen.",
+    "Report PDF text extracted via pypdf contains no 'confiance' occurrences and does contain 'Ventes comparables' / 'Périmètre' markers — clean.",
+    "Dossier endpoint measured client-side at 140-272 ms across 3 sequential calls per property (both PROP_A and PROP_B), well under the 2 s SLA. Cache + background refresh strategy is effective."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter22_confidence_dossier.py (new)"
+  ],
+  "success_rate": {"backend": "100% (6/6)", "frontend": "100%"},
+  "seed_data_creation": "None. Used existing properties 6aa3f68d440f04920cdaffde and 6aa02db9efd8f90925a5a758 for delivered@resend.dev.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login uses button 'J’ai déjà un compte' (typographic apostrophe), then testIDs signin-email/signin-password, then 'Se connecter'. Auth returns access_token (bearer). PROP_A=6aa3f68d440f04920cdaffde (Châtres-sur-Cher) has full estimation + market-signal-card visible. PROP_B=6aa02db9efd8f90925a5a758 is premium-entitled so /notaire.pdf returns 200. Dossier endpoint should stay <2 s — measured 140-272 ms. If a future iteration removes the market-signal-card score, note the '/100' currently rendered comes from that widget, not from a confidence badge.",
+  "rca_of_issue": "N/A — verification iteration, no bugs reproduced. Behavioural notes: (a) PDF confidence-wording removal was verified by full-text extraction via pypdf, both report.pdf and notaire.pdf; (b) dossier latency drop is consistent with the described cache-first + background-refresh design (Georisques upstream still times out from the pod, but that's isolated behind cache); (c) pack image swap works client-side, the require() paths in PackPreview.tsx are correctly wired to /app/frontend/assets/images/demo-before.jpg and demo-after.jpg."
+}

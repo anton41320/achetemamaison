@@ -105,3 +105,9 @@
 - Backend: target.py (GET/PUT /api/properties/{id}/target), notaire.py (GET /api/properties/{id}/notaire.pdf, pypdf merge), GET /api/alerts.
 - Frontend: TargetPriceCard (fiche bien), notaire export button (dossier screen), AlertsBanner (home).
 - Test data: property 6aa02db9efd8f90925a5a758 has target 250000, validated DPE (expires 2026-10-20 → alert) and validated ERP PDF.
+
+## Iteration 22 — Retrait « niveau de confiance », dossier rapide, aperçu photo « avant » dégradé (main agent, 2026-06)
+- Frontend: fiche bien sans ConfidenceBadge ni carte « Niveau de confiance » (composant supprimé) ; PropertyCard sans badge confiance ; dossier.tsx affiche un squelette (testID dossier-skeleton) pendant le chargement.
+- Backend: `_dossier` n'appelle plus Géorisques en direct (cache + refresh en tâche de fond, `georisques.refresh_in_background`) ; index Mongo documents/checklist_state/orders ; PDFs report/notaire sans « Confiance ».
+- Assets: demo-before.jpg régénéré (cuisine sombre/encombrée) pour PackPreview (pack.tsx).
+- Login test: delivered@resend.dev / Estimo2026! — biens 6aa3f68d440f04920cdaffde, 6aa02db9efd8f90925a5a758.

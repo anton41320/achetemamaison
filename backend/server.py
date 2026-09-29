@@ -710,14 +710,17 @@ async def _dossier(pid: str) -> dict:
     if not doc:
         raise HTTPException(status_code=404, detail="Bien introuvable")
     prop = PropertyDoc.from_mongo(doc)
-    try:
-        risks = await georisques.get_for_property(db, prop)
-    except Exception:  # noqa: BLE001 — Géorisques must never block the dossier
-        logger.exception("Géorisques unavailable")
-        risks = None
+    # Never wait on georisques.gouv.fr here: use the cached snapshot (even stale) and refresh in the background.
+    risks = await georisques.get_cached(db, prop)
+    if not georisques.is_fresh(risks):
+        await georisques.refresh_in_background(db, prop)
     items = dossier_mod.build_checklist(prop, risks)
-    docs = await db.documents.find({"property_id": pid, "deleted_at": None}).sort("created_at", -1).to_list(300)
-    overrides = {o["item_key"]: o for o in await db.checklist_state.find({"property_id": pid}).to_list(100)}
+    docs, overrides_raw, unlocked = await asyncio.gather(
+        db.documents.find({"property_id": pid, "deleted_at": None}).sort("created_at", -1).to_list(300),
+        db.checklist_state.find({"property_id": pid}).to_list(100),
+        pack.is_unlocked(db, pid),
+    )
+    overrides = {o["item_key"]: o for o in overrides_raw}
     by_item: dict[str, list[dict]] = {}
     for d in docs:
         by_item.setdefault(d["item_key"], []).append(_doc_out(d))
@@ -742,7 +745,7 @@ async def _dossier(pid: str) -> dict:
                 done += 1
     unassigned = by_item.get("autre", [])
     return {"property_id": pid, "items": items, "unassigned": unassigned,
-            "locked": not await pack.is_unlocked(db, pid),
+            "locked": not unlocked,
             "risks": georisques.to_json(risks) if risks else None,
             "progress": {"done": done, "total_required": total_required,
                          "pct": round(done / total_required * 100) if total_required else 100}}
@@ -1066,6 +1069,9 @@ async def startup():
         asyncio.create_task(_dvf_refresh_loop())
     await db.properties.create_index([("deleted_at", 1), ("created_at", -1)])
     await db.photos.create_index([("property_id", 1), ("deleted_at", 1)])
+    await db.documents.create_index([("property_id", 1), ("deleted_at", 1), ("created_at", -1)])
+    await db.checklist_state.create_index([("property_id", 1)])
+    await db.orders.create_index([("property_id", 1), ("status", 1)])
     try:
         await asyncio.to_thread(storage.init_storage)
     except Exception as exc:  # noqa: BLE001

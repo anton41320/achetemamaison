@@ -12,7 +12,6 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { TYPE_LABELS, api, formatEuro, formatInt, formatK, formatPct } from "@/src/api";
-import { ConfidenceBadge, useConfidenceColor } from "@/src/components/ConfidenceBadge";
 import { CompletionBadge } from "@/src/components/CompletionBadge";
 import { FinalEstimateCard } from "@/src/components/FinalEstimateCard";
 import { HedonicCard } from "@/src/components/HedonicCard";
@@ -60,7 +59,6 @@ export default function PropertyDetailScreen() {
   });
 
   const est = data?.estimation ?? null;
-  const tone = useConfidenceColor(est?.confidence.level ?? "moyen");
 
   if (isLoading) {
     return (
@@ -121,9 +119,6 @@ export default function PropertyDetailScreen() {
                 <Text style={styles.heroRange} testID="estimation-range">
                   Fourchette {formatK(est.low)} – {formatK(est.high)}
                 </Text>
-                <View style={{ marginTop: spacing.md }}>
-                  <ConfidenceBadge glass level={est.confidence.level} score={est.confidence.score} testID="confidence-badge" />
-                </View>
               </>
             ) : null}
           </View>
@@ -186,26 +181,6 @@ export default function PropertyDetailScreen() {
               </View>
             ) : null}
 
-            {/* Confidence breakdown */}
-            <Animated.View entering={FadeInDown.delay(180).duration(320)} style={styles.card} testID="confidence-breakdown">
-              <View style={styles.cardHeader}>
-                <Text style={styles.h3}>Niveau de confiance</Text>
-                <Text style={[styles.score, { color: tone.fg }]}>{est.confidence.score}/100</Text>
-              </View>
-              {est.confidence.details.map((d) => (
-                <View key={d.key} style={styles.detailRow}>
-                  <View style={styles.detailHead}>
-                    <Text style={styles.detailLabel}>{d.label}</Text>
-                    <Text style={styles.detailScore}>{d.score.toFixed(0)}/{d.max_score}</Text>
-                  </View>
-                  <View style={styles.bar}>
-                    <View style={[styles.barFill, { width: `${Math.round((d.score / d.max_score) * 100)}%`, backgroundColor: tone.fg }]} />
-                  </View>
-                  <Text style={styles.detailHint}>{d.hint}</Text>
-                </View>
-              ))}
-            </Animated.View>
-
             {/* Adjustments */}
             <Animated.View entering={FadeInDown.delay(240).duration(320)} style={styles.card} testID="adjustments-card">
               <Text style={styles.h3}>Comment est calculée la fourchette ?</Text>
@@ -235,8 +210,8 @@ export default function PropertyDetailScreen() {
                 s’élargit jusqu’à 10 km, en ne retenant hors de votre commune que des communes de taille comparable,
                 tant que cela rend la valeur centrale plus robuste. La fourchette encadre la valeur centrale
                 (incertitude de la médiane + spécificités non renseignées) et non l’écart entre ventes individuelles,
-                indiqué par la dispersion. Elle est plafonnée à ±15 % (±20 % si confiance faible) : le niveau de
-                confiance porte le risque résiduel.
+                indiqué par la dispersion. Elle est plafonnée à ±15 % (±20 % lorsque les ventes comparables sont peu
+                nombreuses ou dispersées).
               </Text>
             </Animated.View>
 
@@ -460,13 +435,6 @@ const useStyles = makeStyles((colors) => ({
   card: { backgroundColor: colors.surfaceSecondary, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.lg, gap: spacing.md },
   cardHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md },
   h3: { fontFamily: fonts.semibold, fontSize: 17, color: colors.onSurfaceSecondary, flexShrink: 1 },
-  score: { fontFamily: fonts.bold, fontSize: 18 },
-  detailRow: { gap: 6 },
-  detailHead: { flexDirection: "row", justifyContent: "space-between" },
-  detailLabel: { fontFamily: fonts.medium, fontSize: 14, color: colors.onSurfaceSecondary },
-  detailScore: { fontFamily: fonts.medium, fontSize: 13, color: colors.muted },
-  bar: { height: 6, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary, overflow: "hidden" },
-  barFill: { height: 6, borderRadius: radius.pill },
   detailHint: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted },
   lineRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing.md, paddingVertical: 4 },
   lineLabel: { flex: 1, fontFamily: fonts.regular, fontSize: 14, color: colors.onSurfaceTertiary },

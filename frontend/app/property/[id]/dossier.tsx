@@ -99,7 +99,11 @@ export default function DossierScreen() {
       <ScreenHeader title="Dossier de vente" subtitle="Checklist adaptée à votre bien · lecture IA validée par vous" onBack={() => router.back()} />
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xl }]}>
         {dossier.isLoading ? (
-          <ActivityIndicator color={colors.brandPrimary} />
+          <View style={{ gap: spacing.lg }} testID="dossier-skeleton">
+            <View style={styles.skelProgress} />
+            <View style={styles.skelTitle} />
+            {[0, 1, 2, 3, 4].map((i) => <View key={i} style={styles.skelItem} />)}
+          </View>
         ) : dossier.isError || !d ? (
           <PrimaryButton title="Réessayer" variant="secondary" onPress={() => dossier.refetch()} testID="dossier-retry-button" />
         ) : (
@@ -306,6 +310,9 @@ function ItemCard({ item, locked, open, uploading, onToggle, onCamera, onLibrary
 const useStyles = makeStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.surface },
   content: { padding: spacing.lg, gap: spacing.lg },
+  skelProgress: { height: 132, borderRadius: radius.lg, backgroundColor: colors.skeleton },
+  skelTitle: { height: 14, width: 120, borderRadius: radius.pill, backgroundColor: colors.skeleton, marginTop: spacing.sm },
+  skelItem: { height: 64, borderRadius: radius.lg, backgroundColor: colors.skeleton },
   progressCard: { backgroundColor: colors.brandTertiary, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.sm },
   progressHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   progressTitle: { fontFamily: fonts.semibold, fontSize: 14, color: colors.onBrandTertiary },

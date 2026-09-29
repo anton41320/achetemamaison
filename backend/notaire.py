@@ -14,7 +14,7 @@ from reportlab.lib.units import mm
 from reportlab.platypus import Image, KeepTogether, PageBreak, Paragraph, SimpleDocTemplate, Spacer
 
 from models import PropertyDoc
-from report import APP_NAME, BRAND, CONDITION_LABELS, INK, LEVEL_LABELS, MUTED, _table, brand_header, eur
+from report import APP_NAME, BRAND, CONDITION_LABELS, INK, MUTED, _table, brand_header, eur
 
 logger = logging.getLogger("notaire")
 
@@ -82,7 +82,7 @@ def build_cover(prop: PropertyDoc, final: Optional[dict], dossier: dict, attachm
         rows = [["Indicateur", "Valeur"],
                 ["Fourchette ventes comparables", f"{eur(est.low)} – {eur(est.high)}"],
                 ["Valeur centrale comparables", eur(est.value)],
-                ["Confiance", f"{LEVEL_LABELS[est.confidence.level]} ({est.confidence.score}/100)"]]
+                ["Ventes comparables", f"{est.confidence.n_comparables} ventes · {est.confidence.radius_label}"]]
         if final and len([c for c in final["components"] if c["effective_weight"] > 0]) > 1:
             rows.append(["Estimation finale pondérée", f"{eur(final['value'])}  ({eur(final['low'])} – {eur(final['high'])})"])
         if target:
