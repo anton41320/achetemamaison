@@ -1,0 +1,47 @@
+{
+  "summary": "Adaptive icon regeneration verified. Config check PASSED: app.json diff is limited to adding android.adaptiveIcon.monochromeImage; `npx expo config --type public` succeeds and prints android.adaptiveIcon = { foregroundImage: './assets/images/adaptive-icon.png', backgroundColor: '#0B3B8F', monochromeImage: './assets/images/adaptive-icon-mono.png' }. Mono icon PASSED: same 1024x1024, alpha channel exactly matches (0.000% diff), fully white on opaque pixels. Frontend smoke PASSED: /welcome renders BrandLogo (testID welcome-logo) + 3-step stepper (Estimation, Mise en vente, Vendu); login with delivered@resend.dev / Estimo2026! from sign-in screen (testIDs signin-email/signin-password) routes to '/' with 'Mes biens' home visible; no red screen, no bundle regression; supervisor: expo RUNNING. FOREGROUND ASSET GEOMETRY: adaptive-icon.png is 1024x1024 RGBA and non-empty, but two minor deviations from the specified safe-zone contract were observed and should be judged by the main agent: (1) content bbox is 305,190 -> 796,670 giving width=491px (spec required >=500px, shortfall 9px, ~1.8%); (2) 48 opaque pixels (alpha>128) lie between r=339 and r=343 from center 512,512, i.e. up to ~5px outside the 66% Android safe circle (r<=338). The content is also visually offset upward (bbox vertical center y=430, 82px above image center 512), which pushes the top corners of the bounding shape past the safe circle. Everything else in the geometry contract holds (RGBA, 1024x1024, non-empty). No file was modified.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Android adaptive icon (assets/images/adaptive-icon.png)",
+        "issues": [
+          "Content bbox width is 491px (<500px spec threshold, shortfall of 9px / ~1.8%). Legibility likely still acceptable in practice but does not meet the stated contract.",
+          "48 opaque pixels lie outside the 66% Android safe circle (r>338); max distance from center is 342.97px (~5px overflow). Content is vertically offset upward (bbox y range 190-670, midY=430 vs. image center 512), which is what pushes the top corners past the safe circle.",
+          "Recommendation: shift content downward by ~82px to re-center vertically, then apply an isotropic downscale of ~0.985x around (512,512). That both moves all opaque pixels inside r<=338 and keeps content width >=500 (would be ~484 after scale; alternatively skip the downscale and only re-center, which alone likely brings max radius to ~318 while keeping width=491, still <500). Cleanest fix: re-center + scale so bbox becomes ~505x494 centered on (512,512), fully inside r=338."
+        ]
+      }
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/tmp/verify_assets.py"
+  ],
+  "action_items": [
+    "Adaptive icon foreground (assets/images/adaptive-icon.png) is 5px outside the 66% Android safe circle at its top corners and 9px shy of the 500px content-width threshold specified. Consider regenerating so that: (a) the content bbox is centered on (512,512), and (b) all opaque pixels lie within r<=338. Ideal target bbox ~ 505x495 centered.",
+    "No action needed on adaptive-icon-mono.png (matches foreground alpha exactly and is fully white).",
+    "No action needed on app.json (only the monochromeImage line was added; expo config resolves correctly).",
+    "No action needed on frontend (welcome + sign-in + Mes biens all work; no regression)."
+  ],
+  "critical_code_review_comments": [
+    "app.json android.adaptiveIcon is correctly structured for Android 13+ themed icons (foregroundImage + backgroundColor + monochromeImage).",
+    "monochromeImage alpha channel is an exact clone of the foregroundImage alpha (0.000% diff), which is the correct authoring pattern.",
+    "Old cropped foreground (contained content from 152 to 872px per the review note) is NOT restored; current asset is a clear improvement even if it still slightly grazes the safe circle."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "skipped",
+    "frontend": "100%",
+    "asset_contract": "partial (mono OK, foreground 2 minor geometry deviations)"
+  },
+  "seed_data_creation": "None. Existing seeded properties for delivered@resend.dev were used for the login smoke check.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "If main agent regenerates adaptive-icon.png, re-run /tmp/verify_assets.py; expected pass conditions: 1024x1024 RGBA, alpha bbox width >=500px, all pixels with alpha>128 must satisfy hypot(x-512, y-512) <= 338. Mono icon must keep same alpha as foreground and remain white on opaque pixels. app.json diff must remain limited to adaptiveIcon.monochromeImage line. Frontend smoke reference: welcome via '/welcome' shows testID welcome-logo + 3-step stepper; login flow uses button labeled 'J’ai déjà un compte' (typographic apostrophe) then testIDs signin-email/signin-password and 'Se connecter' -> lands on '/' with 'Mes biens'.",
+  "rca_of_issue": "N/A — this iteration verifies an asset/config change, no bug reproduction. The two minor geometry deviations on the foreground are consistent with the content being drawn slightly larger than the safe circle and vertically offset upward within the 1024x1024 canvas (bbox midY=430 instead of 512). Root cause is authoring/layout of the source SVG/PSD, not a code bug."
+}

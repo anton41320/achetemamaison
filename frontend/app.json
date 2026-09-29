@@ -20,7 +20,8 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#0B3B8F"
+        "backgroundColor": "#0B3B8F",
+        "monochromeImage": "./assets/images/adaptive-icon-mono.png"
       },
       "package": "achetesmamaison.app",
       "permissions": [
