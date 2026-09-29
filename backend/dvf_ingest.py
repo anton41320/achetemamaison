@@ -40,7 +40,7 @@ class NotPublished(Exception):
     """Le millésime n'est pas (encore) publié en open data (fichier 404)."""
 
 
-def download(dept: str, year: int, force: bool = False) -> tuple[Path, bool]:
+def download(dept: str, year: int, force: bool = False, known_size: int | None = None) -> tuple[Path | None, bool]:
     """Télécharge le fichier s'il manque (ou si `force` et que la version distante a changé). Retourne (chemin, modifié)."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     path = DATA_DIR / f"{dept}_{year}.csv.gz"
@@ -48,16 +48,17 @@ def download(dept: str, year: int, force: bool = False) -> tuple[Path, bool]:
     if exists and not force:
         return path, False
     url = BASE_URL.format(year=year, dept=dept)
-    if exists:  # rafraîchissement : ne re-télécharger que si la taille distante diffère
+    local_size = path.stat().st_size if exists else known_size  # les .gz sont supprimés après ingestion : la taille est mémorisée en base
+    if force and local_size:  # rafraîchissement : ne re-télécharger que si la taille distante diffère
         try:
             head = requests.head(url, timeout=60, allow_redirects=True)
             if head.status_code == 404:
                 raise NotPublished(url)
             remote = int(head.headers.get("Content-Length") or -1)
-            if remote == path.stat().st_size:
-                return path, False
+            if remote == local_size:
+                return (path if exists else None), False
         except requests.RequestException:
-            return path, False
+            return (path if exists else None), False
     logger.info("Downloading %s", url)
     with requests.get(url, timeout=180, stream=True) as r:
         if r.status_code == 404:
@@ -161,15 +162,20 @@ def ingest_all(mongo_url: str, db_name: str, depts: list[str], years: list[int],
         for dept in depts:
             for year in years:
                 try:
-                    path, changed = download(dept, year, force=force)
-                    already = force and not changed and db.dvf_sales.count_documents({"dept": dept, "year": year}, limit=1) > 0
+                    known = db.dvf_files.find_one({"_id": f"{dept}_{year}"}, {"size": 1})
+                    path, changed = download(dept, year, force=force, known_size=(known or {}).get("size"))
+                    already = path is None or (force and not changed and db.dvf_sales.count_documents({"dept": dept, "year": year}, limit=1) > 0)
                     if already:
                         logger.info("Unchanged %s/%s", dept, year)
                     else:
+                        size = path.stat().st_size
                         docs = parse_file(path, dept, year)
                         db.dvf_sales.delete_many({"dept": dept, "year": year})
                         for i in range(0, len(docs), 5000):
                             db.dvf_sales.insert_many(docs[i:i + 5000])
+                        db.dvf_files.replace_one({"_id": f"{dept}_{year}"}, {"_id": f"{dept}_{year}", "dept": dept, "year": year, "size": size,
+                                                                            "sales": len(docs), "ingested_at": datetime.now(timezone.utc)}, upsert=True)
+                        path.unlink(missing_ok=True)  # France entière ≈ plusieurs Go de .gz : on ne garde pas les fichiers
                         changed_files += 1
                         logger.info("Ingested %s/%s: %d sales", dept, year, len(docs))
                 except NotPublished:

@@ -37,6 +37,15 @@ def ingest_then_train(mongo_url: str, db_name: str, depts: list[str], years: lis
                  "ml_lgbm_v1" not in seeded and _missing(mongo_url, db_name, "ml_lgbm_v1"), delay_s=0.0)
 
 
+def ingest_only(mongo_url: str, db_name: str, depts: list[str], years: list[int]) -> None:
+    """Extension de couverture : charge les départements manquants sans toucher aux modèles (artefacts déjà nationaux)."""
+    import dvf_ingest
+
+    logging.basicConfig(level=logging.INFO)
+    _low_priority(20.0)
+    dvf_ingest.ingest_all(mongo_url, db_name, depts, years)
+
+
 def _missing(mongo_url: str, db_name: str, model_id: str) -> bool:
     from pymongo import MongoClient
 

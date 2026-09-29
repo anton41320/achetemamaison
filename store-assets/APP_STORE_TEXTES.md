@@ -84,7 +84,7 @@ PACK PREMIUM — 49 € PAR BIEN, SANS ABONNEMENT
 VOS DONNÉES VOUS APPARTIENNENT
 Compte personnel sécurisé, données rattachées à votre compte uniquement, suppression du compte possible à tout moment depuis l'application.
 
-Couverture actuelle des estimations : Loir-et-Cher (41), Indre-et-Loire (37) et Loiret (45). D'autres départements arrivent.
+Couverture des estimations : toute la France (métropole, Corse, Guadeloupe, Martinique, Guyane, Réunion), hors Alsace-Moselle dont les ventes ne sont pas publiées en open data.
 
 Les estimations sont fournies à titre indicatif et ne constituent ni une expertise ni un avis de valeur au sens réglementaire.
 ```

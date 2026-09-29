@@ -135,8 +135,8 @@ export default function NewPropertyScreen() {
           <Animated.View entering={FadeIn.duration(250)} style={styles.section}>
             <Text style={styles.h2}>Où se situe le bien ?</Text>
             <Text style={styles.p}>
-              Zone couverte : Loir-et-Cher (41), Indre-et-Loire (37), Loiret (45). L’adresse est géolocalisée via la
-              Base Adresse Nationale.
+              Toute la France (métropole, Corse et DOM) sauf l’Alsace-Moselle (57, 67, 68), dont les ventes ne sont pas
+              publiées par l’État. L’adresse est géolocalisée via la Base Adresse Nationale.
             </Text>
             <Field
               label="Adresse"
@@ -200,8 +200,8 @@ export default function NewPropertyScreen() {
               <View style={styles.warnBanner} testID="address-uncovered-warning">
                 <WarningIcon size={18} color={colors.warning} weight="fill" />
                 <Text style={styles.warnText}>
-                  Cette adresse est hors des départements ingérés (41, 37, 45). Aucune vente de référence n’est disponible
-                  pour l’estimer.
+                  Cette adresse est hors de la zone couverte (Alsace-Moselle : ventes non publiées par l’État). Aucune
+                  vente de référence n’est disponible pour l’estimer.
                 </Text>
               </View>
             ) : null}

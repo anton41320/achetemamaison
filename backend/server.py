@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -130,6 +131,19 @@ def _ingest_running() -> bool:
     return dvf_ingest.is_running() or jobs.is_running()
 
 
+async def _ingest_running_anywhere() -> bool:
+    """Also true when another process (previous worker after a reload / redeploy) is mid-ingestion, per dvf_meta."""
+    if _ingest_running():
+        return True
+    status = await db.dvf_meta.find_one({"_id": "status"}) or {}
+    started = status.get("started_at")
+    if status.get("state") != "running" or not started:
+        return False
+    if started.tzinfo is None:
+        started = started.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - started).total_seconds() < 12 * 3600
+
+
 async def _dvf_refresh_loop() -> None:
     """Toutes les 6 h : si le dernier rafraîchissement date de plus de DVF_REFRESH_DAYS jours, relance l'ingestion
     (nouveaux millésimes / fichiers open data mis à jour) puis le réentraînement, en processus enfant basse priorité."""
@@ -198,13 +212,21 @@ async def geocode(q: str = Query(min_length=3, max_length=200), limit: int = Que
     return {"results": out, "covered_departments": DVF_DEPARTMENTS}
 
 
+_dvf_stats_cache: dict = {"at": 0.0, "rows": []}
+
+
 @public.get("/dvf/status")
 async def dvf_status():
     meta = await db.dvf_meta.find_one({"_id": "status"}) or {}
-    per_dept = await db.dvf_sales.aggregate([
-        {"$group": {"_id": {"dept": "$dept", "type": "$type"}, "count": {"$sum": 1},
-                    "min_date": {"$min": "$date"}, "max_date": {"$max": "$date"}}},
-    ]).to_list(50)
+    # 4 M+ ventes : l'agrégat par département prend ~4 s → mis en cache 10 min (sauf pendant une ingestion).
+    now = time.monotonic()
+    if _ingest_running() or now - _dvf_stats_cache["at"] > 600:
+        _dvf_stats_cache["rows"] = await db.dvf_sales.aggregate([
+            {"$group": {"_id": {"dept": "$dept", "type": "$type"}, "count": {"$sum": 1},
+                        "min_date": {"$min": "$date"}, "max_date": {"$max": "$date"}}},
+        ]).to_list(None)
+        _dvf_stats_cache["at"] = now
+    per_dept = _dvf_stats_cache["rows"]
     depts: dict[str, dict] = {}
     for row in per_dept:
         d = depts.setdefault(row["_id"]["dept"], {"dept": row["_id"]["dept"], "appartement": 0, "maison": 0, "total": 0,
@@ -1065,6 +1087,15 @@ async def startup():
         if hed_missing or ml_missing:
             logger.info("Models missing (hedonic=%s, ml=%s): training in a background process", hed_missing, ml_missing)
             jobs.start(jobs.train_models, mongo_url, db_name, hed_missing, ml_missing)
+        # Coverage extended (e.g. 3 départements → France entière): load the départements with no data for a published year.
+        pairs = await db.dvf_sales.aggregate([{"$group": {"_id": {"d": "$dept", "y": "$year"}}}]).to_list(None)
+        present = {(p["_id"]["d"], p["_id"]["y"]) for p in pairs}
+        published_years = {y for _, y in present}  # a year present for at least one département is published
+        missing_depts = [d for d in DVF_DEPARTMENTS if any((d, y) not in present for y in published_years)]
+        if missing_depts and not await _ingest_running_anywhere():
+            logger.info("DVF: %d département(s) à charger : %s", len(missing_depts), ",".join(missing_depts))
+            asyncio.get_running_loop().run_in_executor(None, communes.refresh_populations, mongo_url, db_name, missing_depts)
+            jobs.start(jobs.ingest_only, mongo_url, db_name, missing_depts, DVF_YEARS)
 
 
 @app.on_event("shutdown")

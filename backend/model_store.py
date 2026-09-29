@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -66,14 +66,26 @@ def seed_missing_sync(mongo_url: str, db_name: str) -> list[str]:
         client.close()
 
 
+def _ts(value: Any) -> float:
+    """trained_at → epoch seconds (naive Mongo datetimes are UTC ; missing → 0)."""
+    if not isinstance(value, datetime):
+        return 0.0
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.timestamp()
+
+
 def seed_missing_with(db) -> list[str]:
+    """Seed shipped models that are absent from `models` — or older than the shipped artifact (e.g. retrained on more départements)."""
     seeded: list[str] = []
     for model_id in ARTIFACTS:
-        if db.models.find_one({"_id": model_id}, {"_id": 1}):
-            continue
         doc = load(model_id)
-        if doc:
-            db.models.replace_one({"_id": model_id}, doc, upsert=True)
-            seeded.append(model_id)
-            logger.info("Model %s seeded from disk", model_id)
+        if not doc:
+            continue
+        current = db.models.find_one({"_id": model_id}, {"trained_at": 1})
+        if current and not (_ts(doc.get("trained_at")) > _ts(current.get("trained_at"))):
+            continue
+        db.models.replace_one({"_id": model_id}, doc, upsert=True)
+        seeded.append(model_id)
+        logger.info("Model %s seeded from disk (%s)", model_id, "newer artifact" if current else "missing")
     return seeded

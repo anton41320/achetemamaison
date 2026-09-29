@@ -36,6 +36,7 @@ GROUPS = {
     "year_frac": ("time", "Période de marché"),
 }
 BASELINE_SAMPLE = 300
+MAX_ROWS = 1_200_000  # cap mémoire de l'entraînement (conteneur 8 Go) : au-delà, échantillon uniforme
 
 _lock = threading.Lock()
 _training = False
@@ -130,9 +131,17 @@ def train(mongo_url: str, db_name: str) -> None:
     client = MongoClient(mongo_url)
     db = client[db_name]
     try:
-        rows = list(db.dvf_sales.find({}, {"mutation_id": 1, "price": 1, "price_m2": 1, "surface": 1, "rooms": 1,
-                                           "land_surface": 1, "type": 1, "code_commune": 1, "commune": 1,
-                                           "year": 1, "date": 1, "location": 1}))
+        projection = {"mutation_id": 1, "price": 1, "price_m2": 1, "surface": 1, "rooms": 1, "land_surface": 1, "type": 1,
+                      "code_commune": 1, "commune": 1, "year": 1, "date": 1, "location": 1}
+        total = db.dvf_sales.estimated_document_count()
+        if total > MAX_ROWS:
+            # France entière (4 M+ ventes) : un échantillon uniforme suffit au LightGBM et borne la mémoire (~1 Ko / ligne en dicts).
+            keep = MAX_ROWS / total
+            rng_rows = random.Random(42)
+            rows = [r for r in db.dvf_sales.find({}, projection) if rng_rows.random() < keep]
+            logger.info("ML: %d sales sampled out of %d (memory cap)", len(rows), total)
+        else:
+            rows = list(db.dvf_sales.find({}, projection))
         if len(rows) < 1000:
             logger.warning("Not enough rows for ML (%d)", len(rows))
             return

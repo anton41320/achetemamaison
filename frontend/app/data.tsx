@@ -9,7 +9,7 @@ import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { ScreenHeader } from "@/src/components/ScreenHeader";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
-const DEPT_NAMES: Record<string, string> = { "41": "Loir-et-Cher", "37": "Indre-et-Loire", "45": "Loiret" };
+const DEPT_NAMES: Record<string, string> = { "41": "Loir-et-Cher", "37": "Indre-et-Loire", "45": "Loiret", "75": "Paris", "69": "Rhône", "13": "Bouches-du-Rhône", "33": "Gironde", "59": "Nord", "2A": "Corse-du-Sud", "2B": "Haute-Corse", "971": "Guadeloupe", "972": "Martinique", "973": "Guyane", "974": "La Réunion" };
 const LEVEL_LABELS: Record<string, string> = { eleve: "Confiance élevée", moyen: "Confiance moyenne", faible: "Confiance faible", appartement: "Appartements", maison: "Maisons" };
 
 function pct(v: number) {
