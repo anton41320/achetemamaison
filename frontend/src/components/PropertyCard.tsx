@@ -1,7 +1,7 @@
-import { ArrowRightIcon, BuildingsIcon, CaretRightIcon, CheckCircleIcon, HouseIcon } from "phosphor-react-native";
+import { ArrowRightIcon, BuildingsIcon, CaretRightIcon, CheckCircleIcon, CheckIcon, HouseIcon } from "phosphor-react-native";
 import { Pressable, Text, View } from "react-native";
 
-import { Property, PropertyNextSteps, TYPE_LABELS, formatK } from "@/src/api";
+import { NextStep, Property, PropertyNextSteps, TYPE_LABELS, formatEuro, formatK } from "@/src/api";
 import { ConfidenceBadge } from "@/src/components/ConfidenceBadge";
 import { CompletionBadge } from "@/src/components/CompletionBadge";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
@@ -14,12 +14,32 @@ interface Props {
   onStepPress?: (route: string) => void;
 }
 
+const STAGES = ["Estimation", "Mise en vente", "Vendu"] as const;
+
+/** Stage of the sale derived from the server-side next steps: prix fixé → mise en vente ; dossier complet → vendu. */
+function stageOf(ns: PropertyNextSteps | null | undefined): { stage: 0 | 1 | 2; cta: { label: string; route: string } | null; urgent: boolean } {
+  if (!ns) return { stage: 0, cta: null, urgent: false };
+  const by = (k: NextStep["key"]) => ns.steps.find((s) => s.key === k);
+  const target = by("target");
+  const dossier = by("dossier");
+  if (target && !target.done) {
+    const features = by("features");
+    return { stage: 0, cta: { label: features && !features.done ? `${features.label}, puis fixer votre prix de vente` : "Fixer votre prix de vente", route: target.route }, urgent: false };
+  }
+  if (dossier && !dossier.done) {
+    const pending = (["photos", "listing", "dossier"] as const).map(by).find((s) => s && !s.done)!;
+    return { stage: 1, cta: { label: pending.label, route: pending.route }, urgent: pending.key === "dossier" && pending.label.startsWith("Renouveler") };
+  }
+  const exp = by("export");
+  return { stage: 2, cta: exp ? { label: exp.label, route: exp.route } : null, urgent: false };
+}
+
 export function PropertyCard({ property, onPress, testID, nextSteps, onStepPress }: Props) {
   const styles = useStyles();
   const { colors } = useTheme();
   const est = property.estimation;
   const Icon = property.property_type === "maison" ? HouseIcon : BuildingsIcon;
-  const next = nextSteps?.next ?? null;
+  const { stage, cta, urgent } = stageOf(nextSteps);
 
   return (
     <View style={styles.card}>
@@ -41,8 +61,9 @@ export function PropertyCard({ property, onPress, testID, nextSteps, onStepPress
           </Text>
           {est ? (
             <>
+              <Text style={styles.value} testID={`${testID}-value`}>{formatEuro(est.value)}</Text>
               <Text style={styles.range} testID={`${testID}-range`}>
-                {formatK(est.low)} – {formatK(est.high)}
+                Fourchette {formatK(est.low)} – {formatK(est.high)}
               </Text>
               <View style={styles.badges}>
                 <ConfidenceBadge level={est.confidence.level} />
@@ -57,28 +78,33 @@ export function PropertyCard({ property, onPress, testID, nextSteps, onStepPress
       </Pressable>
 
       {nextSteps ? (
-        <Pressable
-          testID={`${testID}-next-step`}
-          accessibilityRole="button"
-          accessibilityLabel={next ? `Prochaine étape : ${next.label}` : "Toutes les étapes sont faites"}
-          onPress={() => next && onStepPress?.(next.route)}
-          style={({ pressed }) => [styles.stepRow, next?.key === "dossier" && next.label.startsWith("Renouveler") && styles.stepRowUrgent, pressed && styles.pressed]}
-        >
-          <View style={styles.stepProgress}>
-            <Text style={styles.stepProgressText}>{nextSteps.done}/{nextSteps.total}</Text>
+        <View style={styles.stageBox} testID={`${testID}-stage`}>
+          <View style={styles.stageTrack}>
+            {STAGES.map((st, i) => (
+              <View key={st} style={styles.stageItem}>
+                <View style={[styles.stageDot, i < stage && styles.stageDotDone, i === stage && styles.stageDotCurrent]}>
+                  {i < stage ? <CheckIcon size={10} color={colors.onBrandPrimary} weight="bold" /> : <Text style={[styles.stageDotText, i === stage && styles.stageDotTextCurrent]}>{i + 1}</Text>}
+                </View>
+                <Text style={[styles.stageLabel, i === stage && styles.stageLabelCurrent]} numberOfLines={1}>{st}</Text>
+              </View>
+            ))}
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.stepKicker}>Prochaine étape</Text>
-            <Text style={styles.stepLabel} numberOfLines={1} testID={`${testID}-next-step-label`}>
-              {next ? next.label : "Tout est prêt"}
-            </Text>
-          </View>
-          {next ? (
-            <ArrowRightIcon size={16} color={colors.onBrandTertiary} weight="bold" />
-          ) : (
-            <CheckCircleIcon size={18} color={colors.success} weight="fill" />
-          )}
-        </Pressable>
+          <Pressable
+            testID={`${testID}-next-step`}
+            accessibilityRole="button"
+            accessibilityLabel={cta ? `Prochaine étape : ${cta.label}` : "Toutes les étapes sont faites"}
+            onPress={() => cta && onStepPress?.(cta.route)}
+            style={({ pressed }) => [styles.stepRow, urgent && styles.stepRowUrgent, pressed && styles.pressed]}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={styles.stepKicker} testID={`${testID}-stage-label`}>Étape {stage + 1}/3 · {STAGES[stage]}{stage < 2 ? ` → ${STAGES[stage + 1]}` : " · dossier complet"}</Text>
+              <Text style={styles.stepLabel} numberOfLines={1} testID={`${testID}-next-step-label`}>
+                {cta ? cta.label : "Tout est prêt"}
+              </Text>
+            </View>
+            {cta ? <ArrowRightIcon size={16} color={colors.onBrandTertiary} weight="bold" /> : <CheckCircleIcon size={18} color={colors.success} weight="fill" />}
+          </Pressable>
+        </View>
       ) : null}
     </View>
   );
@@ -106,7 +132,18 @@ const useStyles = makeStyles((colors) => ({
   badges: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, alignItems: "center" },
   address: { fontFamily: fonts.semibold, fontSize: 15, color: colors.onSurfaceSecondary },
   meta: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
-  range: { fontFamily: fonts.bold, fontSize: 20, color: colors.onSurfaceSecondary, marginTop: 2, marginBottom: 4 },
+  value: { fontFamily: fonts.bold, fontSize: 22, color: colors.onSurfaceSecondary, marginTop: 2, fontVariant: ["tabular-nums"] },
+  range: { fontFamily: fonts.medium, fontSize: 12, color: colors.muted, marginBottom: 4, fontVariant: ["tabular-nums"] },
+  stageBox: { borderTopWidth: 1, borderTopColor: colors.border },
+  stageTrack: { flexDirection: "row", paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, gap: spacing.sm, backgroundColor: colors.surface },
+  stageItem: { flex: 1, flexDirection: "row", alignItems: "center", gap: 6 },
+  stageDot: { width: 20, height: 20, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary, alignItems: "center", justifyContent: "center" },
+  stageDotDone: { backgroundColor: colors.success },
+  stageDotCurrent: { backgroundColor: colors.brandPrimary },
+  stageDotText: { fontFamily: fonts.bold, fontSize: 11, color: colors.onSurfaceSecondary },
+  stageDotTextCurrent: { color: colors.onBrandPrimary },
+  stageLabel: { flex: 1, fontFamily: fonts.medium, fontSize: 11, color: colors.muted },
+  stageLabelCurrent: { fontFamily: fonts.bold, color: colors.brandPrimary },
   stepRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -115,12 +152,8 @@ const useStyles = makeStyles((colors) => ({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     minHeight: 48,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
   },
   stepRowUrgent: { backgroundColor: colors.warningSoft },
-  stepProgress: { minWidth: 40, height: 28, borderRadius: radius.pill, backgroundColor: colors.surfaceSecondary, alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.sm },
-  stepProgressText: { fontFamily: fonts.bold, fontSize: 12, color: colors.onBrandTertiary, fontVariant: ["tabular-nums"] },
   stepKicker: { fontFamily: fonts.medium, fontSize: 10, color: colors.muted, textTransform: "uppercase", letterSpacing: 0.6 },
   stepLabel: { fontFamily: fonts.semibold, fontSize: 13, color: colors.onBrandTertiary },
 }));

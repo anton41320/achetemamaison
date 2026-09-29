@@ -1,4 +1,4 @@
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { useState } from "react";
 import { Text } from "react-native";
 
@@ -11,6 +11,7 @@ import { fonts, makeStyles } from "@/src/theme";
 export default function SignInScreen() {
   const styles = useStyles();
   const { signIn } = useSession();
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -25,6 +26,7 @@ export default function SignInScreen() {
     setError(null);
     try {
       await signIn(email, password);
+      router.replace("/");
     } catch (e) {
       setError((e as Error).message);
     } finally {
