@@ -3,13 +3,65 @@ import { Platform } from "react-native";
 const BASE = `${process.env.EXPO_PUBLIC_BACKEND_URL}/api`;
 
 /** Multipart file part: a Blob on the web, the React Native `{ uri, name, type }` descriptor on iOS/Android.
- *  (Never sniff `document`: it exists in Expo's native runtime too, and a Blob makes iOS throw "Unsupported FormDataPart".) */
+ *  (Never sniff `document`: it exists in Expo's native runtime too.) */
 async function appendFile(form: FormData, uri: string, name: string, type: string) {
   if (Platform.OS === "web") {
     form.append("file", await (await fetch(uri)).blob(), name);
   } else {
     form.append("file", { uri, name, type } as any);
   }
+}
+
+/** POST a FormData. On iOS/Android we go through XMLHttpRequest: Expo ≥ 54 replaces the global `fetch` by its WinterCG
+ *  implementation, which rejects React Native `{ uri }` file parts ("Unsupported FormDataPart implementation"), whereas
+ *  React Native's XHR streams them natively and reports upload progress. The web keeps `fetch` + Blob. */
+async function multipart<T>(path: string, form: FormData, onProgress?: (pct: number) => void): Promise<T> {
+  const url = `${BASE}${path}`;
+  const headers: Record<string, string> = authToken ? { Authorization: `Bearer ${authToken}` } : {};
+  if (Platform.OS === "web") {
+    const res = await fetch(url, { method: "POST", body: form, headers });
+    if (!res.ok) throw new Error(await errorMessage(res));
+    return res.json();
+  }
+  return new Promise<T>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    Object.entries(headers).forEach(([k, v]) => xhr.setRequestHeader(k, v));
+    if (onProgress) {
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+    }
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        onProgress?.(100);
+        resolve(JSON.parse(xhr.responseText));
+      } else {
+        let message = `Erreur ${xhr.status}`;
+        try {
+          const body = JSON.parse(xhr.responseText);
+          if (typeof body?.detail === "string") message = body.detail;
+        } catch {
+          // keep default
+        }
+        reject(new Error(message));
+      }
+    };
+    xhr.onerror = () => reject(new Error("Connexion interrompue pendant l’envoi"));
+    xhr.ontimeout = () => reject(new Error("Envoi trop long, réessayez"));
+    xhr.timeout = 180000;
+    xhr.send(form);
+  });
+}
+
+async function errorMessage(res: Response): Promise<string> {
+  try {
+    const body = await res.json();
+    if (typeof body?.detail === "string") return body.detail;
+  } catch {
+    // keep default
+  }
+  return `Erreur ${res.status}`;
 }
 
 // Session token (set by SessionProvider); sent as Bearer header, or as ?t= for links opened by the OS.
@@ -486,49 +538,7 @@ export function fileUrl(path: string): string {
 export async function uploadPhoto(propertyId: string, uri: string, name: string, type: string, onProgress?: (pct: number) => void): Promise<Photo> {
   const form = new FormData();
   await appendFile(form, uri, name, type);
-  if (!onProgress) {
-    const res = await fetch(`${BASE}/properties/${propertyId}/photos`, { method: "POST", body: form, headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} });
-    if (!res.ok) throw new Error(await errorMessage(res));
-    return res.json();
-  }
-  // XMLHttpRequest: the only path exposing upload progress on both React Native and the web.
-  return new Promise<Photo>((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", `${BASE}/properties/${propertyId}/photos`);
-    if (authToken) xhr.setRequestHeader("Authorization", `Bearer ${authToken}`);
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
-    };
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        onProgress(100);
-        resolve(JSON.parse(xhr.responseText));
-      } else {
-        let message = `Erreur ${xhr.status}`;
-        try {
-          const body = JSON.parse(xhr.responseText);
-          if (typeof body?.detail === "string") message = body.detail;
-        } catch {
-          // keep default
-        }
-        reject(new Error(message));
-      }
-    };
-    xhr.onerror = () => reject(new Error("Connexion interrompue pendant l’envoi"));
-    xhr.ontimeout = () => reject(new Error("Envoi trop long, réessayez"));
-    xhr.timeout = 120000;
-    xhr.send(form);
-  });
-}
-
-async function errorMessage(res: Response): Promise<string> {
-  try {
-    const body = await res.json();
-    if (typeof body?.detail === "string") return body.detail;
-  } catch {
-    // keep default
-  }
-  return `Erreur ${res.status}`;
+  return multipart<Photo>(`/properties/${propertyId}/photos`, form, onProgress);
 }
 
 export async function sendFeedback(p: { message: string; screen: string; platform: string; appVersion: string; screenshot?: { uri: string; name: string; type: string } | null }): Promise<{ ok: boolean; emailed: boolean }> {
@@ -538,9 +548,7 @@ export async function sendFeedback(p: { message: string; screen: string; platfor
   form.append("platform", p.platform);
   form.append("app_version", p.appVersion);
   if (p.screenshot) await appendFile(form, p.screenshot.uri, p.screenshot.name, p.screenshot.type);
-  const res = await fetch(`${BASE}/feedback`, { method: "POST", body: form, headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} });
-  if (!res.ok) throw new Error(await errorMessage(res));
-  return res.json();
+  return multipart(`/feedback`, form);
 }
 
 export type DocStatus = "a_verifier" | "valide" | "expire" | "erreur_ocr";
@@ -705,18 +713,7 @@ export async function uploadDocument(propertyId: string, itemKey: string, uri: s
   const form = new FormData();
   await appendFile(form, uri, name, type);
   form.append("item_key", itemKey);
-  const res = await fetch(`${BASE}/properties/${propertyId}/documents`, { method: "POST", body: form, headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} });
-  if (!res.ok) {
-    let message = `Erreur ${res.status}`;
-    try {
-      const body = await res.json();
-      if (typeof body?.detail === "string") message = body.detail;
-    } catch {
-      // keep default
-    }
-    throw new Error(message);
-  }
-  return res.json();
+  return multipart<SaleDocument>(`/properties/${propertyId}/documents`, form);
 }
 
 export const api = {
