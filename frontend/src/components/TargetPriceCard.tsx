@@ -10,9 +10,11 @@ import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 interface Props {
   propertyId: string;
   suggestedValue: number;
+  /** Estimation reminder shown above the price form (central value + range). */
+  estimation?: { value: number; low: number; high: number } | null;
 }
 
-export function TargetPriceCard({ propertyId, suggestedValue }: Props) {
+export function TargetPriceCard({ propertyId, suggestedValue, estimation }: Props) {
   const styles = useStyles();
   const { colors } = useTheme();
   const queryClient = useQueryClient();
@@ -59,7 +61,7 @@ export function TargetPriceCard({ propertyId, suggestedValue }: Props) {
     <View style={styles.card} testID="target-price-card">
       <View style={styles.header}>
         <CrosshairIcon size={20} color={colors.brandPrimary} weight="duotone" />
-        <Text style={styles.h3}>Prix cible</Text>
+        <Text style={styles.h3}>Votre prix de vente</Text>
         {a && !editing ? (
           <Pressable testID="target-edit-button" accessibilityRole="button" onPress={startEdit} style={styles.smallBtn}>
             <Text style={styles.smallBtnLabel}>Modifier</Text>
@@ -67,10 +69,18 @@ export function TargetPriceCard({ propertyId, suggestedValue }: Props) {
         ) : null}
       </View>
 
+      {estimation ? (
+        <View style={styles.reminder} testID="target-estimation-reminder">
+          <Text style={styles.reminderLabel}>Rappel de l’estimation</Text>
+          <Text style={styles.reminderValue}>{formatEuro(estimation.value)}</Text>
+          <Text style={styles.reminderRange}>Fourchette {formatK(estimation.low)} – {formatK(estimation.high)}</Text>
+        </View>
+      ) : null}
+
       {showForm ? (
         <View style={{ gap: spacing.md }} testID="target-form">
           <Text style={styles.p}>
-            À quel prix souhaitez-vous vendre ? Achètes ma maison situe ce prix dans la fourchette finale et les signaux du marché.
+            À quel prix souhaitez-vous vendre ? Ce prix sera affiché dans votre annonce et le PDF ; Achètes ma maison le situe par rapport à l’estimation et aux signaux du marché.
           </Text>
           <View style={styles.inputRow}>
             <TextInput
@@ -153,6 +163,10 @@ const useStyles = makeStyles((colors) => ({
   smallBtn: { minHeight: 36, paddingHorizontal: spacing.md, borderRadius: radius.pill, backgroundColor: colors.brandTertiary, justifyContent: "center" },
   smallBtnLabel: { fontFamily: fonts.semibold, fontSize: 13, color: colors.onBrandTertiary },
   p: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 19, color: colors.onSurfaceTertiary },
+  reminder: { backgroundColor: colors.brandTertiary, borderRadius: radius.md, padding: spacing.md, gap: 2 },
+  reminderLabel: { fontFamily: fonts.medium, fontSize: 12, color: colors.onBrandTertiary, textTransform: "uppercase", letterSpacing: 0.6 },
+  reminderValue: { fontFamily: fonts.bold, fontSize: 24, color: colors.onBrandTertiary, fontVariant: ["tabular-nums"] },
+  reminderRange: { fontFamily: fonts.regular, fontSize: 13, color: colors.onBrandTertiary },
   tip: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted },
   inputRow: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.lg, minHeight: 52 },
   input: { flex: 1, fontFamily: fonts.bold, fontSize: 20, color: colors.onSurface, paddingVertical: 12, fontVariant: ["tabular-nums"] },

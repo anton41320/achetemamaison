@@ -47,10 +47,10 @@ export function FinalEstimateCard({ estimation }: Props) {
         <Text style={styles.h3}>Estimation finale pondérée</Text>
       </View>
       <View style={styles.headline}>
+        <Text style={styles.central} testID="final-value">{formatEuro(result.value)}</Text>
         <Text style={styles.range} testID="final-range">
-          {formatK(result.low)} – {formatK(result.high)}
+          Fourchette {formatK(result.low)} – {formatK(result.high)}
         </Text>
-        <Text style={styles.central} testID="final-value">Valeur centrale {formatEuro(result.value)}</Text>
         <Text style={styles.detail}>
           {activeCount > 1 ? `Moyenne pondérée de ${activeCount} signaux` : "Un seul signal actif : comparables"} · réglage
           mémorisé pour tous vos biens
@@ -105,8 +105,8 @@ const useStyles = makeStyles((colors) => ({
   header: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   h3: { fontFamily: fonts.semibold, fontSize: 17, color: colors.onSurfaceSecondary, flex: 1 },
   headline: { backgroundColor: colors.brandTertiary, borderRadius: radius.md, padding: spacing.lg, gap: 4 },
-  range: { fontFamily: fonts.bold, fontSize: 28, color: colors.onBrandTertiary, fontVariant: ["tabular-nums"] },
-  central: { fontFamily: fonts.medium, fontSize: 14, color: colors.onBrandTertiary },
+  central: { fontFamily: fonts.bold, fontSize: 30, color: colors.onBrandTertiary, fontVariant: ["tabular-nums"] },
+  range: { fontFamily: fonts.medium, fontSize: 14, color: colors.onBrandTertiary, fontVariant: ["tabular-nums"] },
   detail: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted },
   row: { gap: 2 },
   rowDisabled: { opacity: 0.55 },

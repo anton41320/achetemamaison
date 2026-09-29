@@ -1,0 +1,30 @@
+{
+  "summary": "Iteration 20: welcome/onboarding + property-detail restructure verified end-to-end. Backend smoke (3/3) and frontend flows (welcome unauth, welcome auth, account, property detail hero, final-estimate-card, target-price-card with reminder, ordering, and edit flow) all pass. Target price restored to 250 000 € after edit test.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_smoke_iter20.py",
+    "/app/test_reports/pytest/iter20_smoke.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "welcome.tsx uses Pressable on the FlatList slide as the sole tap-to-advance affordance; horizontal swipe is also enabled which is correct. testIDs coherent with request.",
+    "account.tsx button testID 'account-welcome' present with correct label 'Revoir la présentation (3 étapes)'.",
+    "property/[id]/index.tsx correctly renders hero with big central (44px font) + small range (15px), estimation-central-recap block styled with brandTertiary background + brandPrimary text (22px bold), FinalEstimateCard central 30px vs range 14px, TargetPriceCard shows reminder above form/analysis. Ordering step-2 → target-price → photos → listing → visits → pack → step-3 → dossier confirmed via bounding boxes.",
+    "No deprecated Expo packages detected in touched files (welcome uses phosphor icons, expo-router, react-native-safe-area-context — all current)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_smoke_iter20.py (new)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "None. Reused existing property 6aa02db9efd8f90925a5a758. Target price edited then restored to 250000 as instructed.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Auth endpoint is POST /api/auth/login (not /sign-in). Token returned as 'token' key. Test account delivered@resend.dev / Estimo2026!. Property 6aa02db9efd8f90925a5a758 has target_price=250000 and full estimation with hedonic/ML so FinalEstimateCard renders.",
+  "rca_of_issue": "N/A — no bugs found. Measured bounding boxes: hero central 52px vs range 19px (2.7×), final-value 38px vs final-range 18px (2.1×), all vertical ordering matches spec."
+}

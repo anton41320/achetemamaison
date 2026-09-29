@@ -53,8 +53,8 @@ function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
         animation: "slide_from_right",
       }}
     >
+      <Stack.Screen name="welcome" />
       <Stack.Protected guard={!signedIn}>
-        <Stack.Screen name="welcome" />
         <Stack.Screen name="sign-in" />
         <Stack.Screen name="sign-up" />
         <Stack.Screen name="forgot-password" />

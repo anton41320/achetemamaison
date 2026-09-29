@@ -88,6 +88,7 @@ export default function AccountScreen() {
           <Text style={styles.h3}>Session</Text>
           <Text style={styles.p}>Connecté en tant que {user?.email}. Votre session reste active sur cet appareil.</Text>
           <PrimaryButton title="Se déconnecter" onPress={() => signOut()} testID="account-signout" variant="ghost" />
+          <PrimaryButton title="Revoir la présentation (3 étapes)" onPress={() => router.push("/welcome")} testID="account-welcome" variant="ghost" />
           <PrimaryButton title="Confidentialité & support" onPress={() => router.push("/privacy")} testID="account-privacy" variant="ghost" />
         </View>
 

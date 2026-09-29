@@ -114,12 +114,12 @@ export default function PropertyDetailScreen() {
             </Text>
             {est ? (
               <>
-                <Text style={styles.heroRangeLabel}>Fourchette estimée</Text>
-                <Text style={styles.heroRange} testID="estimation-range">
-                  {formatK(est.low)} – {formatK(est.high)}
-                </Text>
+                <Text style={styles.heroRangeLabel}>Valeur estimée</Text>
                 <Text style={styles.heroCentral} testID="estimation-value">
-                  Valeur centrale {formatEuro(est.value)}
+                  {formatEuro(est.value)}
+                </Text>
+                <Text style={styles.heroRange} testID="estimation-range">
+                  Fourchette {formatK(est.low)} – {formatK(est.high)}
                 </Text>
                 <View style={{ marginTop: spacing.md }}>
                   <ConfidenceBadge glass level={est.confidence.level} score={est.confidence.score} testID="confidence-badge" />
@@ -131,6 +131,13 @@ export default function PropertyDetailScreen() {
 
         {est ? (
           <View style={styles.body}>
+            <View style={[styles.stepHeader, { marginTop: 0 }]} testID="step-1-header">
+              <View style={styles.stepBadge}><Text style={styles.stepBadgeText}>1</Text></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.stepTitle}>Estimation</Text>
+                <Text style={styles.stepSub}>Votre bien au juste prix, expliqué critère par critère.</Text>
+              </View>
+            </View>
             {est.insufficient_data ? (
               <Animated.View entering={FadeInDown.duration(300)} style={styles.warnBanner} testID="insufficient-data-banner">
                 <WarningIcon size={20} color={colors.warning} weight="fill" />
@@ -220,7 +227,7 @@ export default function PropertyDetailScreen() {
               ))}
               <View style={[styles.lineRow, styles.lineTotal]}>
                 <Text style={styles.lineLabelStrong}>Valeur centrale</Text>
-                <Text style={styles.lineValueStrong}>{formatEuro(est.value)}</Text>
+                <Text style={styles.lineValueStrong} testID="estimation-central-recap">{formatEuro(est.value)}</Text>
               </View>
               <Text style={styles.detailHint}>
                 Les prix/m² des ventes sont d’abord ramenés à votre surface (le prix/m² baisse quand la taille
@@ -286,10 +293,6 @@ export default function PropertyDetailScreen() {
               <MarketSignalCard propertyId={id!} />
             </Animated.View>
 
-            <Animated.View entering={FadeInDown.delay(400).duration(320)}>
-              <TargetPriceCard propertyId={id!} suggestedValue={est.value} />
-            </Animated.View>
-
             <Animated.View entering={FadeInDown.delay(420).duration(320)}>
               <RisksCard propertyId={id!} />
             </Animated.View>
@@ -300,16 +303,16 @@ export default function PropertyDetailScreen() {
               </Animated.View>
             ) : null}
 
-            <Pressable
-              testID="dossier-button"
-              accessibilityRole="button"
-              onPress={() => router.push(`/property/${id}/dossier`)}
-              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.85 }]}
-            >
-              <FolderOpenIcon size={20} color={colors.onBrandTertiary} />
-              <Text style={styles.linkLabel}>Dossier de vente (documents & diagnostics)</Text>
-              <CaretRightIcon size={18} color={colors.onBrandTertiary} />
-            </Pressable>
+            <View style={styles.stepHeader} testID="step-2-header">
+              <View style={styles.stepBadge}><Text style={styles.stepBadgeText}>2</Text></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.stepTitle}>Mise en vente</Text>
+                <Text style={styles.stepSub}>Commencez par fixer votre prix de vente, puis préparez l’annonce.</Text>
+              </View>
+            </View>
+            <Animated.View entering={FadeInDown.delay(400).duration(320)}>
+              <TargetPriceCard propertyId={id!} suggestedValue={est.value} estimation={est} />
+            </Animated.View>
 
             <Pressable
               testID="photos-button"
@@ -355,6 +358,24 @@ export default function PropertyDetailScreen() {
                 <Text style={styles.linkSub}>Débloque tous les outils IA : annonce, retouches photo, lecture des documents, PDF</Text>
               </View>
               <CaretRightIcon size={18} color={colors.onBrandPrimary} />
+            </Pressable>
+
+            <View style={styles.stepHeader} testID="step-3-header">
+              <View style={styles.stepBadge}><Text style={styles.stepBadgeText}>3</Text></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.stepTitle}>Vendu</Text>
+                <Text style={styles.stepSub}>Le dossier de vente complet pour signer sereinement.</Text>
+              </View>
+            </View>
+            <Pressable
+              testID="dossier-button"
+              accessibilityRole="button"
+              onPress={() => router.push(`/property/${id}/dossier`)}
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.85 }]}
+            >
+              <FolderOpenIcon size={20} color={colors.onBrandTertiary} />
+              <Text style={styles.linkLabel}>Dossier de vente (documents & diagnostics)</Text>
+              <CaretRightIcon size={18} color={colors.onBrandTertiary} />
             </Pressable>
 
             <Pressable
@@ -421,8 +442,8 @@ const useStyles = makeStyles((colors) => ({
   heroAddress: { fontFamily: fonts.semibold, fontSize: 16, color: colors.onHero },
   heroMeta: { fontFamily: fonts.regular, fontSize: 13, color: colors.onHeroMuted, marginTop: 4, marginBottom: spacing.lg },
   heroRangeLabel: { fontFamily: fonts.medium, fontSize: 13, color: colors.onHeroMuted, textTransform: "uppercase", letterSpacing: 0.8 },
-  heroRange: { fontFamily: fonts.bold, fontSize: 40, lineHeight: 48, color: colors.onHero, marginTop: 4, fontVariant: ["tabular-nums"] },
-  heroCentral: { fontFamily: fonts.medium, fontSize: 15, color: colors.onHeroMuted, marginTop: 4 },
+  heroCentral: { fontFamily: fonts.bold, fontSize: 44, lineHeight: 52, color: colors.onHero, marginTop: 4, fontVariant: ["tabular-nums"] },
+  heroRange: { fontFamily: fonts.medium, fontSize: 15, color: colors.onHeroMuted, marginTop: 4, fontVariant: ["tabular-nums"] },
   body: { padding: spacing.lg, gap: spacing.lg },
   skelRow: { flexDirection: "row", gap: spacing.md },
   skelCard: { flex: 1, height: 96, borderRadius: radius.md, backgroundColor: colors.skeleton },
@@ -450,9 +471,14 @@ const useStyles = makeStyles((colors) => ({
   lineRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing.md, paddingVertical: 4 },
   lineLabel: { flex: 1, fontFamily: fonts.regular, fontSize: 14, color: colors.onSurfaceTertiary },
   lineValue: { fontFamily: fonts.semibold, fontSize: 14, color: colors.onSurfaceSecondary, fontVariant: ["tabular-nums"] },
-  lineTotal: { borderTopWidth: 1, borderTopColor: colors.divider, paddingTop: spacing.md },
-  lineLabelStrong: { fontFamily: fonts.semibold, fontSize: 15, color: colors.onSurfaceSecondary },
-  lineValueStrong: { fontFamily: fonts.bold, fontSize: 17, color: colors.onSurfaceSecondary, fontVariant: ["tabular-nums"] },
+  stepHeader: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginTop: spacing.lg },
+  stepBadge: { width: 32, height: 32, borderRadius: radius.pill, backgroundColor: colors.brandPrimary, alignItems: "center", justifyContent: "center" },
+  stepBadgeText: { fontFamily: fonts.bold, fontSize: 15, color: colors.onBrandPrimary },
+  stepTitle: { fontFamily: fonts.bold, fontSize: 18, color: colors.onSurface },
+  stepSub: { fontFamily: fonts.regular, fontSize: 13, color: colors.onSurfaceTertiary },
+  lineTotal: { borderTopWidth: 1, borderTopColor: colors.divider, paddingTop: spacing.md, marginTop: spacing.xs, backgroundColor: colors.brandTertiary, marginHorizontal: -spacing.md, paddingHorizontal: spacing.md, paddingBottom: spacing.md, borderRadius: radius.md },
+  lineLabelStrong: { fontFamily: fonts.semibold, fontSize: 15, color: colors.brandPrimary },
+  lineValueStrong: { fontFamily: fonts.bold, fontSize: 22, color: colors.brandPrimary, fontVariant: ["tabular-nums"] },
   linkRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.brandTertiary, borderRadius: radius.md, padding: spacing.lg, minHeight: 56 },
   linkLabel: { flex: 1, fontFamily: fonts.semibold, fontSize: 15, color: colors.onBrandTertiary },
   linkRowPremium: { backgroundColor: colors.brandPrimary },
