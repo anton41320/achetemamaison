@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
+import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowDownIcon, ArrowUpIcon, CameraIcon, CheckCircleIcon, DownloadSimpleIcon, ImagesIcon, LockKeyIcon, ShareNetworkIcon, SparkleIcon, StarIcon, TrashIcon, WarningIcon } from "phosphor-react-native";
+import { ArrowDownIcon, ArrowUpIcon, CameraIcon, CheckCircleIcon, DownloadSimpleIcon, FolderOpenIcon, ImagesIcon, LockKeyIcon, ShareNetworkIcon, SparkleIcon, StarIcon, TrashIcon, WarningIcon } from "phosphor-react-native";
 import { useState } from "react";
 import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -26,6 +27,7 @@ export default function PhotosScreen() {
   const queryClient = useQueryClient();
 
   const [permissionBlocked, setPermissionBlocked] = useState<Source | null>(null);
+  const [pickError, setPickError] = useState<string | null>(null);
   const [showAfter, setShowAfter] = useState<Record<string, boolean>>({});
 
   const photos = useQuery({
@@ -98,8 +100,21 @@ export default function PhotosScreen() {
   const exportName = (index: number, after: boolean) => `achetesmamaison-${id!.slice(-6)}-photo-${index + 1}${after ? "-retouchee" : ""}.jpg`;
   const exportOrUnlock = (fn: () => void) => (pack.unlocked ? fn() : router.push(`/property/${id}/pack`));
 
+  // Sélecteur de fichiers système (Storage Access Framework) : fonctionne sur tout Android, sans autorisation.
+  const pickFiles = async () => {
+    setPickError(null);
+    try {
+      const res = await DocumentPicker.getDocumentAsync({ type: "image/*", multiple: true, copyToCacheDirectory: true });
+      if (res.canceled || !res.assets?.length) return;
+      uploadAll(res.assets.map((a) => ({ uri: a.uri, fileName: a.name, mimeType: a.mimeType ?? "image/jpeg", width: 0, height: 0 })));
+    } catch (e) {
+      setPickError((e as Error).message);
+    }
+  };
+
   const pick = async (source: Source) => {
     setPermissionBlocked(null);
+    setPickError(null);
     const get = source === "camera" ? ImagePicker.getCameraPermissionsAsync : ImagePicker.getMediaLibraryPermissionsAsync;
     const ask = source === "camera" ? ImagePicker.requestCameraPermissionsAsync : ImagePicker.requestMediaLibraryPermissionsAsync;
     // Android : le sélecteur de photos système (Photo Picker) ne requiert aucune autorisation ; seul l'appareil photo en a besoin.
@@ -116,12 +131,21 @@ export default function PhotosScreen() {
         return;
       }
     }
-    const result =
-      source === "camera"
-        ? await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.85 })
-        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.85, allowsMultipleSelection: true, selectionLimit: 20, orderedSelection: true });
-    if (result.canceled || !result.assets?.length) return;
-    uploadAll(result.assets);
+    try {
+      const result =
+        source === "camera"
+          ? await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.85 })
+          : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.85, allowsMultipleSelection: true, selectionLimit: 20, orderedSelection: true });
+      if (result.canceled || !result.assets?.length) return;
+      uploadAll(result.assets);
+    } catch (e) {
+      if (source === "camera") {
+        setPickError((e as Error).message);
+        return;
+      }
+      // Android sans « Photo Picker » (ancienne version / sans services Google) : bascule sur le sélecteur de fichiers.
+      await pickFiles();
+    }
   };
 
   return (
@@ -144,6 +168,12 @@ export default function PhotosScreen() {
               <Text style={styles.pickLabel}>Appareil photo</Text>
             </Pressable>
           ) : null}
+          {Platform.OS === "android" ? (
+            <Pressable testID="photos-pick-files" accessibilityRole="button" onPress={pickFiles} style={styles.pickBtn} disabled={uploading}>
+              <FolderOpenIcon size={22} color={colors.onBrandTertiary} weight="duotone" />
+              <Text style={styles.pickLabel}>Fichiers</Text>
+            </Pressable>
+          ) : null}
         </View>
         <Text style={styles.hint}>
           La retouche améliore lumière, contraste et perspective, et efface uniquement de petits objets. Aucun élément n’est
@@ -151,6 +181,12 @@ export default function PhotosScreen() {
           l’annonce et les PDF : utilisez les flèches ou « Couverture » pour ordonner vos photos.
         </Text>
         {!pack.loading && !pack.unlocked ? <PremiumGate propertyId={id!} feature="la retouche photo par l’IA" testID="photos-premium-gate" /> : null}
+        {pickError ? (
+          <View style={styles.warn} testID="photos-pick-error">
+            <WarningIcon size={18} color={colors.error} weight="fill" />
+            <Text style={[styles.warnText, { color: colors.error }]}>Impossible d’ouvrir la galerie : {pickError}</Text>
+          </View>
+        ) : null}
 
         {retouched.length >= 2 ? (
           <Pressable
@@ -352,8 +388,8 @@ export default function PhotosScreen() {
 const useStyles = makeStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.surface },
   content: { padding: spacing.lg, gap: spacing.lg },
-  pickRow: { flexDirection: "row", gap: spacing.md },
-  pickBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, minHeight: 56, borderRadius: radius.md, backgroundColor: colors.brandTertiary },
+  pickRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
+  pickBtn: { flexGrow: 1, flexBasis: 100, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, minHeight: 56, paddingHorizontal: spacing.sm, borderRadius: radius.md, backgroundColor: colors.brandTertiary },
   pickLabel: { fontFamily: fonts.semibold, fontSize: 15, color: colors.onBrandTertiary },
   hint: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 19, color: colors.muted },
   warn: { flexDirection: "row", gap: spacing.md, alignItems: "flex-start", backgroundColor: colors.warningSoft, borderRadius: radius.md, padding: spacing.lg },

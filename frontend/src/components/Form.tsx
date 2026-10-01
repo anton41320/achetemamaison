@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
-import { MinusIcon, PlusIcon } from "phosphor-react-native";
-import { ReactNode } from "react";
+import { EyeIcon, EyeSlashIcon, MinusIcon, PlusIcon } from "phosphor-react-native";
+import { ReactNode, useState } from "react";
 import { Platform, Pressable, ScrollView, Text, TextInput, TextInputProps, View } from "react-native";
 
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
@@ -14,9 +14,10 @@ interface FieldProps extends TextInputProps {
   testID: string;
 }
 
-export function Field({ label, hint, suffix, error, testID, style, ...rest }: FieldProps) {
+export function Field({ label, hint, suffix, error, testID, style, secureTextEntry, ...rest }: FieldProps) {
   const styles = useStyles();
   const { colors } = useTheme();
+  const [revealed, setRevealed] = useState(false);
   return (
     <View style={styles.fieldWrap}>
       <Text style={styles.label}>{label}</Text>
@@ -25,9 +26,22 @@ export function Field({ label, hint, suffix, error, testID, style, ...rest }: Fi
           testID={testID}
           placeholderTextColor={colors.muted}
           style={[styles.input, style]}
+          secureTextEntry={secureTextEntry && !revealed}
           {...rest}
         />
         {suffix ? <Text style={styles.suffix}>{suffix}</Text> : null}
+        {secureTextEntry ? (
+          <Pressable
+            testID={`${testID}-toggle-visibility`}
+            accessibilityRole="button"
+            accessibilityLabel={revealed ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+            onPress={() => setRevealed((v) => !v)}
+            hitSlop={8}
+            style={styles.eyeBtn}
+          >
+            {revealed ? <EyeSlashIcon size={22} color={colors.muted} /> : <EyeIcon size={22} color={colors.muted} />}
+          </Pressable>
+        ) : null}
       </View>
       {error ? (
         <Text style={styles.errorText} testID={`${testID}-error`}>{error}</Text>
@@ -161,6 +175,7 @@ const useStyles = makeStyles((colors) => ({
   inputError: { borderColor: colors.error },
   input: { flex: 1, fontFamily: fonts.medium, fontSize: 16, color: colors.onSurfaceSecondary, paddingVertical: 12 },
   suffix: { fontFamily: fonts.medium, fontSize: 15, color: colors.muted, marginLeft: spacing.sm },
+  eyeBtn: { width: 44, height: 44, alignItems: "center", justifyContent: "center", marginRight: -spacing.sm },
   chipRow: { flexDirection: "row", gap: spacing.sm },
   chipScroller: { height: 56, marginHorizontal: -spacing.lg },
   chipRowScroll: { gap: spacing.sm, paddingHorizontal: spacing.lg, alignItems: "center" },
