@@ -13,13 +13,11 @@ MODEL = "gemini-3.1-flash-image-preview"
 MAX_SIDE = 1600
 
 RETOUCH_PROMPT = (
-    "Tu es un retoucheur de photos immobilières professionnel. Retouche cette photo en respectant STRICTEMENT les règles :\n"
-    "- Améliore l'exposition, la luminosité, la balance des blancs, le contraste et la netteté de façon naturelle.\n"
-    "- Redresse les verticales (perspective) si elles sont penchées, sans déformer la pièce.\n"
-    "- Désencombrement léger uniquement : tu peux effacer de petits objets temporaires (papiers, câbles, poubelle, chaussures).\n"
-    "- INTERDIT : ajouter un élément qui n'existe pas (meuble, décoration, fenêtre, plante, vue, ciel différent), "
-    "modifier la structure, les matériaux, les couleurs des murs/sols, la taille des pièces ou la vue extérieure.\n"
-    "- Conserve exactement le même cadrage et le même contenu. Le résultat doit rester une représentation fidèle du bien.\n"
+    "À partir de cette photo, rends la pièce plus lumineuse, bien cadrée au niveau des parallèles (verticales et horizontales "
+    "redressées), range la pièce tout en laissant ce qui est accroché aux murs. Le tout doit être une photo pour une annonce "
+    "immobilière de qualité.\n"
+    "Contraintes de fidélité : n'ajoute aucun meuble ni décoration qui n'existe pas, ne modifie ni la structure, ni les matériaux, "
+    "ni les couleurs des murs et des sols, ni la vue extérieure ; conserve le même point de vue. "
     "Renvoie uniquement l'image retouchée."
 )
 

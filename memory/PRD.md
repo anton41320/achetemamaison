@@ -49,6 +49,7 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 
 - [x] Retrait du « niveau de confiance » côté utilisateur (demande utilisateur, 2026-06) : badge, carte score/100 et détails supprimés de la fiche bien, des cartes de l'accueil et des PDF (rapport, notaire) ; `ConfidenceBadge.tsx` supprimé. Le score reste calculé en interne (largeur de fourchette, blend) et visible sur l'écran admin `data.tsx`. Les métriques périmètre / ventes comparables / dispersion sont conservées.
 - [x] Dossier de vente rapide : `_dossier` ne bloque plus sur georisques.gouv.fr (cache utilisé même périmé, rafraîchissement en tâche de fond `georisques.refresh_in_background`, snapshot partiel réessayé au plus 1×/h, timeouts 8 s × 2) ; requêtes Mongo en parallèle + index `documents`, `checklist_state`, `orders`. Temps de réponse 60 s → ~0,2 s. Squelette de chargement sur l'écran dossier.
+- [x] Prompt de retouche photo IA remplacé par celui de l'utilisateur (plus lumineux, parallèles redressées, pièce rangée en gardant ce qui est accroché aux murs, qualité annonce) + garde-fous de fidélité (`photos.py` RETOUCH_PROMPT). Testé sur la cuisine encombrée : résultat propre et lumineux.
 - [x] Aperçu Pack premium : `demo-before.jpg` régénéré via Nano Banana (script `backend/scripts/make_demo_before.py`) — même cuisine, sombre, jaunâtre, penchée et encombrée — pour contraster avec la version retouchée.
 
 
