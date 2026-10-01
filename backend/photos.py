@@ -13,12 +13,18 @@ MODEL = "gemini-3.1-flash-image-preview"
 MAX_SIDE = 1600
 
 RETOUCH_PROMPT = (
-    "À partir de cette photo, rends la pièce plus lumineuse, bien cadrée au niveau des parallèles (verticales et horizontales "
-    "redressées), range la pièce tout en laissant ce qui est accroché aux murs. Le tout doit être une photo pour une annonce "
-    "immobilière de qualité.\n"
-    "Contraintes de fidélité : n'ajoute aucun meuble ni décoration qui n'existe pas, ne modifie ni la structure, ni les matériaux, "
-    "ni les couleurs des murs et des sols, ni la vue extérieure ; conserve le même point de vue. "
-    "Renvoie uniquement l'image retouchée."
+    "Tu retouches une photo pour une annonce immobilière de qualité. Identifie d'abord si la photo montre un INTÉRIEUR "
+    "ou un EXTÉRIEUR (façade, jardin, terrasse, piscine, vue) et applique la consigne correspondante.\n\n"
+    "INTÉRIEUR : à partir de cette photo, rends la pièce plus lumineuse, bien cadrée au niveau des parallèles (verticales et "
+    "horizontales redressées), range la pièce tout en laissant ce qui est accroché aux murs.\n\n"
+    "EXTÉRIEUR : rends la photo plus attractive en travaillant uniquement la lumière et la netteté : ciel dégagé et lumineux "
+    "(même ciel, débarrassé de sa grisaille, sans ciel de remplacement ni nuages ajoutés), pelouse nette, verte et uniforme, façade propre et "
+    "bien exposée, couleurs naturelles, verticales redressées. Tu peux effacer des éléments temporaires (poubelles, "
+    "tuyau d'arrosage, jouets, véhicule garé devant, câbles). N'AJOUTE RIEN : pas de plante, fleur, arbre, mobilier de jardin, "
+    "piscine, clôture, portail ou décoration qui n'existe pas sur la photo.\n\n"
+    "Contraintes communes : n'ajoute aucun élément inexistant, ne modifie ni la structure, ni les matériaux, ni les couleurs "
+    "des murs, sols et toitures, ni l'environnement ; conserve exactement le même angle de prise de vue et le même cadrage "
+    "(ne recentre pas, ne redessine pas le bâtiment). Renvoie uniquement l'image retouchée."
 )
 
 
