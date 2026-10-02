@@ -24,6 +24,7 @@ import completion
 import dossier as dossier_mod
 import feedback
 import promo
+from environment import analyze as env_analyze, listing_facts as env_listing_facts, official as env_official, report as env_report, valuation as env_valuation
 import dvf_ingest
 import georisques
 import hedonic
@@ -92,6 +93,18 @@ async def _run_estimation(p: PropertyIn | PropertyDoc):
         )
     except NoDataError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
+    # Micro-localisation : ajustements environnement (si l'analyse du bien existe), bornés et transparents
+    env_doc = await db.env_analyses.find_one({"_id": p.id}, {"analysis": 1}) if getattr(p, "id", None) else None
+    if env_doc and env_doc.get("analysis"):
+        env_adj = env_valuation.environment_adjustments(env_doc["analysis"], est.value)
+        env_pct = sum(a.pct for a in env_adj)
+        if env_adj:
+            est.adjustments.extend(env_adj)
+            est.value = float(int(round(est.value * (1 + env_pct) / 1000)) * 1000)
+            est.low = float(int(round(est.low * (1 + env_pct) / 1000)) * 1000)
+            est.high = float(int(round(est.high * (1 + env_pct) / 1000)) * 1000)
+            est.price_m2 = float(int(round(est.value / p.surface / 10)) * 10)
+            est.notes.append(f"Ajustement environnement {env_pct * 100:+.1f} % appliqué à partir de l'analyse de l'environnement (distances mesurées, sources publiques).")
     features_pct = sum(a.pct for a in est.adjustments if a.key.startswith("feat_"))
     model = await hedonic.load_model(db)
     if model:
@@ -464,8 +477,9 @@ async def create_listing(pid: str, req: ListingRequest):
         raise HTTPException(status_code=404, detail="Bien introuvable")
     prop = PropertyDoc.from_mongo(doc)
     await pack.require_unlocked(db, pid, "La rédaction d’annonce par l’IA")
+    env_doc = await db.env_analyses.find_one({"_id": pid}, {"analysis": 1}) if req.use_environment else None
     try:
-        result = await generate_listing(prop, req.style, req.extra_facts, req.include_price)
+        result = await generate_listing(prop, req.style, req.extra_facts, req.include_price, env=(env_doc or {}).get("analysis"))
     except Exception as exc:  # noqa: BLE001
         logger.exception("Listing generation failed")
         raise HTTPException(status_code=502, detail=f"Génération indisponible : {exc}")
@@ -473,6 +487,18 @@ async def create_listing(pid: str, req: ListingRequest):
     res = await db.listings.insert_one({**listing.to_mongo(), "deleted_at": None, **auth.own()})
     saved = await db.listings.find_one({"_id": res.inserted_id})
     return ListingDoc.from_mongo(saved).model_dump(mode="json")
+
+
+@api.get("/properties/{pid}/environment/highlights")
+async def environment_highlights(pid: str):
+    """Atouts du quartier mesurés, depuis le cache uniquement (ne déclenche pas d'analyse)."""
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()}, {"_id": 1})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Bien introuvable")
+    env_doc = await db.env_analyses.find_one({"_id": pid}, {"analysis": 1, "created_at": 1})
+    if not env_doc:
+        return {"available": False, "highlights": []}
+    return {"available": True, "created_at": env_doc["created_at"], "highlights": env_listing_facts.neighbourhood_highlights(env_doc["analysis"])}
 
 
 @api.delete("/properties/{pid}/listings/{lid}")
@@ -1026,12 +1052,92 @@ async def reestimate_property(pid: str):
     doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()})
     if not doc:
         raise HTTPException(status_code=404, detail="Bien introuvable")
+    return await _reestimate_doc(doc)
+
+
+async def _reestimate_doc(doc: dict) -> dict:
     prop = PropertyDoc.from_mongo(doc)
     est = await _run_estimation(prop)
     await db.properties.update_one({"_id": doc["_id"]}, {"$set": {"estimation": est.model_dump(), "updated_at": utcnow()}})
     await db.estimations.insert_one({"property_id": doc["_id"], **est.model_dump()})
     saved = await db.properties.find_one({"_id": doc["_id"]})
     return _prop_response(saved)
+
+
+# ---------------- Analyse de l'environnement ----------------
+
+class AnalyzeIn(BaseModel):
+    address: str = Field(min_length=5, max_length=200)
+    radii_m: Optional[list[int]] = None
+    report: bool = True
+
+
+async def _risks_for(lat: float, lon: float, code_insee: Optional[str], prop: Optional[PropertyDoc]) -> Optional[dict]:
+    """Géorisques : cache du bien si disponible, sinon appel direct borné (jamais bloquant au-delà des timeouts)."""
+    try:
+        if prop is not None:
+            cached = await georisques.get_cached(db, prop)
+            if cached:
+                return cached
+            return await asyncio.wait_for(georisques.get_for_property(db, prop), timeout=25)
+        return await asyncio.wait_for(asyncio.to_thread(georisques.fetch, lat, lon, code_insee or ""), timeout=25)
+    except Exception:  # noqa: BLE001
+        logger.warning("Géorisques indisponible pour l'analyse d'environnement")
+        return None
+
+
+async def _build_environment(*, address: Optional[str], lat: Optional[float], lon: Optional[float], code_insee: Optional[str],
+                             radii: Optional[list[int]], prop: Optional[PropertyDoc], with_report: bool) -> dict:
+    if lat is None and address:
+        geo, _ = await env_official.geocode(db, address)
+        if not geo:
+            raise HTTPException(status_code=404, detail="Adresse introuvable dans la Base Adresse Nationale")
+        lat, lon, code_insee = geo["lat"], geo["lon"], geo.get("citycode")
+    risks = await _risks_for(lat, lon, code_insee, prop)
+    try:
+        analysis = await env_analyze.analyze(db, address=address, lon=lon, lat=lat, code_insee=code_insee, radii=radii, risks=risks)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    report = None
+    if with_report:
+        try:
+            report = await env_report.generate_report(analysis)
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("Environment report failed")
+            report = {"error": f"Rapport IA indisponible : {str(exc)[:120]}", "sections": None}
+    return {"analysis": analysis, "report": report}
+
+
+@api.post("/analyze")
+async def analyze_address(body: AnalyzeIn):
+    """Analyse d'environnement pour une adresse libre (sans bien enregistré)."""
+    out = await _build_environment(address=body.address, lat=None, lon=None, code_insee=None, radii=body.radii_m, prop=None, with_report=body.report)
+    a = out["analysis"]
+    return {"location": {"address": a["address"], "coordinates": a["coordinates"]}, "property": {"parcel": a["parcel"], "building": a["building"]},
+            "analysis": {k: v for k, v in a.items() if k not in ("address", "coordinates", "parcel", "building", "sources")},
+            "report": out["report"], "sources": a["sources"]}
+
+
+@api.get("/properties/{pid}/environment")
+async def property_environment(pid: str, refresh: bool = Query(default=False)):
+    """Analyse d'environnement du bien (cache 30 j). Son calcul déclenche une ré-estimation intégrant les ajustements environnement."""
+    doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Bien introuvable")
+    cached = await db.env_analyses.find_one({"_id": pid})
+    if cached and not refresh and cached["created_at"].replace(tzinfo=timezone.utc) > datetime.now(timezone.utc) - timedelta(days=30):
+        return {"property_id": pid, "created_at": cached["created_at"], "cached": True, **{k: cached[k] for k in ("analysis", "report")},
+                "estimation_adjustments": [a for a in (doc.get("estimation") or {}).get("adjustments", []) if a["key"].startswith("env_")]}
+    prop = PropertyDoc.from_mongo(doc)
+    out = await _build_environment(address=prop.address_label, lat=prop.lat, lon=prop.lon, code_insee=prop.code_commune, radii=None, prop=prop, with_report=True)
+    now = utcnow()
+    await db.env_analyses.replace_one({"_id": pid}, {"_id": pid, "property_id": pid, "created_at": now, **out, **auth.own()}, upsert=True)
+    try:
+        updated = await _reestimate_doc(doc)
+        env_adj = [a for a in updated["estimation"]["adjustments"] if a["key"].startswith("env_")]
+    except HTTPException:
+        env_adj = []
+    return {"property_id": pid, "created_at": now, "cached": False, **out, "estimation_adjustments": env_adj}
 
 
 @api.delete("/properties/{pid}")

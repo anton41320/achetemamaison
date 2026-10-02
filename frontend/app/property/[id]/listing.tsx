@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Clipboard from "expo-clipboard";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { CheckIcon, CopyIcon, ShareNetworkIcon, SparkleIcon, TrashIcon, WarningIcon } from "phosphor-react-native";
+import { CheckIcon, CopyIcon, ShareNetworkIcon, SparkleIcon, TrashIcon, TreeIcon, WarningIcon } from "phosphor-react-native";
 import { useState } from "react";
 import { ActivityIndicator, Platform, Pressable, Switch, Text, View } from "react-native";
 import { KeyboardAwareScrollView, KeyboardStickyView } from "react-native-keyboard-controller";
@@ -30,7 +30,10 @@ export default function ListingScreen() {
   const [style, setStyle] = useState<ListingStyle>("sobre");
   const [extra, setExtra] = useState("");
   const [includePrice, setIncludePrice] = useState(true);
+  const [useEnv, setUseEnv] = useState(true);
   const [copied, setCopied] = useState<string | null>(null);
+  // Atouts du quartier mesurés par l'analyse d'environnement (cache uniquement : ne déclenche pas d'analyse)
+  const envHl = useQuery({ queryKey: ["environment-highlights", id], queryFn: () => api.environmentHighlights(id!), enabled: !!id });
 
   const listings = useQuery({ queryKey: ["listings", id], queryFn: () => api.listListings(id!), enabled: !!id });
   const prop = useQuery({ queryKey: ["property", id], queryFn: () => api.getProperty(id!), enabled: !!id });
@@ -55,7 +58,7 @@ export default function ListingScreen() {
   const generate = useMutation({
     mutationFn: async () => {
       if (includePrice && priceDirty && priceValid) await savePrice.mutateAsync(priceText.trim() === "" ? null : parsedPrice);
-      return api.createListing(id!, { style, extra_facts: extra.trim() || null, include_price: includePrice });
+      return api.createListing(id!, { style, extra_facts: extra.trim() || null, include_price: includePrice, use_environment: useEnv && !!envHl.data?.available });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["listings", id] }),
   });
@@ -105,6 +108,36 @@ export default function ListingScreen() {
           style={{ minHeight: 72, textAlignVertical: "top" }}
           hint="Seuls les faits ci-dessus et ceux du bien seront utilisés. Rien d’autre ne sera inventé."
         />
+        <View style={styles.envBox} testID="listing-env-box">
+          <View style={styles.switchRow}>
+            <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+              <TreeIcon size={18} color={colors.onBrandTertiary} />
+              <Text style={[styles.switchLabel, { flex: 1 }]}>Citer les atouts du quartier mesurés</Text>
+            </View>
+            <Switch
+              testID="listing-use-environment"
+              value={useEnv && !!envHl.data?.available}
+              disabled={!envHl.data?.available}
+              onValueChange={setUseEnv}
+              trackColor={{ true: colors.brandPrimary, false: colors.surfaceTertiary }}
+              thumbColor={Platform.OS === "android" ? colors.surfaceSecondary : undefined}
+            />
+          </View>
+          {envHl.data?.available ? (
+            useEnv ? (
+              envHl.data.highlights.length ? (
+                <View style={styles.chips} testID="listing-env-highlights">
+                  {envHl.data.highlights.map((h) => <Text key={h.key} style={styles.envChip}>{h.text}</Text>)}
+                </View>
+              ) : <Text style={styles.envHint}>Aucun atout mesurable dans les rayons analysés : l’annonce ne parlera pas du quartier.</Text>
+            ) : <Text style={styles.envHint}>L’annonce ne mentionnera pas le quartier.</Text>
+          ) : (
+            <Pressable testID="listing-env-run" accessibilityRole="button" onPress={() => router.push(`/property/${id}/environment`)} style={{ minHeight: 44, justifyContent: "center" }}>
+              <Text style={styles.envHint}>Lancez d’abord l’analyse de l’environnement du bien pour que l’IA puisse citer commerces, école, gare ou parc avec leur distance réelle. <Text style={styles.envLink}>Lancer l’analyse →</Text></Text>
+            </Pressable>
+          )}
+          <Text style={styles.envHint}>Seules des distances mesurées (IGN, OpenStreetMap) sont citées, sans qualificatif ni invention.</Text>
+        </View>
         <View style={styles.switchRow}>
           <Text style={styles.switchLabel}>Mentionner le prix dans l’annonce</Text>
           <Switch
@@ -172,6 +205,7 @@ export default function ListingScreen() {
             <View key={l.id} style={styles.listing} testID={`listing-card-${i}`}>
               <View style={styles.listingHead}>
                 <Text style={styles.stylePill}>{LISTING_STYLES.find((s) => s.value === l.style)?.label ?? l.style}</Text>
+                {l.used_environment ? <Text style={styles.envPill} testID={`listing-env-pill-${i}`}>Quartier mesuré</Text> : null}
                 <Text style={styles.date}>{formatMonth(l.created_at)}</Text>
               </View>
               <Text style={styles.title} testID={`listing-title-${i}`}>{l.title}</Text>
@@ -240,6 +274,12 @@ const useStyles = makeStyles((colors) => ({
   content: { padding: spacing.lg, gap: spacing.lg },
   p: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.onSurfaceTertiary },
   switchRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md, minHeight: 44 },
+  envBox: { backgroundColor: colors.brandTertiary, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.sm },
+  envChip: { fontFamily: fonts.medium, fontSize: 12, color: colors.onBrandTertiary, backgroundColor: colors.surface, paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radius.pill, overflow: "hidden" },
+  envHint: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.onBrandTertiary, opacity: 0.85 },
+  envLink: { fontFamily: fonts.semibold, color: colors.brandPrimary, opacity: 1 },
+  envPill: { fontFamily: fonts.semibold, fontSize: 12, color: colors.success, backgroundColor: colors.successSoft, paddingHorizontal: spacing.md, height: 26, lineHeight: 26, borderRadius: radius.pill, overflow: "hidden" },
+
   switchLabel: { flex: 1, fontFamily: fonts.medium, fontSize: 14, color: colors.onSurface },
   priceBox: { gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.lg },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },

@@ -4,7 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ArrowsOutIcon, CaretLeftIcon, CaretRightIcon, ChartBarIcon, FolderOpenIcon, HandshakeIcon, ImagesIcon, ListBulletsIcon, PencilLineIcon,
-  RulerIcon, SparkleIcon, TargetIcon, TrashIcon, WarningIcon,
+  RulerIcon, SparkleIcon, TargetIcon, TrashIcon, TreeIcon, WarningIcon,
 } from "phosphor-react-native";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -278,6 +278,24 @@ export default function PropertyDetailScreen() {
               </Animated.View>
             ) : null}
 
+            <Pressable
+              testID="environment-button"
+              accessibilityRole="button"
+              onPress={() => router.push(`/property/${id}/environment`)}
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.85 }]}
+            >
+              <TreeIcon size={20} color={colors.onBrandTertiary} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.linkLabel}>Environnement du bien</Text>
+                <Text style={styles.linkSubMuted}>
+                  {est.adjustments.some((a) => a.key.startsWith("env_"))
+                    ? `Analyse intégrée à l’estimation (${formatPct(est.adjustments.filter((a) => a.key.startsWith("env_")).reduce((s, a) => s + a.pct, 0), 1)})`
+                    : "Voisinage, nuisances, risques, urbanisme — affine l’estimation"}
+                </Text>
+              </View>
+              <CaretRightIcon size={18} color={colors.onBrandTertiary} />
+            </Pressable>
+
             <View style={styles.stepHeader} testID="step-2-header">
               <View style={styles.stepBadge}><Text style={styles.stepBadgeText}>2</Text></View>
               <View style={{ flex: 1 }}>
@@ -451,6 +469,7 @@ const useStyles = makeStyles((colors) => ({
   linkLabel: { flex: 1, fontFamily: fonts.semibold, fontSize: 15, color: colors.onBrandTertiary },
   linkRowPremium: { backgroundColor: colors.brandPrimary },
   linkSub: { fontFamily: fonts.regular, fontSize: 12, color: colors.onBrandPrimary, opacity: 0.85, marginTop: 2 },
+  linkSubMuted: { fontFamily: fonts.regular, fontSize: 12, color: colors.onBrandTertiary, opacity: 0.8, marginTop: 2 },
   actions: { gap: spacing.md, marginTop: spacing.sm },
   confirmRow: { flexDirection: "row", gap: spacing.md },
   deleteRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, minHeight: 48 },

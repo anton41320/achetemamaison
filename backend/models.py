@@ -246,9 +246,11 @@ class ListingRequest(BaseModel):
     style: Literal["sobre", "chaleureux", "premium", "familial"] = "sobre"
     extra_facts: Optional[str] = Field(default=None, max_length=1200)
     include_price: bool = True
+    use_environment: bool = True  # atouts du quartier mesurés (analyse d'environnement), si disponible
 
 
 class ListingDoc(BaseDocument):
+    used_environment: bool = False
     property_id: str
     style: str
     title: str

@@ -24,6 +24,7 @@ SYSTEM = """Tu es un rédacteur d'annonces immobilières français. Tu rédiges 
 RÈGLES ABSOLUES :
 - N'invente JAMAIS une information absente des faits (pas d'étage, ascenseur, parking, balcon, cave, exposition, DPE, école, transport, commerces, calme, luminosité, vue, matériaux…) sauf si elle figure explicitement dans les faits.
 - Aucun adjectif sur l'environnement ou le quartier (paisible, calme, recherché, prisé, verdoyant…) : tu ne connais pas les lieux.
+- Si un bloc « ATOUTS DU QUARTIER MESURÉS » est fourni, tu peux citer ces éléments (tous ou une partie), avec leur distance exacte telle qu'indiquée (ex. « école à environ 300 m »), sans les qualifier ni en ajouter. Aucun jugement sur le cadre (remarquable, exceptionnel, privilégié, agréable, « à deux pas »…). Sans ce bloc, ne parle pas du quartier.
 - Reprends l'état du bien EXACTEMENT tel que fourni (par ex. « état correct » ne devient jamais « bon état »).
 - Si un fait manque, ne le mentionne pas. Ne suppose rien sur le quartier.
 - Ne cite pas l'adresse exacte : utilise la commune (et le quartier uniquement s'il est fourni).
@@ -32,7 +33,7 @@ RÈGLES ABSOLUES :
 {"title": string (≤ 70 caractères), "hook": string (1 phrase d'accroche), "description": string (2 à 4 paragraphes séparés par \\n\\n, 120 à 220 mots), "highlights": [3 à 5 points forts courts, chacun fondé sur un fait fourni]}"""
 
 
-def _facts(prop: PropertyDoc, include_price: bool, extra: str | None) -> str:
+def _facts(prop: PropertyDoc, include_price: bool, extra: str | None, env_block: str | None = None) -> str:
     est = prop.estimation
     lines = [
         f"Type : {'maison' if prop.property_type == 'maison' else 'appartement'}",
@@ -72,6 +73,8 @@ def _facts(prop: PropertyDoc, include_price: bool, extra: str | None) -> str:
         lines.append(f"Prix indicatif : fourchette {int(est.low):,} € – {int(est.high):,} € (estimation Achètes ma maison)".replace(",", " "))
     if extra and extra.strip():
         lines.append(f"Précisions fournies par le vendeur (utilisables telles quelles) : {extra.strip()}")
+    if env_block:
+        lines.append("\n" + env_block)
     return "\n".join(lines)
 
 
@@ -87,13 +90,16 @@ def _parse(text: str) -> dict:
     }
 
 
-async def generate_listing(prop: PropertyDoc, style: str, extra_facts: str | None, include_price: bool) -> dict:
+async def generate_listing(prop: PropertyDoc, style: str, extra_facts: str | None, include_price: bool, env: dict | None = None) -> dict:
     from emergentintegrations.llm.chat import LlmChat, UserMessage  # lazy: keeps the LLM SDKs out of API startup memory
 
     api_key = os.environ["EMERGENT_LLM_KEY"]
     chat = LlmChat(api_key=api_key, session_id=f"listing-{uuid.uuid4()}", system_message=SYSTEM).with_model(
         "anthropic", "claude-sonnet-4-6")
-    prompt = (f"STYLE : {STYLE_GUIDE[style]}\n\nFAITS (seule source autorisée) :\n{_facts(prop, include_price, extra_facts)}"
+    from environment.listing_facts import facts_block
+
+    env_block = facts_block(env) if env else None
+    prompt = (f"STYLE : {STYLE_GUIDE[style]}\n\nFAITS (seule source autorisée) :\n{_facts(prop, include_price, extra_facts, env_block)}"
               "\n\nRédige l'annonce en français et renvoie uniquement le JSON.")
     text = await chat.send_message(UserMessage(text=prompt))
-    return {**_parse(text), "model": "claude-sonnet-4-6"}
+    return {**_parse(text), "model": "claude-sonnet-4-6", "used_environment": bool(env_block)}

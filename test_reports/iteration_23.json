@@ -1,0 +1,35 @@
+{
+  "summary": "Iter 23 — Environment feature (POST /api/analyze + GET /api/properties/{id}/environment + mobile UI): fully green. Backend 8/8 pytest cases pass (iter23_environment.xml): (1) /analyze Blois default radii returns 200 in ~15s with parcel AO section/numero, altitude_m numeric, urbanism.zones populated, 4 rings = [50,250,1000,5000], roads/services items have int distance_m + ring + direction + source, sources list has required keys (id/name/licence/fetched_at/status); (2) /analyze with unknown address → 404; (3) /analyze custom radii [100,500,2000] → 3 rings and matching radii; (4) GET /properties/PROP_A/environment returns cached=True in <1s, report.sections contains all 12 required keys (resume, immediat, voisinage, nature, mobilite, services, nuisances, terrain, risques, urbanisme, evolution, a_verifier), a_verifier is a list, estimation_adjustments all start with env_* and total pct in [-0.06, 0.04]; (5) GET /properties/PROP_A → estimation.adjustments contains env_* AND estimation.notes contains \"Ajustement environnement\"; (6) GET /properties/PROP_B/environment (first full analysis, ~1s cached in this env, LLM OK) → analysis + report.sections present; (7) GET /properties/PROP_B → updated_at refreshed, 3 env_* adjustments present (env_eau, env_vert, env_ecole, total +3.5%); (8) non-regression: /dossier <2s AND /reestimate preserves env_* adjustments. Frontend (Expo web 390x844) also 100%: environment-button visible on property detail with subtitle 'Analyse intégrée à l'estimation (+1,5 %)', 'Comment est calculée la fourchette ?' lists env lines (BD TOPO, Axe principal detected), tapping navigates to environment-screen, environment-impact loads cached in <2s, environment-map renders a 640x400 IGN tile ('Orthophoto & parcellaire © IGN — parcelle AO 0329 · 14080 m²'), environment-impact-pct shows '+1,5 %', Résumé section opens by default with 'Synthèse IA' block (478 chars), env-toggle-nuisances/urbanisme expand with Source lines and distances (938/302 chars), env-section-a_verifier shows bullets (740 chars), environment-sources lists 7 'consultée le' entries (≥5), environment-refresh present, environment-see-estimation navigates back to property detail. No red console errors, no shadow* warnings. Deprecated packages / SafeAreaView: none newly introduced by this feature.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "environment-address Text", "issue": "Playwright text_content returned empty string although address is rendered elsewhere (parcelle label visible in environment-map caption). Possibly a React Native Text node not exposing inner text to DOM, or address.label falsy at render. Reference: /app/frontend/app/property/[id]/environment.tsx:97", "testID": "environment-address", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_estimo_environment_api.py",
+    "/app/test_reports/pytest/iter23_environment.xml"
+  ],
+  "action_items": [
+    "Investigate why <Text testID=\"environment-address\"> renders empty text in web preview (/app/frontend/app/property/[id]/environment.tsx:97). The address.label value is clearly present in state (visible in map caption and in network response) — may be a conditional render issue or a stale a vs analysis variable."
+  ],
+  "critical_code_review_comments": [
+    "environment/analyze.py + spatial.py + valuation.py cleanly separate IO (sources), geometry (shapely/pyproj) and valuation adjustments; env_* keys properly prefixed; CAP_LOW=-0.06 / CAP_HIGH=+0.04 enforced (verified by existing test_environment.py).",
+    "server.py:1076 _build_environment correctly raises HTTPException(404) when BAN geocoding fails (not generic 500) — matches the acceptance test.",
+    "GET /properties/{pid}/environment reuses MongoDB cache (env_analyses) with 30d TTL and still runs _reestimate_doc for env_* adjustments on first full analysis — great UX (fast on repeat opens).",
+    "Report LLM failure is gracefully degraded to {\"error\": ..., \"sections\": None} rather than failing the whole request — robust.",
+    "Frontend environment.tsx (178 lines) is well within the 700-line budget, uses testID consistently (environment-*, env-section-*, env-toggle-*), and provides a 'Voir l'estimation mise à jour' CTA that routes back correctly."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_estimo_environment_api.py (new)"
+  ],
+  "success_rate": {"backend": "100% (8/8)", "frontend": "100% (12/12 checks)"},
+  "seed_data_creation": "None. Reused delivered@resend.dev + PROP_A=6aa3f68d440f04920cdaffde (Châtres-sur-Cher, cached env analysis) and PROP_B=6aa02db9efd8f90925a5a758 (cached by prior iteration).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Login: delivered@resend.dev / Estimo2026!. PROP_A env analysis is cached: envPct=+1,5% ; three env_* adjustments on PROP_A (env_vert +1,5%, env_eau -0,5%?, see /properties/PROP_A). PROP_B first analysis finished (LLM OK) and estimation now carries 3 env_* (env_eau +1%, env_vert +1,5%, env_ecole +1%, total +3,5%). First analysis is ~30-60s with timeout 150s — do NOT loop on 'refresh' (LLM cost). The 404 case for unknown BAN address is handled server-side in _build_environment. Overpass/Georisques may be flaky from the pod; they are listed in analysis.unavailable without failing the request (do not treat as a bug).",
+  "rca_of_issue": "N/A — feature verification iteration. Only one minor UI nit (environment-address rendering empty text in Playwright extraction) flagged for the main agent."
+}

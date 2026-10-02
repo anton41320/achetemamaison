@@ -111,3 +111,8 @@
 - Backend: `_dossier` n'appelle plus Géorisques en direct (cache + refresh en tâche de fond, `georisques.refresh_in_background`) ; index Mongo documents/checklist_state/orders ; PDFs report/notaire sans « Confiance ».
 - Assets: demo-before.jpg régénéré (cuisine sombre/encombrée) pour PackPreview (pack.tsx).
 - Login test: delivered@resend.dev / Estimo2026! — biens 6aa3f68d440f04920cdaffde, 6aa02db9efd8f90925a5a758.
+
+## Iteration 23 — Analyse de l'environnement (main agent, 2026-10)
+- Backend : `POST /api/analyze` (adresse libre), `GET /api/properties/{id}/environment` (≈30 s la 1re fois, puis cache ; `?refresh=true`). Ré-estimation automatique avec ajustements `env_*` dans `estimation.adjustments`.
+- Frontend : écran `/property/{id}/environment` (testIDs environment-loading, environment-map, environment-impact, environment-impact-pct, env-section-*, env-toggle-*, environment-sources, environment-refresh), bouton `environment-button` sur la fiche bien.
+- Géorisques et Overpass peuvent être injoignables : l'analyse doit quand même aboutir (sections « indisponible »).

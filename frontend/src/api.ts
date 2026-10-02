@@ -275,6 +275,7 @@ export const LISTING_STYLES: { value: ListingStyle; label: string }[] = [
 ];
 
 export interface Listing {
+  used_environment?: boolean;
   id: string;
   property_id: string;
   style: ListingStyle;
@@ -694,6 +695,68 @@ export interface PropertyNextSteps {
   total: number;
 }
 
+// ---- Analyse de l'environnement ----
+export interface EnvItem {
+  name?: string | null;
+  nature?: string | null;
+  type?: string | null;
+  category?: string;
+  label?: string;
+  importance?: string | null;
+  importance_label?: string;
+  distance_m: number;
+  ring?: string;
+  direction?: string;
+  source: string;
+  url?: string;
+  area_m2?: number | null;
+  built?: boolean;
+}
+export interface EnvSource {
+  id: string; name: string; kind: "official" | "open"; licence: string; doc_url: string; request_url?: string;
+  fetched_at: string; status: "ok" | "unavailable" | "partial"; cached?: boolean; stale?: boolean; what?: string; precision?: string | null;
+}
+export interface EnvAnalysis {
+  generated_at: string;
+  radii_m: number[];
+  address: { input?: string | null; label?: string | null; precision?: string | null; code_insee?: string | null };
+  coordinates: { lon: number; lat: number };
+  parcel: { id: string; section: string; numero: string; contenance_m2?: number | null } | null;
+  building: { nature?: string; usage_1?: string; hauteur?: number | null; nombre_d_etages?: number | null; nombre_de_logements?: number | null; footprint_m2?: number } | null;
+  neighbours: { distance_m: number; nature?: string; usage?: string; hauteur_m?: number | null; etages?: number | null; footprint_m2: number }[];
+  density: { radius_m: number; buildings: number; built_ratio_pct: number; within_50m: number; nearest_m: number | null };
+  terrain: { altitude_m: number | null; slope_pct: number | null; aspect: string | null; elevation_range_m?: number; nearest_water_m: number | null; nearest_forest_m: number | null;
+    vegetation_ratio_250m_pct: number | null; landcover: { code: string; label: string; precision: string } | null };
+  urbanism: { zones: { libelle?: string; libelong?: string; typezone?: string; reglement?: string; url?: string | null }[]; prescriptions: { libelle?: string; type?: string }[];
+    infos: { libelle?: string }[]; servitudes: { libelle?: string }[]; documents: { type?: string; name?: string; approval_date?: string; url?: string }[];
+    summary: { typezone: string[]; constructible_hint: boolean; agricole_ou_naturel: boolean }; notice: string } | null;
+  risks: { at_address: { key: string; label: string; level: string; detail?: string }[]; commune_only: { key: string; label: string; level: string }[];
+    argile?: { label: string; level: string } | null; radon?: { label: string; level: string } | null; catnat?: { count: number } | null; partial?: boolean; source_url?: string } | null;
+  roads: EnvItem[]; railways: EnvItem[]; water: EnvItem[]; green_spaces: EnvItem[]; services: EnvItem[]; transport: EnvItem[];
+  industrial_sites: EnvItem[]; aerodromes: EnvItem[]; nuisances: EnvItem[];
+  nearby_parcels: { id: string; section: string; numero: string; surface_m2: number; built: boolean; distance_m: number; adjacent: boolean }[];
+  rings: { label: string; buildings: number; roads: number; services: number; transport: number; green: number; water: number; industrial: number; unbuilt_parcels: number }[];
+  sources: EnvSource[];
+  unavailable: string[];
+  limits: string[];
+}
+export interface EnvReport {
+  model?: string;
+  sections: Record<string, string | string[]> | null;
+  titles?: Record<string, string>;
+  order?: string[];
+  disclaimer?: string;
+  error?: string;
+}
+export interface EnvironmentResult {
+  property_id: string;
+  created_at: string;
+  cached: boolean;
+  analysis: EnvAnalysis;
+  report: EnvReport | null;
+  estimation_adjustments: Adjustment[];
+}
+
 export interface PackStatus {
   property_id: string;
   unlocked: boolean;
@@ -743,7 +806,8 @@ export const api = {
   putWeights: (w: Weights) => request<Weights>("/settings/weights", { method: "PUT", body: JSON.stringify(w) }),
   marketSignal: (id: string) => request<MarketSignal>(`/properties/${id}/market-signal`),
   listListings: (id: string) => request<Listing[]>(`/properties/${id}/listings`),
-  createListing: (id: string, body: { style: ListingStyle; extra_facts: string | null; include_price: boolean }) =>
+  environmentHighlights: (id: string) => request<{ available: boolean; created_at?: string; highlights: { key: string; text: string; distance_m: number; source: string }[] }>(`/properties/${id}/environment/highlights`),
+  createListing: (id: string, body: { style: ListingStyle; extra_facts: string | null; include_price: boolean; use_environment: boolean }) =>
     request<Listing>(`/properties/${id}/listings`, { method: "POST", body: JSON.stringify(body) }),
   deleteListing: (id: string, lid: string) => request<{ deleted: boolean }>(`/properties/${id}/listings/${lid}`, { method: "DELETE" }),
   listPhotos: (id: string) => request<Photo[]>(`/properties/${id}/photos`),
@@ -771,6 +835,13 @@ export const api = {
   nextSteps: () => request<{ properties: PropertyNextSteps[] }>("/next-steps"),
   propertyNextSteps: (id: string) => request<PropertyNextSteps>(`/properties/${id}/next-steps`),
   packStatus: (id: string) => request<PackStatus>(`/properties/${id}/pack/status`),
+  environment: (id: string, refresh = false) => request<EnvironmentResult>(`/properties/${id}/environment${refresh ? "?refresh=true" : ""}`),
+  /** Orthophoto IGN + parcellaire (WMS Géoplateforme) centrée sur le bien — rendu statique, sans clé. */
+  environmentMapUrl: (lon: number, lat: number, zoomM = 130, w = 640, h = 400) => {
+    const dLat = zoomM / 111_320;
+    const dLon = dLat / Math.cos((lat * Math.PI) / 180) * (w / h);
+    return `https://data.geopf.fr/wms-r/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=ORTHOIMAGERY.ORTHOPHOTOS,CADASTRALPARCELS.PARCELLAIRE_EXPRESS&STYLES=&CRS=EPSG:4326&BBOX=${lat - dLat},${lon - dLon},${lat + dLat},${lon + dLon}&WIDTH=${w}&HEIGHT=${h}&FORMAT=image/png`;
+  },
   redeemPromo: (code: string) => request<{ unlocked: boolean; code: string }>(`/promo/redeem`, { method: "POST", body: JSON.stringify({ code }) }),
   packCheckout: (id: string, return_url: string) =>
     request<{ order_id: string; checkout_url: string }>(`/properties/${id}/pack/checkout`, { method: "POST", body: JSON.stringify({ return_url }) }),
