@@ -11,6 +11,7 @@ import { useSession } from "@/src/auth";
 import { isExpoGo, nativeStoreAvailable, purchasePack, restorePack } from "@/src/iap";
 import { PackPreview } from "@/src/components/PackPreview";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
+import { PromoCodeCard } from "@/src/components/PromoCodeCard";
 import { ScreenHeader } from "@/src/components/ScreenHeader";
 import { ShareReportButton } from "@/src/components/ShareReportButton";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
@@ -119,7 +120,7 @@ export default function PackScreen() {
             <View style={styles.unlockedCard} testID="pack-unlocked">
               <LockOpenIcon size={22} color={colors.success} weight="fill" />
               <View style={{ flex: 1 }}>
-                <Text style={styles.unlockedTitle}>Pack débloqué pour ce bien</Text>
+                <Text style={styles.unlockedTitle}>{d.promo_active ? "Pack débloqué par code d’accès" : "Pack débloqué pour ce bien"}</Text>
                 <Text style={styles.p}>Annonce IA, retouches photo illimitées, lecture des documents et PDF premium débloqués.</Text>
                 {d.last_order?.status === "paid" && d.last_order.customer_email ? (
                   <Text style={styles.hint} testID="pack-receipt">
@@ -245,6 +246,7 @@ export default function PackScreen() {
                 </Text>
               </>
             )}
+            <PromoCodeCard propertyId={id!} />
           </>
         )}
       </ScrollView>

@@ -94,6 +94,8 @@ async def is_unlocked(db, pid: str) -> bool:
     if await db.orders.find_one({"property_id": pid, "status": "paid"}, {"_id": 1}) is not None:
         return True
     user = auth.current_user_var.get()
+    if user and user.get("promo_code"):  # code promo testeur : tout le compte
+        return True
     return bool(user) and (user.get("email") or "").lower() in comp_emails()
 
 

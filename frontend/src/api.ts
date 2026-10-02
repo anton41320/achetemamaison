@@ -697,6 +697,7 @@ export interface PropertyNextSteps {
 export interface PackStatus {
   property_id: string;
   unlocked: boolean;
+  promo_active: boolean;
   price_cents: number;
   currency: string;
   payments_available: boolean;
@@ -770,6 +771,7 @@ export const api = {
   nextSteps: () => request<{ properties: PropertyNextSteps[] }>("/next-steps"),
   propertyNextSteps: (id: string) => request<PropertyNextSteps>(`/properties/${id}/next-steps`),
   packStatus: (id: string) => request<PackStatus>(`/properties/${id}/pack/status`),
+  redeemPromo: (code: string) => request<{ unlocked: boolean; code: string }>(`/promo/redeem`, { method: "POST", body: JSON.stringify({ code }) }),
   packCheckout: (id: string, return_url: string) =>
     request<{ order_id: string; checkout_url: string }>(`/properties/${id}/pack/checkout`, { method: "POST", body: JSON.stringify({ return_url }) }),
   packPdfUrl: (id: string, style: ListingStyle) => withToken(`${BASE}/properties/${id}/pack.pdf?style=${style}`),

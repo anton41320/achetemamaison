@@ -23,6 +23,7 @@ import communes
 import completion
 import dossier as dossier_mod
 import feedback
+import promo
 import dvf_ingest
 import georisques
 import hedonic
@@ -67,6 +68,7 @@ public = APIRouter(prefix="/api")       # routes publiques
 auth.init(db)
 iap.init(db)
 feedback.init(db)
+promo.init(db)
 
 
 def _prop_response(doc: dict) -> dict:
@@ -607,6 +609,7 @@ async def _pack_status(pid: str) -> dict:
     n_photos = await db.photos.count_documents({"property_id": pid, "deleted_at": None})
     n_listings = await db.listings.count_documents({"property_id": pid, "deleted_at": None})
     return {"property_id": pid, "unlocked": unlocked, "price_cents": pack.PACK_PRICE_CENTS, "currency": pack.PACK_CURRENCY,
+            "promo_active": promo.user_has_promo(auth.current_user_var.get()),
             **pack.payments_config(), "free_retouches": pack.FREE_RETOUCHES, "retouches_used": used,
             "photos": n_photos, "listings": n_listings,
             "last_order": {"order_id": str(last["_id"]), "status": last["status"], "customer_email": last.get("customer_email"),
@@ -1058,6 +1061,7 @@ app.include_router(legal.router)  # https://<domaine>/privacy (hôte déployé :
 app.include_router(auth.router)
 app.include_router(iap.router, prefix="/api")
 app.include_router(feedback.router, prefix="/api", dependencies=[Depends(auth.require_user)])
+app.include_router(promo.router, prefix="/api", dependencies=[Depends(auth.require_user)])
 app.include_router(iap.webhook_router, prefix="/api")
 app.include_router(api, dependencies=[Depends(auth.require_user)])
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
