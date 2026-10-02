@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import timedelta, timezone
 from typing import Optional
 
+from estimator import RANGE_HALF
 from models import Estimation, MarketEstimate, Weights
 
 
@@ -16,8 +17,8 @@ def market_estimate(est: Estimation, surface: float) -> Optional[MarketEstimate]
     land = next((a.amount for a in est.adjustments if a.key == "land"), 0.0)
     value = level.median_pm2 * surface * (1 + pct_total) + land
     return MarketEstimate(
-        value=float(int(round(value / 1000)) * 1000), low=float(int(round(value * 0.85 / 1000)) * 1000),
-        high=float(int(round(value * 1.15 / 1000)) * 1000), price_m2=float(int(round(value / surface / 10)) * 10),
+        value=float(int(round(value / 1000)) * 1000), low=float(int(round(value * (1 - RANGE_HALF) / 1000)) * 1000),
+        high=float(int(round(value * (1 + RANGE_HALF) / 1000)) * 1000), price_m2=float(int(round(value / surface / 10)) * 10),
         label=f"Prix/m² médian {level.label.lower()}", count=level.count,
     )
 
@@ -44,8 +45,7 @@ def blend(est: Estimation, weights: Weights) -> dict:
         active = [comps[0]]
         total = 1.0
     value = sum(c["value"] * c["weight"] for c in active) / total
-    low = sum(c["low"] * c["weight"] for c in active) / total
-    high = sum(c["high"] * c["weight"] for c in active) / total
+    low, high = value * (1 - RANGE_HALF), value * (1 + RANGE_HALF)
     for c in comps:
         c["effective_weight"] = round(c["weight"] / total, 3) if c in active else 0.0
     return {

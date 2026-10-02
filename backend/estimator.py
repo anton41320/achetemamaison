@@ -22,9 +22,8 @@ MARKET_YEARS = 3
 SEARCH_RADIUS_M = 10000
 SIZE_RATIO = (0.4, 2.5)  # a commune is "of similar size" when its population is within 0,4× – 2,5× the target's
 TIGHT_TOL = 0.15  # surface tolerance tried first at each radius (less price/m² dispersion)
-IRREDUCIBLE = 0.07  # unobserved specifics of the property after declared adjustments
+RANGE_HALF = 0.05  # fourchette affichée : ±5 % autour de la valeur centrale (choix produit) ; l'incertitude réelle est portée par la dispersion
 SIZE_ELASTICITY = 0.20  # price/m² ∝ surface^-0.20 (hedonic log-surface coefficient ≈ 0.80)
-MAX_HALF = 0.15  # widest range shown when data is viable; the confidence score carries the residual risk
 METHOD_VERSION = "comparables_dvf_v4"  # bump when the range/selection/hedonic logic changes: stored estimations auto-refresh
 
 # (label, radius_m or None = same commune, surface tolerance, restrict to communes of similar size)
@@ -415,16 +414,10 @@ def estimate_from_candidates(cands: list[dict], *, surface: float, ptype: str, c
                          hint=f"Périmètre retenu : {level_label} · distance médiane pondérée {w_dist_med / 1000:.1f} km".replace(".", ",")),
     ]
 
-    # Range half-width = uncertainty on the *central value*, not the spread of individual sales.
-    # Sampling error of the weighted median combined with an irreducible floor for unobserved specifics,
-    # widened when confidence is low or sales are old, and capped so the range stays actionable.
-    half = math.sqrt(se_median ** 2 + IRREDUCIBLE ** 2)
-    if med_age > 2.0:
-        half += 0.02
-    half *= 1 + (100 - score) / 400
-    half = clamp(half, 0.07, MAX_HALF if score >= 45 else MAX_HALF + 0.05)
+    # Fourchette fixe ±5 % autour de la valeur centrale ; la fiabilité (dispersion, nombre de ventes) est exposée à part.
+    half = RANGE_HALF
     if insufficient:
-        half = max(half, 0.25)
+        notes.append("Peu de ventes comparables : la fourchette de ±5 % doit être lue avec prudence.")
 
     if med_age > 2.5:
         notes.append("Les ventes retenues sont relativement anciennes : le marché a pu évoluer depuis.")
