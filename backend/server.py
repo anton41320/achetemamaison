@@ -986,7 +986,8 @@ async def property_report(pid: str, photos: bool = Query(default=True)):
         raise HTTPException(status_code=422, detail="Aucune estimation disponible")
     imgs = await _property_photos(pid, 8) if photos else []
     risks = await db.risks.find_one({"_id": prop.id})
-    pdf = await asyncio.to_thread(build_report, prop, blend(prop.estimation, await _get_weights()), imgs, risks)
+    environment = await db.env_analyses.find_one({"_id": pid}, {"analysis": 1, "report": 1, "created_at": 1})
+    pdf = await asyncio.to_thread(build_report, prop, blend(prop.estimation, await _get_weights()), imgs, risks, environment)
     filename = f"estimo-{pid[-6:]}.pdf"
     return Response(content=pdf, media_type="application/pdf",
                     headers={"Content-Disposition": f'inline; filename="{filename}"'})

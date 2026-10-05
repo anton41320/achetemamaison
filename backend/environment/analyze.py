@@ -248,7 +248,9 @@ async def analyze(db, *, address: Optional[str] = None, lon: Optional[float] = N
             terrain["slope_pct"], terrain["aspect"] = spatial.slope_aspect(pts)
             terrain["elevation_range_m"] = round(max(p[2] for p in pts) - min(p[2] for p in pts), 1)
     if data.get("clc"):
-        c = data["clc"][0]
+        from shapely.geometry import shape as _shape
+        # le WFS filtre sur l'emprise des polygones : on garde celui qui contient réellement le point (coordonnées Lambert-93 natives)
+        c = next((x for x in data["clc"] if _shape(x["geometry"]).contains(origin)), None) or min(data["clc"], key=lambda x: x.get("area_ha") or 1e12)
         terrain["landcover"] = {"code": c["code"], "label": c["label"], "source": "clc", "precision": "classe au 1/100 000 (unité minimale 25 ha) — ne décrit pas la parcelle"}
     nearest_water = min([w["distance_m"] for w in water], default=None)
     terrain["nearest_water_m"] = nearest_water

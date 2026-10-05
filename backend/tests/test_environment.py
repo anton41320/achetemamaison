@@ -94,3 +94,32 @@ def test_listing_highlights_prioritized_and_capped():
     assert "Dr X" not in facts_block(env)  # pas de nom de professionnel de santé
     assert "2 commerces alimentaires à moins de 340 m" in facts_block(env)
     assert neighbourhood_highlights({"services": [], "transport": [], "green_spaces": [], "water": [], "terrain": {}}) == [] and facts_block({"services": []}) is None
+
+
+def test_pdf_environment_section_builds_without_crash():
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.platypus import Table
+
+    from environment.pdf import environment_section
+    ss = getSampleStyleSheet()
+    body = ParagraphStyle("b", parent=ss["BodyText"], fontSize=9)
+    small = ParagraphStyle("s", parent=body, fontSize=8)
+    env_doc = {"created_at": "2026-10-02T12:00:00", "analysis": {
+        "generated_at": "2026-10-02T12:00:00+00:00", "parcel": {"section": "AO", "numero": "0329", "contenance_m2": 14080}, "building": {"footprint_m2": 22},
+        "density": {"built_ratio_pct": 9.5, "buildings": 361, "nearest_m": 1}, "terrain": {"altitude_m": 93.6, "slope_pct": 5.1, "aspect": "pente exposée sud", "landcover": {"label": "Prairies"}},
+        "green_spaces": [{"nature": "Bois", "distance_m": 34, "direction": "nord", "source": "bdtopo"}], "water": [], "roads": [{"name": "D 976", "importance_label": "axe principal", "distance_m": 76, "direction": "est", "source": "bdtopo"}],
+        "railways": [], "transport": [], "services": [{"name": "École <Jules & Ferry>", "category": "ecole", "distance_m": 210, "direction": "sud", "source": "bdtopo"}],
+        "nuisances": [{"label": "Voie ferrée", "type": "voie ferrée", "distance_m": 253, "source": "bdtopo"}],
+        "risks": {"at_address": [{"label": "Pollution des sols", "level": "info"}], "commune_only": [{"label": "Séisme"}]},
+        "urbanism": {"zones": [{"libelle": "N", "typezone": "N", "reglement": "41039_reglement.pdf"}], "servitudes": [{"libelle": "A4"}], "prescriptions": [], "notice": "Vérifier."},
+        "nearby_parcels": [{"section": "AO", "numero": "0328", "surface_m2": 604, "built": False, "distance_m": 9, "adjacent": True}],
+        "sources": [{"id": "bdtopo", "name": "IGN BD TOPO", "kind": "official", "licence": "LO 2.0", "fetched_at": "2026-10-02T12:00:00+00:00", "status": "ok"}],
+        "limits": ["Distances à vol d'oiseau."]},
+        "report": {"sections": {"resume": "Texte <b>", "nuisances": "N", "a_verifier": ["Vérifier X"]}, "titles": {"resume": "Résumé"}, "disclaimer": "IA."}}
+    flow = environment_section(env_doc, ParagraphStyle("h2", parent=ss["Heading2"]), body, small, lambda rows, widths, style: Table(rows, colWidths=widths))
+    assert len(flow) > 20
+    # rendu effectif (échappement XML des « < » et « & »)
+    from io import BytesIO
+    from reportlab.lib.pagesizes import A4
+    from reportlab.platypus import SimpleDocTemplate
+    SimpleDocTemplate(BytesIO(), pagesize=A4).build(flow)

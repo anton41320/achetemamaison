@@ -40,7 +40,7 @@ def pct(p: float, digits: int = 1) -> str:
 
 
 def build_report(prop: PropertyDoc, final: Optional[dict] = None, photos: Optional[list[tuple[bytes, bool]]] = None,
-                 risks: Optional[dict] = None) -> bytes:
+                 risks: Optional[dict] = None, environment: Optional[dict] = None) -> bytes:
     est = prop.estimation
     assert est is not None
     buf = BytesIO()
@@ -144,6 +144,11 @@ def build_report(prop: PropertyDoc, final: Optional[dict] = None, photos: Option
 
     if risks:
         story.extend(risks_section(risks, h2, body, small))
+
+    if environment:
+        from environment.pdf import environment_section
+
+        story.extend(environment_section(environment, h2, body, small, _table))
 
     # Photos (retouched preferred), 2 per row
     if photos:
