@@ -1,0 +1,31 @@
+{
+  "summary": "Iter 24 verification — ALL GREEN. Backend 3/3 pytest (iter24_sanity.xml): (1) GET /api/properties/PROP_A/environment returns cached=True in 0.3s (<3s) with full report.sections; (2) GET /api/properties/PROP_A estimation.low/high == round(value*0.95, 1000) / round(value*1.05, 1000) within ±1000€ (verified value=115 000, low=109 000, high=121 000); (3) POST /api/properties/PROP_A/photos (multipart JPEG 640x480) → 201 + listed via GET → DELETE /api/photos/{id} → removed. Frontend (Expo web, 390x844, Playwright): (A) Password toggle — DOM input.type on signin-password goes password→text→password on 2 taps of 'signin-password-toggle-visibility'; same on signup-password with 'signup-password-toggle-visibility' (password→text). (B) Logos — welcome-logo horizontally centered (center=195.0, vw/2=195.0, diff=0.0px ≤ 4); signin-screen-logo left-aligned with wordmark (x=16); home-logo visible in connected header at x=16 y=11 w=40. (C) Environment — property detail shows environment-button with subtitle 'Analyse intégrée à l’estimation (+1,5 %)', Fourchette 109 k€ – 121 k€ (±5% of 115 000), 'BD TOPO' appears 3× in 'Comment est calculée la fourchette ?'. Tapping navigates to /environment, environment-screen rendered, environment-map IGN tile loads (img.naturalWidth=640), environment-impact-pct='+1,5 %'. env-toggle-mobilite expands (959 chars) and env-toggle-risques expands (1051 chars, 'Source' present). environment-sources contains 7 'consultée le' entries (≥5). environment-see-estimation navigates back to /property/{id}. (D) Photo gallery import — on /property/{id}/photos, clicking 'photos-pick-library' triggers an HTML file chooser (page.expect_file_chooser()); feeding 2 generated JPEGs (640x480) → 'photos-upload-queue' appears, both uploads succeed sequentially, photo cards count goes 0→2. Both uploaded photos deleted via photo-delete-{i} (final count back to 0). Zero red console errors across all screens. Deprecated packages / SafeAreaView issues: none newly introduced.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter24_sanity.py",
+    "/app/test_reports/pytest/iter24_sanity.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Form.tsx: Field component correctly derives eye-icon from `secureTextEntry` prop and exposes testID '{testID}-toggle-visibility' (lines 33-44). hitSlop=8 keeps the 44x44 target comfortable; EyeIcon/EyeSlashIcon swap on each tap via local useState — clean, no prop drilling.",
+    "BrandLogo.tsx: wordmark='column' uses alignItems:'center' (styles.column) → welcome-logo centering is driven by the wrap View, confirmed centered within the welcome AuthShell content (diff 0.0 px at 390 px viewport).",
+    "server.py: _run_estimation applies env_pct AFTER base estimation then re-rounds low/high to 1000 € (lines 103-105). The ±5% band is enforced in estimator.py:435-436 (RANGE_HALF=0.05) and preserved through env adjustments within ±1000 € tolerance — observed 115k → 109k/121k.",
+    "photos.tsx: uploadAll iterates sequentially (line 49-58) with per-file progress patching; on web Platform.OS==='web' hides camera/files buttons so only 'Galerie' is shown (lines 165-176) — matches the brief ('Fichiers' only on Android). ImagePicker.launchImageLibraryAsync({ allowsMultipleSelection:true }) on web triggers a standard <input type='file' multiple> under the hood → page.expect_file_chooser() works as expected.",
+    "No regression on iteration 23 environment flow — cached response <1s, all 12 report sections present, env_* adjustments total +1.5% visible on property detail."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter24_sanity.py (new)"
+  ],
+  "success_rate": {"backend": "100% (3/3)", "frontend": "100% (4/4 flows)"},
+  "seed_data_creation": "None persistent. Two TEST_ JPEGs uploaded then deleted via UI (photo-delete-{i}); DELETE verified via backend test as well. Account delivered@resend.dev final photo count unchanged.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login: delivered@resend.dev / Estimo2026!. PROP_A=6aa3f68d440f04920cdaffde. Expected estimation: value=115 000 €, low=109 000 €, high=121 000 € (±5% rounded to 1000). environment cached (envPct=+1.5%). On web, only 'Galerie' button is visible on /photos (camera + files are Android-only — do not test on web). File picker test works with page.expect_file_chooser() + fc.set_files([...]) ; cleanup via photo-delete-{i} (dialog handler needed to accept confirm).",
+  "rca_of_issue": "N/A — verification iteration. All four target flows (password eye toggle, logo centering, environment integration, web gallery import) passed without changes."
+}
