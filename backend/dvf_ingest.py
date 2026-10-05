@@ -170,9 +170,14 @@ def ingest_all(mongo_url: str, db_name: str, depts: list[str], years: list[int],
                     else:
                         size = path.stat().st_size
                         docs = parse_file(path, dept, year)
-                        db.dvf_sales.delete_many({"dept": dept, "year": year})
+                        # Bascule sans trou : on insère le nouveau lot (tag `batch`) puis on retire l'ancien lot seulement
+                        # après succès — les données existantes restent servies si l'insertion échoue en cours de route.
+                        batch = f"{dept}_{year}_{int(datetime.now(timezone.utc).timestamp())}"
+                        for d in docs:
+                            d["batch"] = batch
                         for i in range(0, len(docs), 5000):
                             db.dvf_sales.insert_many(docs[i:i + 5000])
+                        db.dvf_sales.delete_many({"dept": dept, "year": year, "batch": {"$ne": batch}})
                         db.dvf_files.replace_one({"_id": f"{dept}_{year}"}, {"_id": f"{dept}_{year}", "dept": dept, "year": year, "size": size,
                                                                             "sales": len(docs), "ingested_at": datetime.now(timezone.utc)}, upsert=True)
                         path.unlink(missing_ok=True)  # France entière ≈ plusieurs Go de .gz : on ne garde pas les fichiers

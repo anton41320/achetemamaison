@@ -21,6 +21,7 @@ from starlette.middleware.cors import CORSMiddleware
 import auth
 import communes
 import completion
+import departements
 import dossier as dossier_mod
 import feedback
 import promo
@@ -53,7 +54,12 @@ logger = logging.getLogger("estimo")
 
 mongo_url = os.environ["MONGO_URL"]
 db_name = os.environ["DB_NAME"]
-DVF_DEPARTMENTS = [d.strip() for d in os.environ["DVF_DEPARTMENTS"].split(",") if d.strip()]
+# Couverture nationale décidée dans le code : une variable d'environnement DVF_DEPARTMENTS figée sur un ancien déploiement
+# (ex. 3 départements pilotes) ne doit plus restreindre la zone couverte.
+DVF_DEPARTMENTS = departements.ALL_FRANCE
+_env_depts = [d.strip() for d in os.environ.get("DVF_DEPARTMENTS", "").split(",") if d.strip()]
+if _env_depts and set(_env_depts) != set(DVF_DEPARTMENTS):
+    logging.getLogger("server").warning("DVF_DEPARTMENTS (env, %d départements) ignoré : couverture France entière (%d) appliquée", len(_env_depts), len(DVF_DEPARTMENTS))
 DVF_YEARS = [int(y) for y in os.environ["DVF_YEARS"].split(",") if y.strip()]
 # Les nouveaux millésimes sont intégrés automatiquement : la liste s'étend jusqu'à l'année en cours.
 DVF_YEARS = sorted(set(DVF_YEARS) | set(range(max(DVF_YEARS) + 1, datetime.now().year + 1)))
@@ -92,7 +98,7 @@ async def _run_estimation(p: PropertyIn | PropertyDoc):
             features=p.features,
         )
     except NoDataError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
+        raise HTTPException(status_code=await _no_data_status(p), detail=await _no_data_message(p, str(exc)))
     # Micro-localisation : ajustements environnement (si l'analyse du bien existe), bornés et transparents
     env_doc = await db.env_analyses.find_one({"_id": p.id}, {"analysis": 1}) if getattr(p, "id", None) else None
     if env_doc and env_doc.get("analysis"):
@@ -140,6 +146,40 @@ async def _get_weights() -> Weights:
     doc = await db.settings.find_one({"_id": "weights"}) or {}
     doc.pop("_id", None)
     return Weights(**doc)
+
+
+# Départements absents de DVF (livre foncier d'Alsace-Moselle, Mayotte) : aucune vente publiée par la DGFiP.
+DVF_NOT_COVERED = {"57": "Moselle", "67": "Bas-Rhin", "68": "Haut-Rhin", "976": "Mayotte"}
+
+
+def _dept_of(code_commune: str | None) -> str:
+    c = code_commune or ""
+    return c[:3] if c.startswith("97") else c[:2]
+
+
+async def _dept_loaded(dept: str) -> bool:
+    return await db.dvf_sales.count_documents({"dept": dept}, limit=1) > 0
+
+
+async def _no_data_status(p) -> int:
+    dept = _dept_of(getattr(p, "code_commune", None))
+    if dept in DVF_NOT_COVERED or await _dept_loaded(dept):
+        return 422
+    return 503  # données du département pas encore chargées (déploiement récent) : réessayer plus tard
+
+
+async def _no_data_message(p, default: str) -> str:
+    dept = _dept_of(getattr(p, "code_commune", None))
+    if dept in DVF_NOT_COVERED:
+        return (f"Le département {DVF_NOT_COVERED[dept]} ({dept}) n’est pas couvert par la base DVF de la DGFiP (livre foncier) : "
+                "aucune vente de référence n’est publiée, l’estimation par comparables est impossible.")
+    if dept and not await _dept_loaded(dept):
+        status = await db.dvf_meta.find_one({"_id": "status"}) or {}
+        running = status.get("state") == "running" or _ingest_running()
+        pct = f" ({round((status.get('progress') or 0) * 100)} %)" if running else ""
+        return (f"Les ventes du département {dept} sont en cours de chargement{pct}. Réessayez dans quelques minutes."
+                if running else f"Les ventes du département {dept} ne sont pas encore chargées sur ce serveur. Réessayez un peu plus tard ; si le problème persiste, signalez-le.")
+    return default
 
 
 def _ingest_running() -> bool:
