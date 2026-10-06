@@ -55,6 +55,33 @@ export function FeaturesForm({ propertyType, value, onChange }: Props) {
         options={[{ value: "na", label: "—" }, { value: "aucun", label: "Aucun" }, { value: "un", label: "1" }, { value: "deux_plus", label: "2+" }]}
       />
       {maison ? <Yn k="outbuilding" label="Dépendance / abri" testID="feat-outbuilding" /> : null}
+      {maison && value.outbuilding ? (
+        <View style={styles.sub}>
+          <Segmented
+            label="Type de dépendance"
+            testID="feat-outbuilding-type"
+            scroll
+            value={value.outbuilding_type ?? "na"}
+            onChange={(v) => set("outbuilding_type", v === "na" ? null : (v as Features["outbuilding_type"]))}
+            options={[
+              { value: "na", label: "—" }, { value: "bureau", label: "Bureau" }, { value: "hangar", label: "Hangar" }, { value: "grange", label: "Grange" },
+              { value: "abri_jardin", label: "Abri de jardin" }, { value: "pool_house", label: "Pool house" }, { value: "autre", label: "Autre" },
+            ]}
+          />
+          <Field
+            label="Surface de la dépendance"
+            testID="feat-outbuilding-surface"
+            placeholder="20"
+            suffix="m²"
+            keyboardType="number-pad"
+            value={value.outbuilding_surface === null ? "" : String(value.outbuilding_surface)}
+            onChangeText={(t) => {
+              const n = Number(t.replace(/[^\d]/g, ""));
+              set("outbuilding_surface", t.trim() === "" || Number.isNaN(n) || n === 0 ? null : Math.min(n, 2000));
+            }}
+          />
+        </View>
+      ) : null}
       <Segmented
         label="Exposition principale"
         testID="feat-orientation"

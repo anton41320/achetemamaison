@@ -47,6 +47,8 @@ class Features(BaseModel):
     terrace: Optional[bool] = None
     garage: Optional[Literal["aucun", "un", "deux_plus"]] = None
     outbuilding: Optional[bool] = None
+    outbuilding_type: Optional[Literal["bureau", "hangar", "grange", "abri_jardin", "pool_house", "autre"]] = None
+    outbuilding_surface: Optional[float] = Field(default=None, ge=1, le=2000)  # m²
     orientation: Optional[Literal["nord", "est", "sud", "ouest", "sud_ouest", "sud_est", "nord_est", "nord_ouest"]] = None
     # Configuration
     single_storey: Optional[bool] = None

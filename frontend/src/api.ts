@@ -329,6 +329,8 @@ export interface Features {
   terrace: boolean | null;
   garage: "aucun" | "un" | "deux_plus" | null;
   outbuilding: boolean | null;
+  outbuilding_type: "bureau" | "hangar" | "grange" | "abri_jardin" | "pool_house" | "autre" | null;
+  outbuilding_surface: number | null;
   orientation: "nord" | "est" | "sud" | "ouest" | "sud_ouest" | "sud_est" | "nord_est" | "nord_ouest" | null;
   single_storey: boolean | null;
   basement: boolean | null;
@@ -359,7 +361,7 @@ export interface Features {
 }
 
 export const EMPTY_FEATURES: Features = {
-  pool: null, fenced: null, motorized_gate: null, terrace: null, garage: null, outbuilding: null, orientation: null,
+  pool: null, fenced: null, motorized_gate: null, terrace: null, garage: null, outbuilding: null, outbuilding_type: null, outbuilding_surface: null, orientation: null,
   single_storey: null, basement: null, convertible_attic: null, pantry: null, master_suite: null, master_suite_dressing: null, master_suite_bathroom: null, master_suite_wc: null, dressing: null, bathrooms: null, heating: null, sanitation: null, dpe: null,
   double_glazing: null, air_conditioning: null, fireplace: null, solar_panels: null, floor: null, elevator: null, balcony: null,
   parking: null, cellar: null, caretaker: null, condo_fees: null, heating_mode: null, underfloor_heating: null,
@@ -541,16 +543,6 @@ export async function uploadPhoto(propertyId: string, uri: string, name: string,
   const form = new FormData();
   await appendFile(form, uri, name, type);
   return multipart<Photo>(`/properties/${propertyId}/photos`, form, onProgress);
-}
-
-export async function sendFeedback(p: { message: string; screen: string; platform: string; appVersion: string; screenshot?: { uri: string; name: string; type: string } | null }): Promise<{ ok: boolean; emailed: boolean }> {
-  const form = new FormData();
-  form.append("message", p.message);
-  form.append("screen", p.screen);
-  form.append("platform", p.platform);
-  form.append("app_version", p.appVersion);
-  if (p.screenshot) await appendFile(form, p.screenshot.uri, p.screenshot.name, p.screenshot.type);
-  return multipart(`/feedback`, form);
 }
 
 export type DocStatus = "a_verifier" | "valide" | "expire" | "erreur_ocr";

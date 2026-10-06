@@ -22,6 +22,7 @@ MARKET_YEARS = 3
 SEARCH_RADIUS_M = 10000
 SIZE_RATIO = (0.4, 2.5)  # a commune is "of similar size" when its population is within 0,4× – 2,5× the target's
 TIGHT_TOL = 0.15  # surface tolerance tried first at each radius (less price/m² dispersion)
+OUTBUILDING_LABELS = {"bureau": "Bureau indépendant", "hangar": "Hangar", "grange": "Grange", "abri_jardin": "Abri de jardin", "pool_house": "Pool house", "autre": "Dépendance"}
 RANGE_HALF = 0.05  # fourchette affichée : ±5 % autour de la valeur centrale (choix produit) ; l'incertitude réelle est portée par la dispersion
 SIZE_ELASTICITY = 0.20  # price/m² ∝ surface^-0.20 (hedonic log-surface coefficient ≈ 0.80)
 METHOD_VERSION = "comparables_dvf_v4"  # bump when the range/selection/hedonic logic changes: stored estimations auto-refresh
@@ -71,7 +72,14 @@ def feature_adjustments(ptype: str, f, value_base: float, surface: Optional[floa
     elif f.garage == "deux_plus":
         out.append(("feat_garage", "Double garage ou plus", 0.05))
     if maison and f.outbuilding:
-        out.append(("feat_outbuilding", "Dépendance / abri", 0.02))
+        label = OUTBUILDING_LABELS.get(f.outbuilding_type or "", "Dépendance")
+        surf = f.outbuilding_surface or 0
+        pct = 0.01 if f.outbuilding_type == "abri_jardin" else 0.02
+        if surf >= 100:
+            pct += 0.02
+        elif surf >= 40:
+            pct += 0.01
+        out.append(("feat_outbuilding", label + (f" {surf:g} m²" if surf else ""), pct))
     if f.orientation in ("sud", "sud_ouest", "sud_est"):
         out.append(("feat_orientation", "Exposition sud", 0.02))
     elif f.orientation == "nord":

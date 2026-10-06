@@ -52,6 +52,10 @@ def _facts(prop: PropertyDoc, include_price: bool, extra: str | None, env_block:
 
         lines.append(f"Assainissement : {SANITATION_LABELS.get(san, san)}")
     f = prop.features
+    if prop.property_type == "maison" and f.outbuilding:
+        from estimator import OUTBUILDING_LABELS
+
+        lines.append("Dépendance : " + OUTBUILDING_LABELS.get(f.outbuilding_type or "", "dépendance").lower() + (f" de {f.outbuilding_surface:g} m²" if f.outbuilding_surface else ""))
     if f.fireplace and f.fireplace != "aucune":
         lines.append(f"Chauffage d'appoint / cheminée : {FIREPLACE_LABELS[f.fireplace]}")
     if prop.property_type == "appartement":

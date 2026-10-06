@@ -23,7 +23,6 @@ import communes
 import completion
 import departements
 import dossier as dossier_mod
-import feedback
 import promo
 from environment import analyze as env_analyze, listing_facts as env_listing_facts, official as env_official, report as env_report, valuation as env_valuation
 import dvf_ingest
@@ -74,7 +73,6 @@ api = APIRouter(prefix="/api")          # routes protégées (connexion requise)
 public = APIRouter(prefix="/api")       # routes publiques
 auth.init(db)
 iap.init(db)
-feedback.init(db)
 promo.init(db)
 
 
@@ -1211,7 +1209,6 @@ app.include_router(legal.router, prefix="/api")  # https://<domaine>/api/privacy
 app.include_router(legal.router)  # https://<domaine>/privacy (hôte déployé : la racine est servie par l'API)
 app.include_router(auth.router)
 app.include_router(iap.router, prefix="/api")
-app.include_router(feedback.router, prefix="/api", dependencies=[Depends(auth.require_user)])
 app.include_router(promo.router, prefix="/api", dependencies=[Depends(auth.require_user)])
 app.include_router(iap.webhook_router, prefix="/api")
 app.include_router(api, dependencies=[Depends(auth.require_user)])
