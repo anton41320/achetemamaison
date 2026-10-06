@@ -70,7 +70,7 @@ def _facts(prop: PropertyDoc, include_price: bool, extra: str | None, env_block:
         lines.append(f"Prix de vente : {int(prop.target_price):,} € — prix fixé par le vendeur : l'annonce affiche exactement ce montant "
                      "(jamais de fourchette, jamais le mot « estimation »).".replace(",", " "))
     elif include_price and est:
-        lines.append(f"Prix indicatif : fourchette {int(est.low):,} € – {int(est.high):,} € (estimation Achètes ma maison)".replace(",", " "))
+        lines.append(f"Prix indicatif : fourchette {int(est.low):,} € – {int(est.high):,} € (estimation Achète ma maison)".replace(",", " "))
     if extra and extra.strip():
         lines.append(f"Précisions fournies par le vendeur (utilisables telles quelles) : {extra.strip()}")
     if env_block:

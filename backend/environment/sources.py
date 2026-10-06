@@ -13,7 +13,7 @@ import requests
 
 logger = logging.getLogger("environment")
 
-UA = {"User-Agent": "achetesmamaison/1.0 (analyse environnement ; contact via l'application)", "Accept": "application/json"}
+UA = {"User-Agent": "achetemamaison/1.0 (analyse environnement ; contact via l'application)", "Accept": "application/json"}
 CACHE_DAYS = 30
 _session = requests.Session()
 _session.headers.update(UA)

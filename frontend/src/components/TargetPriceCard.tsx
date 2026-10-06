@@ -80,7 +80,7 @@ export function TargetPriceCard({ propertyId, suggestedValue, estimation }: Prop
       {showForm ? (
         <View style={{ gap: spacing.md }} testID="target-form">
           <Text style={styles.p}>
-            À quel prix souhaitez-vous vendre ? Ce prix sera affiché dans votre annonce et le PDF ; Achètes ma maison le situe par rapport à l’estimation et aux signaux du marché.
+            À quel prix souhaitez-vous vendre ? Ce prix sera affiché dans votre annonce et le PDF ; Achète ma maison le situe par rapport à l’estimation et aux signaux du marché.
           </Text>
           <View style={styles.inputRow}>
             <TextInput

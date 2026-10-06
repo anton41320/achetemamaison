@@ -97,7 +97,7 @@ export default function PhotosScreen() {
   };
   const setCover = (photoId: string) => reorder.mutate([photoId, ...(photos.data ?? []).map((p) => p.id).filter((x) => x !== photoId)]);
   const retouched = (photos.data ?? []).filter((p) => p.status === "done" && p.retouched_path);
-  const exportName = (index: number, after: boolean) => `achetesmamaison-${id!.slice(-6)}-photo-${index + 1}${after ? "-retouchee" : ""}.jpg`;
+  const exportName = (index: number, after: boolean) => `achetemamaison-${id!.slice(-6)}-photo-${index + 1}${after ? "-retouchee" : ""}.jpg`;
   const exportOrUnlock = (fn: () => void) => (pack.unlocked ? fn() : router.push(`/property/${id}/pack`));
 
   // Sélecteur de fichiers système (Storage Access Framework) : fonctionne sur tout Android, sans autorisation.

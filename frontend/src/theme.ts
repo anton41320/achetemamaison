@@ -35,7 +35,7 @@ import { Appearance, StyleSheet, useColorScheme } from "react-native";
 
 export type ColorScheme = "light" | "dark";
 
-// Brand palette « Achètes ma maison » : bleu du logo (#1656C9 → #0B3B8F) sur fonds clairs teintés de bleu.
+// Brand palette « Achète ma maison » : bleu du logo (#1656C9 → #0B3B8F) sur fonds clairs teintés de bleu.
 const light = {
   surface: "#F4F7FC",
   onSurface: "#0F1F3D",

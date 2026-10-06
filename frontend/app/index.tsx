@@ -50,7 +50,7 @@ export default function HomeScreen() {
     <View style={styles.screen} testID="home-screen">
       <ScreenHeader
         title="Mes biens"
-        subtitle="Achètes ma maison · Estimations · Centre-Val de Loire"
+        subtitle="Achète ma maison · Estimations · France entière"
         leading={<BrandLogo size={40} wordmark="none" testID="home-logo" />}
         right={
           <View style={{ flexDirection: "row", gap: spacing.sm }}>
@@ -86,7 +86,7 @@ export default function HomeScreen() {
           <Image source={{ uri: EMPTY_IMAGE }} style={styles.emptyImage} contentFit="cover" transition={300} />
           <Text style={styles.emptyTitle}>Aucune estimation pour le moment</Text>
           <Text style={styles.emptyText}>
-            Renseignez l’adresse et les caractéristiques de votre bien : Achètes ma maison calcule une fourchette de valeur à
+            Renseignez l’adresse et les caractéristiques de votre bien : Achète ma maison calcule une fourchette de valeur à
             partir des ventes réelles enregistrées autour de chez vous.
           </Text>
           <PrimaryButton title="Nouvelle estimation" onPress={goNew} testID="home-empty-cta" />

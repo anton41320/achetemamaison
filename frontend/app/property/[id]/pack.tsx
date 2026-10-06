@@ -159,7 +159,7 @@ export default function PackScreen() {
                 {d.photos} photo{d.photos > 1 ? "s" : ""} · {d.retouches_used} retouchée{d.retouches_used > 1 ? "s" : ""}. Les visuels retouchés portent la mention « non contractuel ».
               </Text>
               <ShareReportButton propertyId={id!} url={api.packPdfUrl(id!, style)} label="Générer et partager le PDF"
-                fileName={`achetesmamaison-annonce-${id!.slice(-6)}.pdf`} dialogTitle="Partager l’annonce premium" testID="pack-pdf-button" />
+                fileName={`achetemamaison-annonce-${id!.slice(-6)}.pdf`} dialogTitle="Partager l’annonce premium" testID="pack-pdf-button" />
               <View style={styles.row}>
                 <PrimaryButton title="Photos & retouches" variant="ghost" onPress={() => router.push(`/property/${id}/photos`)} testID="pack-photos-button" style={{ flex: 1 }} />
                 <PrimaryButton title="Rédiger l’annonce" variant="ghost" onPress={() => router.push(`/property/${id}/listing`)} testID="pack-listing-button" style={{ flex: 1 }} />

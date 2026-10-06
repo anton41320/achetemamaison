@@ -2,7 +2,7 @@
 
 Covers:
 - POST /api/auth/login (seed account)
-- Health branding: /api/health.app == "Achètes ma maison"
+- Health branding: /api/health.app == "Achète ma maison"
 - Locked property 6aa3f68d440f04920cdaffde:
     * GET /api/properties/{id}/pack/status -> unlocked=false, free_retouches=0
     * POST /api/properties/{id}/listings -> 402 with detail starting with 'Pack annonce premium requis (49 €)'
@@ -13,7 +13,7 @@ Covers:
 - Regression on unlocked property (if any):
     * GET /api/properties/{id}/pack.pdf -> 200 application/pdf
 - PDF branding (locked property is fine):
-    * GET /api/properties/{id}/report.pdf -> 200, page 1 text contains 'Achètes ma maison · Rapport d'estimation' + at least one image
+    * GET /api/properties/{id}/report.pdf -> 200, page 1 text contains 'Achète ma maison · Rapport d'estimation' + at least one image
     * GET /api/properties/{id}/notaire.pdf -> 200
 """
 from __future__ import annotations
@@ -60,7 +60,7 @@ class TestBranding:
     def test_health_app_name(self):
         r = requests.get(f"{BASE_URL}/api/health", timeout=15)
         assert r.status_code == 200, r.text
-        assert r.json().get("app") == "Achètes ma maison", r.json()
+        assert r.json().get("app") == "Achète ma maison", r.json()
 
 
 # ---------------- Locked property paywall ----------------
@@ -160,7 +160,7 @@ class TestPdfBranding:
         reader = PdfReader(io.BytesIO(pdf_bytes))
         page1 = reader.pages[0]
         text1 = (page1.extract_text() or "").replace("\n", " ")
-        assert "Achètes ma maison" in text1, text1[:400]
+        assert "Achète ma maison" in text1, text1[:400]
         assert "Rapport d’estimation" in text1 or "Rapport d'estimation" in text1, text1[:400]
 
         # Page 1 must contain an image (logo). pypdf exposes .images

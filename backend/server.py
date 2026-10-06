@@ -69,7 +69,7 @@ BAN_URL = os.environ["BAN_URL"]
 client = AsyncIOMotorClient(mongo_url)
 db = client[db_name]
 
-app = FastAPI(title="Achètes ma maison API")
+app = FastAPI(title="Achète ma maison API")
 api = APIRouter(prefix="/api")          # routes protégées (connexion requise)
 public = APIRouter(prefix="/api")       # routes publiques
 auth.init(db)
@@ -219,7 +219,7 @@ async def _dvf_refresh_loop() -> None:
 
 @public.get("/health")
 async def health():
-    return {"status": "ok", "app": "Achètes ma maison", "departments": DVF_DEPARTMENTS}
+    return {"status": "ok", "app": "Achète ma maison", "departments": DVF_DEPARTMENTS}
 
 
 @app.get("/health", include_in_schema=False)
@@ -648,7 +648,7 @@ async def export_photo(photo_id: str, version: Literal["retouched", "original"] 
     except storage.StorageError as exc:
         raise HTTPException(status_code=502, detail=str(exc))
     out, mime = await asyncio.to_thread(photo_ai.watermark, data)
-    filename = f"achetesmamaison-{doc['property_id'][-6:]}-{photo_id[-6:]}{'-retouchee' if path != doc['original_path'] else ''}.jpg"
+    filename = f"achetemamaison-{doc['property_id'][-6:]}-{photo_id[-6:]}{'-retouchee' if path != doc['original_path'] else ''}.jpg"
     return Response(content=out, media_type=mime,
                     headers={"Content-Disposition": f'attachment; filename="{filename}"', "Cache-Control": "private, max-age=3600"})
 

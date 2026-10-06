@@ -16,7 +16,7 @@ from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, S
 
 from models import PropertyDoc
 
-APP_NAME = "Achètes ma maison"
+APP_NAME = "Achète ma maison"
 LOGO_PATH = Path(__file__).parent / "data" / "logo.png"
 BRAND = colors.HexColor("#1656C9")
 BRAND_SOFT = colors.HexColor("#E8F0FD")

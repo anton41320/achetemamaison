@@ -11,7 +11,7 @@ import auth
 
 router = APIRouter()
 
-APP_NAME = "Achètes ma maison"
+APP_NAME = "Achète ma maison"
 SUPPORT_EMAIL = "contact@achetesmamaison.fr"
 UPDATED = "17 septembre 2026"
 

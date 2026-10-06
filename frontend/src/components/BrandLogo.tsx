@@ -3,7 +3,7 @@ import { Text, View } from "react-native";
 
 import { fonts, makeStyles, radius, spacing } from "@/src/theme";
 
-export const APP_NAME = "Achètes ma maison";
+export const APP_NAME = "Achète ma maison";
 
 interface Props {
   size?: number;

@@ -82,7 +82,7 @@ export default function ListingScreen() {
     setExportedId(l.id);
     return exporter.shareListing(
       listingText(l),
-      retouched.map((p, i) => ({ uri: api.photoExportUrl(p.id), fileName: `achetesmamaison-${id!.slice(-6)}-photo-${i + 1}-retouchee.jpg` })),
+      retouched.map((p, i) => ({ uri: api.photoExportUrl(p.id), fileName: `achetemamaison-${id!.slice(-6)}-photo-${i + 1}-retouchee.jpg` })),
       `export-${l.id}`,
     );
   };

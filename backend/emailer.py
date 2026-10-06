@@ -24,7 +24,7 @@ logger = logging.getLogger("emailer")
 # Proxy email géré par Emergent — constante volontairement codée (survit au déploiement).
 EMAIL_BASE_URL = "https://integrations.emergentagent.com"
 EMAIL_KEY = os.environ.get("EMERGENT_EMAIL_KEY")
-EMAIL_FROM_NAME = os.environ.get("EMAIL_FROM_NAME", "Achètes ma maison")
+EMAIL_FROM_NAME = os.environ.get("EMAIL_FROM_NAME", "Achète ma maison")
 EMAIL_REPLY_TO = os.environ.get("EMAIL_REPLY_TO")
 
 _SHORTENERS = ("bit.ly", "tinyurl.com", "t.co", "is.gd", "cutt.ly", "goo.gl", "rebrand.ly")

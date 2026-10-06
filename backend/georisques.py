@@ -19,7 +19,7 @@ CACHE_DAYS = 30
 PARTIAL_RETRY_MINUTES = 60  # a degraded snapshot is retried at most once an hour, never on every screen open
 ICPE_RADIUS_M = 1000
 _session = requests.Session()
-_session.headers.update({"Accept": "application/json", "User-Agent": "achetesmamaison/1.0", "Connection": "close"})
+_session.headers.update({"Accept": "application/json", "User-Agent": "achetemamaison/1.0", "Connection": "close"})
 
 # key in rapport -> (our key, short label, family)
 NATURAL = {

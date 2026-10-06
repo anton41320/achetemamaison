@@ -190,7 +190,7 @@ export default function DossierScreen() {
                 propertyId={id!}
                 url={api.notaireUrl(id!)}
                 label="Exporter le dossier (PDF)"
-                fileName={`achetesmamaison-dossier-notaire-${id!.slice(-6)}.pdf`}
+                fileName={`achetemamaison-dossier-notaire-${id!.slice(-6)}.pdf`}
                 dialogTitle="Envoyer le dossier de vente"
                 testID="notaire-export-button"
               />
