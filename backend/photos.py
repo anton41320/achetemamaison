@@ -9,6 +9,13 @@ from pathlib import Path
 
 from PIL import Image, ImageFilter, ImageOps
 
+try:  # HEIC / HEIF / AVIF (photos iPhone partagées, certains Android)
+    from pillow_heif import register_heif_opener
+
+    register_heif_opener()
+except Exception:  # noqa: BLE001
+    pass
+
 MODEL = "gemini-3.1-flash-image-preview"
 MAX_SIDE = 1600
 

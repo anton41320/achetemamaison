@@ -596,8 +596,12 @@ async def upload_photo(pid: str, file: UploadFile = File(...)):
         raise HTTPException(status_code=413, detail="Photo trop lourde (15 Mo max)")
     try:
         data, mime = await asyncio.to_thread(photo_ai.normalize, raw)
-    except Exception:  # noqa: BLE001
-        raise HTTPException(status_code=422, detail="Fichier image illisible (JPEG, PNG, HEIC attendus)")
+    except Exception as exc:  # noqa: BLE001
+        # Diagnostic (journal serveur) : type annoncé, nom, taille, signature des premiers octets
+        logger.warning("Photo illisible pour %s : content_type=%s filename=%s size=%d magic=%s err=%s", pid, file.content_type, file.filename,
+                       len(raw), raw[:12].hex(), str(exc)[:120])
+        hint = "fichier vide" if not raw else f"format non reconnu (en-tête {raw[:4].hex()})"
+        raise HTTPException(status_code=422, detail=f"Fichier image illisible : {hint}. Formats acceptés : JPEG, PNG, WebP, HEIC.")
     path = f"{storage.APP_NAME}/properties/{pid}/{uuid.uuid4()}.jpg"
     try:
         await asyncio.to_thread(storage.put_object, path, data, mime)

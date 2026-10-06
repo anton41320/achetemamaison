@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowDownIcon, ArrowUpIcon, CameraIcon, CheckCircleIcon, DownloadSimpleIcon, FolderOpenIcon, ImagesIcon, LockKeyIcon, ShareNetworkIcon, SparkleIcon, StarIcon, TrashIcon, WarningIcon } from "phosphor-react-native";
@@ -17,6 +18,29 @@ import { ScreenHeader } from "@/src/components/ScreenHeader";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
 type Source = "library" | "camera";
+
+const EXT_MIME: Record<string, string> = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", heic: "image/heic", heif: "image/heif", gif: "image/gif" };
+
+/** Nom + type MIME cohérents quel que soit le sélecteur (galerie Android renvoie parfois `image/*` ou un nom sans extension). */
+function fileMeta(a: { uri: string; fileName?: string | null; mimeType?: string | null }, i: number): { name: string; type: string } {
+  const fromUri = a.uri.split("?")[0].split("/").pop() ?? "";
+  let name = (a.fileName && a.fileName.trim()) || fromUri || `photo-${i + 1}.jpg`;
+  let ext = (name.includes(".") ? name.split(".").pop()! : "").toLowerCase();
+  let type = a.mimeType && a.mimeType.startsWith("image/") && a.mimeType !== "image/*" ? a.mimeType.toLowerCase() : EXT_MIME[ext] ?? "image/jpeg";
+  if (!EXT_MIME[ext]) {
+    ext = Object.keys(EXT_MIME).find((k) => EXT_MIME[k] === type) ?? "jpg";
+    name = `${name.replace(/\.[^.]*$/, "") || `photo-${i + 1}`}.${ext}`;
+  }
+  return { name, type };
+}
+
+/** Android : un `content://` est copié dans le cache de l'app pour être envoyé comme fichier (lecture fiable par le réseau natif). */
+async function ensureFileUri(uri: string, name: string): Promise<string> {
+  if (Platform.OS !== "android" || !uri.startsWith("content://")) return uri;
+  const dest = `${FileSystem.cacheDirectory}upload-${Date.now()}-${name.replace(/[^\w.-]/g, "_")}`;
+  await FileSystem.copyAsync({ from: uri, to: dest });
+  return dest;
+}
 
 export default function PhotosScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -44,12 +68,13 @@ export default function PhotosScreen() {
 
   /** Sequential uploads (one connection at a time on mobile networks), each with its own progress bar. */
   const uploadAll = async (assets: ImagePicker.ImagePickerAsset[]) => {
-    const items = assets.map((a, i) => ({ asset: a, key: `${Date.now()}-${i}`, name: a.fileName ?? `photo-${i + 1}.jpg` }));
+    const items = assets.map((a, i) => ({ asset: a, key: `${Date.now()}-${i}`, ...fileMeta(a, i) }));
     setQueue(items.map(({ key, name }) => ({ key, name, pct: 0, status: "waiting" as const })));
     for (const it of items) {
       patchQueue(it.key, { status: "uploading" });
       try {
-        await uploadPhoto(id!, it.asset.uri, it.name, it.asset.mimeType ?? "image/jpeg", (pct) => patchQueue(it.key, { pct }));
+        const uri = await ensureFileUri(it.asset.uri, it.name);
+        await uploadPhoto(id!, uri, it.name, it.type, (pct) => patchQueue(it.key, { pct }));
         patchQueue(it.key, { status: "done", pct: 100 });
         queryClient.invalidateQueries({ queryKey: ["photos", id] });
       } catch (e) {
