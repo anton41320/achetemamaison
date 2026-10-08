@@ -742,12 +742,24 @@ export interface EnvReport {
 }
 export interface EnvironmentResult {
   property_id: string;
+  status: "done";
   created_at: string;
   cached: boolean;
   analysis: EnvAnalysis;
   report: EnvReport | null;
   estimation_adjustments: Adjustment[];
 }
+/** Analyse en cours (ou en échec) : état d'avancement à interroger toutes les 2 s. */
+export interface EnvironmentJob {
+  property_id: string;
+  status: "running" | "error";
+  stage: string | null;
+  progress: number;
+  started_at: string | null;
+  updated_at: string | null;
+  error: string | null;
+}
+export type EnvironmentResponse = EnvironmentResult | EnvironmentJob;
 
 export interface PackStatus {
   property_id: string;
@@ -827,7 +839,7 @@ export const api = {
   nextSteps: () => request<{ properties: PropertyNextSteps[] }>("/next-steps"),
   propertyNextSteps: (id: string) => request<PropertyNextSteps>(`/properties/${id}/next-steps`),
   packStatus: (id: string) => request<PackStatus>(`/properties/${id}/pack/status`),
-  environment: (id: string, refresh = false) => request<EnvironmentResult>(`/properties/${id}/environment${refresh ? "?refresh=true" : ""}`),
+  environment: (id: string, refresh = false) => request<EnvironmentResponse>(`/properties/${id}/environment${refresh ? "?refresh=true" : ""}`),
   /** Orthophoto IGN + parcellaire (WMS Géoplateforme) centrée sur le bien — rendu statique, sans clé. */
   environmentMapUrl: (lon: number, lat: number, zoomM = 130, w = 640, h = 400) => {
     const dLat = zoomM / 111_320;

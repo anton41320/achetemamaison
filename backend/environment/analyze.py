@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Awaitable, Callable, Optional
 
 from shapely.geometry import Point, mapping
 
@@ -35,12 +35,23 @@ def _feat(item: dict, origin: Point, radii: list[int], lon: float, lat: float) -
     return out, g  # type: ignore[return-value]
 
 
+Progress = Callable[[str, int], Awaitable[None]]
+
+
 async def analyze(db, *, address: Optional[str] = None, lon: Optional[float] = None, lat: Optional[float] = None,
-                  code_insee: Optional[str] = None, radii: Optional[list[int]] = None, risks: Optional[dict] = None) -> dict:
+                  code_insee: Optional[str] = None, radii: Optional[list[int]] = None, risks: Optional[dict] = None,
+                  on_progress: Optional[Progress] = None) -> dict:
     radii = sorted(radii or DEFAULT_RADII)
     rmax = radii[-1]
     sources: list[dict] = []
     unavailable: list[str] = []
+
+    async def progress(stage: str, pct: int):
+        if on_progress:
+            try:
+                await on_progress(stage, pct)
+            except Exception:  # noqa: BLE001
+                logger.debug("progress callback failed", exc_info=True)
 
     def keep(rec: dict, what: str):
         sources.append({**rec, "what": what})
@@ -51,6 +62,7 @@ async def analyze(db, *, address: Optional[str] = None, lon: Optional[float] = N
     if lon is None or lat is None:
         if not address:
             raise ValueError("Adresse ou coordonnées requises")
+        await progress("Géocodage de l'adresse (BAN)", 8)
         geo, rec = await official.geocode(db, address)
         keep(rec, "Géocodage de l'adresse")
         if not geo:
@@ -78,13 +90,25 @@ async def analyze(db, *, address: Optional[str] = None, lon: Optional[float] = N
         "gpu_docs": official.gpu_documents(db, code_insee) if code_insee else asyncio.sleep(0, result=(None, None)),
         "osm": osm.pois(db, lon, lat, min(1500, rmax)),
     }
-    results = dict(zip(tasks.keys(), await asyncio.gather(*tasks.values(), return_exceptions=True)))
-    data: dict[str, Any] = {}
     labels = {"parcels": "Parcelles cadastrales", "buildings": "Bâtiments (BD TOPO)", "roads": "Routes (BD TOPO)", "roads_major": "Grands axes (BD TOPO)",
               "rail": "Voies ferrées (BD TOPO)", "rivers": "Cours d'eau (BD TOPO)", "water": "Surfaces en eau (BD TOPO)", "vegetation": "Végétation (BD TOPO)",
               "zai": "Zones d'activité et d'intérêt (BD TOPO)", "aerodrome": "Aérodromes (BD TOPO)", "transport": "Équipements de transport (BD TOPO)",
               "sport": "Terrains de sport (BD TOPO)", "alti": "Altimétrie (RGE ALTI)", "clc": "Occupation du sol (CLC 2018)", "gpu": "Urbanisme au point (GPU)",
               "gpu_docs": "Documents d'urbanisme (GPU)", "osm": "Services et commerces (OpenStreetMap)"}
+    done_count = 0
+
+    async def tracked(key: str, coro):
+        nonlocal done_count
+        try:
+            return await coro
+        finally:
+            done_count += 1
+            await progress(f"{labels[key]} · {done_count}/{len(tasks)} sources", 10 + round(55 * done_count / len(tasks)))
+
+    await progress("Interrogation des sources officielles (IGN, Cadastre, GPU, OSM)", 10)
+    results = dict(zip(tasks.keys(), await asyncio.gather(*(tracked(k, c) for k, c in tasks.items()), return_exceptions=True)))
+    data: dict[str, Any] = {}
+    await progress("Calculs spatiaux (distances, densité, pente)", 68)
     for k, res in results.items():
         if isinstance(res, BaseException):
             logger.warning("%s failed: %s", k, res)

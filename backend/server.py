@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import time
@@ -1130,25 +1131,77 @@ async def _risks_for(lat: float, lon: float, code_insee: Optional[str], prop: Op
 
 
 async def _build_environment(*, address: Optional[str], lat: Optional[float], lon: Optional[float], code_insee: Optional[str],
-                             radii: Optional[list[int]], prop: Optional[PropertyDoc], with_report: bool) -> dict:
+                             radii: Optional[list[int]], prop: Optional[PropertyDoc], with_report: bool,
+                             progress: Optional[env_analyze.Progress] = None) -> dict:
+    async def step(stage: str, pct: int):
+        if progress:
+            await progress(stage, pct)
+
     if lat is None and address:
+        await step("Géocodage de l'adresse (BAN)", 3)
         geo, _ = await env_official.geocode(db, address)
         if not geo:
             raise HTTPException(status_code=404, detail="Adresse introuvable dans la Base Adresse Nationale")
         lat, lon, code_insee = geo["lat"], geo["lon"], geo.get("citycode")
+    await step("Risques naturels et technologiques (Géorisques)", 5)
     risks = await _risks_for(lat, lon, code_insee, prop)
     try:
-        analysis = await env_analyze.analyze(db, address=address, lon=lon, lat=lat, code_insee=code_insee, radii=radii, risks=risks)
+        analysis = await env_analyze.analyze(db, address=address, lon=lon, lat=lat, code_insee=code_insee, radii=radii, risks=risks, on_progress=progress)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     report = None
     if with_report:
+        await step("Rédaction de la synthèse par l'IA", 78)
         try:
             report = await env_report.generate_report(analysis)
         except Exception as exc:  # noqa: BLE001
             logger.exception("Environment report failed")
             report = {"error": f"Rapport IA indisponible : {str(exc)[:120]}", "sections": None}
     return {"analysis": analysis, "report": report}
+
+
+ENV_JOB_STALE_S = 240  # a job without heartbeat for 4 min is considered dead (process restart)
+
+
+def _env_job_public(job: dict) -> dict:
+    return {"status": job["status"], "stage": job.get("stage"), "progress": job.get("progress", 0), "started_at": job.get("started_at"),
+            "updated_at": job.get("updated_at"), "error": job.get("error")}
+
+
+async def _run_environment_job(pid: str, doc: dict) -> None:
+    """Analyse d'environnement en arrière-plan ; progression suivie dans `env_jobs` (interrogée par l'app)."""
+    async def progress(stage: str, pct: int):
+        await db.env_jobs.update_one({"_id": pid}, {"$set": {"stage": stage, "progress": pct, "updated_at": utcnow()}})
+
+    try:
+        prop = PropertyDoc.from_mongo(doc)
+        out = await _build_environment(address=prop.address_label, lat=prop.lat, lon=prop.lon, code_insee=prop.code_commune, radii=None, prop=prop,
+                                       with_report=True, progress=progress)
+        now = utcnow()
+        await db.env_analyses.replace_one({"_id": pid}, {"_id": pid, "property_id": pid, "created_at": now, **out, "owner_id": doc.get("owner_id")}, upsert=True)
+        await progress("Mise à jour de l'estimation", 95)
+        try:
+            await _reestimate_doc(doc)
+        except HTTPException:
+            logger.warning("Ré-estimation impossible après analyse d'environnement (%s)", pid)
+        await db.env_jobs.update_one({"_id": pid}, {"$set": {"status": "done", "stage": "Analyse terminée", "progress": 100, "updated_at": utcnow()}})
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Environment job failed (%s)", pid)
+        detail = exc.detail if isinstance(exc, HTTPException) else "Analyse interrompue : une source n'a pas répondu. Réessayez dans un instant."
+        await db.env_jobs.update_one({"_id": pid}, {"$set": {"status": "error", "error": str(detail)[:200], "updated_at": utcnow()}})
+
+
+_env_tasks: set[asyncio.Task] = set()
+
+
+async def _start_environment_job(pid: str, doc: dict) -> dict:
+    job = {"_id": pid, "property_id": pid, "status": "running", "stage": "Préparation de l'analyse", "progress": 1, "error": None,
+           "started_at": utcnow(), "updated_at": utcnow()}
+    await db.env_jobs.replace_one({"_id": pid}, job, upsert=True)
+    task = asyncio.create_task(_run_environment_job(pid, doc))
+    _env_tasks.add(task)
+    task.add_done_callback(_env_tasks.discard)
+    return job
 
 
 @api.post("/analyze")
@@ -1163,24 +1216,29 @@ async def analyze_address(body: AnalyzeIn):
 
 @api.get("/properties/{pid}/environment")
 async def property_environment(pid: str, refresh: bool = Query(default=False)):
-    """Analyse d'environnement du bien (cache 30 j). Son calcul déclenche une ré-estimation intégrant les ajustements environnement."""
+    """Analyse d'environnement du bien (cache 30 j), calculée en arrière-plan.
+
+    Répond immédiatement : soit le résultat (`status: done`), soit l'état d'avancement (`status: running`, HTTP 202) à interroger
+    toutes les 2 s. Le calcul déclenche une ré-estimation intégrant les ajustements environnement."""
     doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()})
     if not doc:
         raise HTTPException(status_code=404, detail="Bien introuvable")
+    now = datetime.now(timezone.utc)
+    job = await db.env_jobs.find_one({"_id": pid})
+    if job and job["status"] == "running":
+        if job["updated_at"].replace(tzinfo=timezone.utc) > now - timedelta(seconds=ENV_JOB_STALE_S):
+            return Response(content=json.dumps({"property_id": pid, **_env_job_public(job)}, default=str), status_code=202, media_type="application/json")
+        job = None  # heartbeat perdu (redémarrage) : on relance
     cached = await db.env_analyses.find_one({"_id": pid})
-    if cached and not refresh and cached["created_at"].replace(tzinfo=timezone.utc) > datetime.now(timezone.utc) - timedelta(days=30):
-        return {"property_id": pid, "created_at": cached["created_at"], "cached": True, **{k: cached[k] for k in ("analysis", "report")},
+    fresh = cached and cached["created_at"].replace(tzinfo=timezone.utc) > now - timedelta(days=30)
+    if fresh and not refresh:
+        return {"property_id": pid, "status": "done", "created_at": cached["created_at"], "cached": True, **{k: cached[k] for k in ("analysis", "report")},
                 "estimation_adjustments": [a for a in (doc.get("estimation") or {}).get("adjustments", []) if a["key"].startswith("env_")]}
-    prop = PropertyDoc.from_mongo(doc)
-    out = await _build_environment(address=prop.address_label, lat=prop.lat, lon=prop.lon, code_insee=prop.code_commune, radii=None, prop=prop, with_report=True)
-    now = utcnow()
-    await db.env_analyses.replace_one({"_id": pid}, {"_id": pid, "property_id": pid, "created_at": now, **out, **auth.own()}, upsert=True)
-    try:
-        updated = await _reestimate_doc(doc)
-        env_adj = [a for a in updated["estimation"]["adjustments"] if a["key"].startswith("env_")]
-    except HTTPException:
-        env_adj = []
-    return {"property_id": pid, "created_at": now, "cached": False, **out, "estimation_adjustments": env_adj}
+    if job and job["status"] == "error" and not refresh:
+        # dernier calcul en échec : pas de relance automatique en boucle, l'app propose « Réessayer » (refresh=true)
+        return {"property_id": pid, **_env_job_public(job)}
+    job = await _start_environment_job(pid, doc)
+    return Response(content=json.dumps({"property_id": pid, **_env_job_public(job)}, default=str), status_code=202, media_type="application/json")
 
 
 @api.delete("/properties/{pid}")

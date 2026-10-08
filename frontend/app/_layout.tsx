@@ -68,6 +68,8 @@ function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
         <Stack.Screen name="property/[id]/vente" />
         <Stack.Screen name="property/[id]/vendu" />
         <Stack.Screen name="property/[id]/edit" />
+        <Stack.Screen name="property/[id]/environment" />
+        <Stack.Screen name="property/[id]/visites" />
         <Stack.Screen name="property/[id]/comparables" />
         <Stack.Screen name="property/[id]/dossier" />
         <Stack.Screen name="property/[id]/listing" />

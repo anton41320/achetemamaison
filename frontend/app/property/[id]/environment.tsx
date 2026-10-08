@@ -1,12 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowsClockwiseIcon, CaretDownIcon, CaretUpIcon, InfoIcon, LinkIcon, MapPinIcon, ScalesIcon, SparkleIcon, WarningIcon } from "phosphor-react-native";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { EnvAnalysis, EnvItem, EnvironmentResult, api, formatK, formatPct } from "@/src/api";
+import { EnvAnalysis, EnvItem, EnvironmentJob, EnvironmentResult, api, formatK, formatPct } from "@/src/api";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { ScreenHeader } from "@/src/components/ScreenHeader";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
@@ -22,44 +22,98 @@ export default function EnvironmentScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const [open, setOpen] = useState<Record<string, boolean>>({ resume: true });
 
-  const q = useQuery({ queryKey: ["environment", id], queryFn: () => api.environment(id!), enabled: !!id, staleTime: 5 * 60_000, retry: 1 });
+  // L'analyse tourne côté serveur en arrière-plan : on interroge l'état toutes les 2 s tant qu'elle est en cours
+  // (réponse immédiate, aucune requête longue susceptible d'être coupée par le réseau ou la passerelle).
+  const q = useQuery({
+    queryKey: ["environment", id],
+    queryFn: () => api.environment(id!),
+    enabled: !!id,
+    staleTime: 5 * 60_000,
+    retry: 1,
+    refetchInterval: (query) => (query.state.data?.status === "running" ? 2000 : false),
+  });
   const toggle = (k: string) => setOpen((o) => ({ ...o, [k]: !o[k] }));
-  const refresh = async () => {
+  const start = async (refresh: boolean) => {
     setRefreshing(true);
     try {
-      const fresh = await api.environment(id!, true);
-      q.refetch();
-      void fresh;
+      const res = await api.environment(id!, refresh);
+      queryClient.setQueryData(["environment", id], res);
+      if (res.status === "done") queryClient.invalidateQueries({ queryKey: ["property", id] });
+    } catch (e) {
+      queryClient.setQueryData(["environment", id], { property_id: id, status: "error", stage: null, progress: 0, started_at: null, updated_at: null, error: (e as Error).message });
     } finally {
       setRefreshing(false);
     }
   };
+  const data = q.data;
+  const wasRunning = useRef(false);
+  useEffect(() => {
+    if (data?.status === "running") wasRunning.current = true;
+    else if (data?.status === "done" && wasRunning.current) {
+      wasRunning.current = false;
+      queryClient.invalidateQueries({ queryKey: ["property", id] });
+      queryClient.invalidateQueries({ queryKey: ["properties"] });
+    }
+  }, [data?.status, id, queryClient]);
 
   return (
     <View style={styles.screen} testID="environment-screen">
       <ScreenHeader title="Environnement du bien" subtitle="Données publiques · distances mesurées · IA pour la synthèse" onBack={() => router.back()} />
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xl }]}>
-        {q.isLoading || refreshing ? (
-          <View style={styles.loading} testID="environment-loading">
-            <ActivityIndicator color={colors.brandPrimary} />
-            <Text style={styles.loadingTitle}>Analyse en cours (environ 30 secondes)</Text>
-            <Text style={styles.hint}>Géocodage BAN · parcelle (Cadastre) · bâtiments, routes, eau, végétation (IGN BD TOPO) · altimétrie · occupation du sol · urbanisme (GPU) · risques (Géorisques) · services (OpenStreetMap) · rédaction du rapport</Text>
-            <View style={styles.skelMap} />
-            {[0, 1, 2].map((i) => <View key={i} style={styles.skelCard} />)}
-          </View>
-        ) : q.isError || !q.data ? (
+        {q.isLoading || refreshing || data?.status === "running" ? (
+          <Progress job={data?.status === "running" ? data : null} />
+        ) : q.isError || !data ? (
           <View style={styles.card} testID="environment-error">
             <WarningIcon size={20} color={colors.error} weight="fill" />
             <Text style={styles.p}>{(q.error as Error)?.message ?? "Analyse indisponible"}</Text>
             <PrimaryButton title="Réessayer" variant="secondary" onPress={() => q.refetch()} testID="environment-retry" />
           </View>
+        ) : data.status !== "done" ? (
+          <View style={styles.card} testID="environment-error">
+            <WarningIcon size={20} color={colors.error} weight="fill" />
+            <Text style={styles.p}>{data.error ?? "Analyse interrompue"}</Text>
+            <Text style={styles.hint}>Les sources publiques (IGN, Géorisques, GPU) sont parfois indisponibles quelques minutes.</Text>
+            <PrimaryButton title="Relancer l’analyse" variant="secondary" onPress={() => start(true)} testID="environment-retry" />
+          </View>
         ) : (
-          <Body data={q.data} open={open} toggle={toggle} onRefresh={refresh} onEstimation={() => router.push(`/property/${id}`)} />
+          <Body data={data} open={open} toggle={toggle} onRefresh={() => start(true)} onEstimation={() => router.push(`/property/${id}`)} />
         )}
       </ScrollView>
+    </View>
+  );
+}
+
+const STAGES_HINT = "Géocodage BAN · parcelle (Cadastre) · bâtiments, routes, eau, végétation (IGN BD TOPO) · altimétrie · occupation du sol · urbanisme (GPU) · risques (Géorisques) · services (OpenStreetMap) · rédaction du rapport";
+
+function Progress({ job }: { job: EnvironmentJob | null }) {
+  const styles = useStyles();
+  const { colors } = useTheme();
+  const pct = Math.max(2, Math.min(100, job?.progress ?? 2));
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setElapsed((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <View style={styles.loading} testID="environment-loading">
+      <View style={styles.progressHead}>
+        <ActivityIndicator color={colors.brandPrimary} />
+        <Text style={styles.loadingTitle}>Analyse en cours · {pct} %</Text>
+      </View>
+      <View style={styles.progressTrack} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: pct }}>
+        <View style={[styles.progressFill, { width: `${pct}%` }]} />
+      </View>
+      <Text style={styles.stage} testID="environment-stage" numberOfLines={2}>{job?.stage ?? "Connexion au serveur…"}</Text>
+      <Text style={styles.hint}>
+        Environ 30 à 60 secondes{elapsed ? ` · ${elapsed} s écoulées` : ""}. L’analyse se poursuit sur le serveur : vous pouvez quitter cet écran et revenir plus tard.
+      </Text>
+      <Text style={styles.hint}>{STAGES_HINT}</Text>
+      <View style={styles.skelMap} />
+      {[0, 1, 2].map((i) => <View key={i} style={styles.skelCard} />)}
     </View>
   );
 }
@@ -223,6 +277,10 @@ const useStyles = makeStyles((colors) => ({
   content: { padding: spacing.lg, gap: spacing.lg },
   loading: { gap: spacing.md, alignItems: "stretch" },
   loadingTitle: { fontFamily: fonts.semibold, fontSize: 15, color: colors.onSurface, textAlign: "center" },
+  progressHead: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm },
+  progressTrack: { height: 8, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary, overflow: "hidden" },
+  progressFill: { height: "100%", borderRadius: radius.pill, backgroundColor: colors.brandPrimary },
+  stage: { fontFamily: fonts.medium, fontSize: 13, color: colors.brandPrimary, textAlign: "center" },
   skelMap: { height: 200, borderRadius: radius.lg, backgroundColor: colors.skeleton },
   skelCard: { height: 96, borderRadius: radius.lg, backgroundColor: colors.skeleton },
   mapWrap: { borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.skeleton },
