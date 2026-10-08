@@ -456,7 +456,7 @@ async def _next_steps_for(doc: dict) -> dict:
     comp = completion.profile_completion(prop)
     step("features", "Compléter les caractéristiques", comp["pct"] >= 70, f"/property/{pid}/edit",
          f"Profil complété à {comp['pct']} % · " + (", ".join(comp["missing"][:3]) + "…" if comp["missing"] else "tout est renseigné"))
-    step("target", "Fixer votre prix cible", prop.target_price is not None, f"/property/{pid}",
+    step("target", "Fixer votre prix cible", prop.target_price is not None, f"/property/{pid}/vente",
          "Situez votre prix dans la fourchette et le marché")
 
     dossier = await _dossier(pid)

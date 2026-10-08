@@ -3,8 +3,8 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  ArrowsOutIcon, CaretLeftIcon, CaretRightIcon, ChartBarIcon, FolderOpenIcon, HandshakeIcon, ImagesIcon, ListBulletsIcon, PencilLineIcon,
-  RulerIcon, SparkleIcon, TargetIcon, TrashIcon, TreeIcon, WarningIcon,
+  ArrowsOutIcon, CaretLeftIcon, CaretRightIcon, ChartBarIcon, ListBulletsIcon,
+  RulerIcon, TargetIcon, TrashIcon, TreeIcon, WarningIcon,
 } from "phosphor-react-native";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -20,7 +20,7 @@ import { MlCard } from "@/src/components/MlCard";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { ShareReportButton } from "@/src/components/ShareReportButton";
 import { RisksCard } from "@/src/components/RisksCard";
-import { TargetPriceCard } from "@/src/components/TargetPriceCard";
+import { StepTabs } from "@/src/components/StepTabs";
 import { TrendCard } from "@/src/components/TrendCard";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
@@ -126,6 +126,7 @@ export default function PropertyDetailScreen() {
 
         {est ? (
           <View style={styles.body}>
+            <StepTabs propertyId={id!} current={0} />
             <View style={[styles.stepHeader, { marginTop: 0 }]} testID="step-1-header">
               <View style={styles.stepBadge}><Text style={styles.stepBadgeText}>1</Text></View>
               <View style={{ flex: 1 }}>
@@ -295,81 +296,6 @@ export default function PropertyDetailScreen() {
               <CaretRightIcon size={18} color={colors.onBrandTertiary} />
             </Pressable>
 
-            <View style={styles.stepHeader} testID="step-2-header">
-              <View style={styles.stepBadge}><Text style={styles.stepBadgeText}>2</Text></View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.stepTitle}>Mise en vente</Text>
-                <Text style={styles.stepSub}>Commencez par fixer votre prix de vente, puis préparez l’annonce.</Text>
-              </View>
-            </View>
-            <Animated.View entering={FadeInDown.delay(400).duration(320)}>
-              <TargetPriceCard propertyId={id!} suggestedValue={est.value} estimation={est} />
-            </Animated.View>
-
-            <Pressable
-              testID="photos-button"
-              accessibilityRole="button"
-              onPress={() => router.push(`/property/${id}/photos`)}
-              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.85 }]}
-            >
-              <ImagesIcon size={20} color={colors.onBrandTertiary} />
-              <Text style={styles.linkLabel}>Photos & retouche IA</Text>
-              <CaretRightIcon size={18} color={colors.onBrandTertiary} />
-            </Pressable>
-
-            <Pressable
-              testID="write-listing-button"
-              accessibilityRole="button"
-              onPress={() => router.push(`/property/${id}/listing`)}
-              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.85 }]}
-            >
-              <PencilLineIcon size={20} color={colors.onBrandTertiary} />
-              <Text style={styles.linkLabel}>Rédiger l’annonce avec l’IA</Text>
-              <CaretRightIcon size={18} color={colors.onBrandTertiary} />
-            </Pressable>
-            <Pressable
-              testID="visits-button"
-              accessibilityRole="button"
-              onPress={() => router.push(`/property/${id}/visites`)}
-              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.85 }]}
-            >
-              <HandshakeIcon size={20} color={colors.onBrandTertiary} />
-              <Text style={styles.linkLabel}>Conseils pour les visites</Text>
-              <CaretRightIcon size={18} color={colors.onBrandTertiary} />
-            </Pressable>
-
-            <Pressable
-              testID="pack-button"
-              accessibilityRole="button"
-              onPress={() => router.push(`/property/${id}/pack`)}
-              style={({ pressed }) => [styles.linkRow, styles.linkRowPremium, pressed && { opacity: 0.85 }]}
-            >
-              <SparkleIcon size={20} color={colors.onBrandPrimary} weight="fill" />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.linkLabel, { color: colors.onBrandPrimary }]}>Pack premium · 49 €</Text>
-                <Text style={styles.linkSub}>Débloque tous les outils IA : annonce, retouches photo, lecture des documents, PDF</Text>
-              </View>
-              <CaretRightIcon size={18} color={colors.onBrandPrimary} />
-            </Pressable>
-
-            <View style={styles.stepHeader} testID="step-3-header">
-              <View style={styles.stepBadge}><Text style={styles.stepBadgeText}>3</Text></View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.stepTitle}>Vendu</Text>
-                <Text style={styles.stepSub}>Le dossier de vente complet pour signer sereinement.</Text>
-              </View>
-            </View>
-            <Pressable
-              testID="dossier-button"
-              accessibilityRole="button"
-              onPress={() => router.push(`/property/${id}/dossier`)}
-              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.85 }]}
-            >
-              <FolderOpenIcon size={20} color={colors.onBrandTertiary} />
-              <Text style={styles.linkLabel}>Dossier de vente (documents & diagnostics)</Text>
-              <CaretRightIcon size={18} color={colors.onBrandTertiary} />
-            </Pressable>
-
             <Pressable
               testID="view-comparables-button"
               accessibilityRole="button"
@@ -382,10 +308,12 @@ export default function PropertyDetailScreen() {
             </Pressable>
 
             <View style={styles.actions}>
-              <ShareReportButton propertyId={id!} />
-              <Text style={styles.detailHint} testID="report-photos-hint">
-                Le rapport PDF inclut vos photos (versions retouchées par IA si disponibles, signalées comme non contractuelles).
-              </Text>
+              <PrimaryButton
+                title="Valider l’estimation → Étape 2 : Mise en vente"
+                onPress={() => router.navigate(`/property/${id}/vente`)}
+                testID="go-step-2-button"
+              />
+              <ShareReportButton propertyId={id!} label="Partager le rapport d’estimation PDF" />
               <PrimaryButton
                 title="Modifier les caractéristiques"
                 variant="secondary"
@@ -466,8 +394,6 @@ const useStyles = makeStyles((colors) => ({
   lineValueStrong: { fontFamily: fonts.bold, fontSize: 22, color: colors.brandPrimary, fontVariant: ["tabular-nums"] },
   linkRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.brandTertiary, borderRadius: radius.md, padding: spacing.lg, minHeight: 56 },
   linkLabel: { flex: 1, fontFamily: fonts.semibold, fontSize: 15, color: colors.onBrandTertiary },
-  linkRowPremium: { backgroundColor: colors.brandPrimary },
-  linkSub: { fontFamily: fonts.regular, fontSize: 12, color: colors.onBrandPrimary, opacity: 0.85, marginTop: 2 },
   linkSubMuted: { fontFamily: fonts.regular, fontSize: 12, color: colors.onBrandTertiary, opacity: 0.8, marginTop: 2 },
   actions: { gap: spacing.md, marginTop: spacing.sm },
   confirmRow: { flexDirection: "row", gap: spacing.md },

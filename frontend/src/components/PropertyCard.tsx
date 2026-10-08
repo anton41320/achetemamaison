@@ -1,8 +1,9 @@
 import { ArrowRightIcon, BuildingsIcon, CaretRightIcon, CheckCircleIcon, CheckIcon, HouseIcon } from "phosphor-react-native";
 import { Pressable, Text, View } from "react-native";
 
-import { NextStep, Property, PropertyNextSteps, TYPE_LABELS, formatEuro, formatK } from "@/src/api";
+import { Property, PropertyNextSteps, TYPE_LABELS, formatEuro, formatK } from "@/src/api";
 import { CompletionBadge } from "@/src/components/CompletionBadge";
+import { STAGES, stageOf } from "@/src/steps";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
 interface Props {
@@ -11,26 +12,6 @@ interface Props {
   testID: string;
   nextSteps?: PropertyNextSteps | null;
   onStepPress?: (route: string) => void;
-}
-
-const STAGES = ["Estimation", "Mise en vente", "Vendu"] as const;
-
-/** Stage of the sale derived from the server-side next steps: prix fixé → mise en vente ; dossier complet → vendu. */
-function stageOf(ns: PropertyNextSteps | null | undefined): { stage: 0 | 1 | 2; cta: { label: string; route: string } | null; urgent: boolean } {
-  if (!ns) return { stage: 0, cta: null, urgent: false };
-  const by = (k: NextStep["key"]) => ns.steps.find((s) => s.key === k);
-  const target = by("target");
-  const dossier = by("dossier");
-  if (target && !target.done) {
-    const features = by("features");
-    return { stage: 0, cta: { label: features && !features.done ? `${features.label}, puis fixer votre prix de vente` : "Fixer votre prix de vente", route: target.route }, urgent: false };
-  }
-  if (dossier && !dossier.done) {
-    const pending = (["photos", "listing", "dossier"] as const).map(by).find((s) => s && !s.done)!;
-    return { stage: 1, cta: { label: pending.label, route: pending.route }, urgent: pending.key === "dossier" && pending.label.startsWith("Renouveler") };
-  }
-  const exp = by("export");
-  return { stage: 2, cta: exp ? { label: exp.label, route: exp.route } : null, urgent: false };
 }
 
 export function PropertyCard({ property, onPress, testID, nextSteps, onStepPress }: Props) {

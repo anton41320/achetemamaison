@@ -13,6 +13,7 @@ import { BrandLogo } from "@/src/components/BrandLogo";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { PropertyCard } from "@/src/components/PropertyCard";
 import { ScreenHeader } from "@/src/components/ScreenHeader";
+import { stageOf, stepRoute } from "@/src/steps";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
 const EMPTY_IMAGE =
@@ -102,7 +103,7 @@ export default function HomeScreen() {
             <Animated.View entering={FadeInDown.delay(Math.min(index, 6) * 60).duration(320)}>
               <PropertyCard
                 property={item}
-                onPress={() => router.push(`/property/${item.id}`)}
+                onPress={() => router.push(stepRoute(item.id, stageOf(stepsById.get(item.id)).stage) as any)}
                 testID={`property-card-${item.id}`}
                 nextSteps={stepsById.get(item.id) ?? null}
                 onStepPress={(route) => router.push(route as any)}

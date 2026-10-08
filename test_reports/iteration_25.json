@@ -1,0 +1,33 @@
+{
+  "summary": "Frontend only — Restructuration de la fiche bien en 3 pages/onglets (Estimation / Mise en vente / Vendu). Login OK avec delivered@resend.dev. Carte bien 'Le Bourg 41230 Soings-en-Sologne' (6aa02db9efd8f90925a5a758) affiche la frise 'Étape 2/3 · Mise en vente → Vendu' et ouvre bien /property/<id>/vente au tap. Les trois pages sont bien distinctes avec le composant StepTabs (testID step-tabs, onglets step-tab-1/2/3), les CTA go-step-2-button et go-step-3-button fonctionnent, la navigation inter-onglets fonctionne dans les deux sens, les liens photos/listing/visits/pack/dossier naviguent vers les bonnes routes, header-back-button OK. Aucun écran blanc ni erreur console rouge. Seules des warnings RN-Web non bloquants : 'shadow* style props deprecated → boxShadow' et 'props.pointerEvents deprecated'. Deprecated packages detected: aucun (expo-av/barcode-scanner/background-fetch non utilisés dans les fichiers de référence).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "StepTabs (toutes pages)", "issues": ["accessibilityState={{selected: active}} n'est pas converti en aria-selected sur le DOM web (vaut null). Les lecteurs d'écran ne connaissent donc pas l'onglet actif. Suggestion : passer aussi aria-selected via accessibilityValue ou un simple accessibilityLabel incluant 'actif'."]}
+    ],
+    "react_native_issues": [
+      {"component": "RN-Web deprecated style props", "issue": "Warnings console : 'shadow* style props are deprecated. Use boxShadow' (voir le FAB dans app/index.tsx:160-162 shadowColor/shadowOpacity/shadowRadius/shadowOffset et toute autre utilisation similaire). Non bloquant mais à migrer vers boxShadow pour RN Web."},
+      {"component": "pointerEvents prop", "issue": "Warning console : 'props.pointerEvents is deprecated. Use style.pointerEvents'. Probablement émis par react-native-reanimated/safe-area-context ; vérifier qu'aucune occurrence pointerEvents=... n'est utilisée directement dans le code applicatif."}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "(Mineur a11y) Ajouter aria-selected côté StepTabs pour que l'onglet actif soit annoncé par les lecteurs d'écran sur Web (actuellement accessibilityState.selected n'est pas répercuté dans le DOM).",
+    "(Mineur) Migrer shadow* → boxShadow dans les styles pour supprimer le warning RN-Web (ex. app/index.tsx FAB)."
+  ],
+  "critical_code_review_comments": [
+    "Bonne séparation du funnel en 3 écrans Expo Router. StepTabs centralise la navigation et dépend bien de stageOf(ns) pour marquer les étapes atteintes.",
+    "stepRoute() cohérent avec le routing /property/[id], /vente, /vendu — la carte sur l'accueil utilise stageOf().stage pour ouvrir la bonne page, conforme à la demande.",
+    "La page /vente lit l'estimation existante pour alimenter TargetPriceCard ; si estimation manquante, un garde-fou textuel invite à revenir à l'étape 1 (OK).",
+    "La page /vendu affiche dossier-status via la query next-steps ; attention : si next-steps n'a pas encore chargé, le sous-texte disparaît (comportement attendu, pas de bug)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (not tested)", "frontend": "100%"},
+  "seed_data_creation": "Aucune.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Le flow 3 étapes fonctionne de bout en bout. Attention : en navigation web Expo Router Stack, les écrans précédents restent montés mais display:none. Un query_selector sans is_visible() peut faussement trouver des testIDs appartenant à l'écran précédent (ex. step-2-header, photos-button sur /property/<id> après être revenu via step-tab-1). Toujours vérifier is_visible() ou faire un reload (page.goto) pour un test propre, comme fait dans ce rapport.",
+  "rca_of_issue": "Non applicable — pas de bug fonctionnel détecté. L'apparente 'fuite' de testIDs step-2-header/photos-button/write-listing-button/pack-button sur /property/<id> dans un premier test provenait des écrans précédents (/vente) conservés par la Stack Expo Router en display:none ; un chargement direct de /property/<id> confirme leur absence réelle du DOM visible."
+}
