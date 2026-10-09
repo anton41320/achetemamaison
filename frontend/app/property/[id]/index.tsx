@@ -182,6 +182,29 @@ export default function PropertyDetailScreen() {
               </View>
             ) : null}
 
+            {/* Dossier environnement — mis en avant, juste sous l'estimation */}
+            <Animated.View entering={FadeInDown.delay(200).duration(320)}>
+              <Pressable
+                testID="environment-button"
+                accessibilityRole="button"
+                onPress={() => router.push(`/property/${id}/environment`)}
+                style={({ pressed }) => [styles.envRow, pressed && { opacity: 0.9 }]}
+              >
+                <View style={styles.envIcon}>
+                  <TreeIcon size={22} color={colors.onBrandPrimary} weight="fill" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.envLabel}>Dossier environnement du bien</Text>
+                  <Text style={styles.envSub}>
+                    {est.adjustments.some((a) => a.key.startsWith("env_"))
+                      ? `Analyse intégrée à l’estimation (${formatPct(est.adjustments.filter((a) => a.key.startsWith("env_")).reduce((s, a) => s + a.pct, 0), 1)})`
+                      : "Voisinage, nuisances, risques, urbanisme — affine l’estimation"}
+                  </Text>
+                </View>
+                <CaretRightIcon size={20} color={colors.onBrandPrimary} weight="bold" />
+              </Pressable>
+            </Animated.View>
+
             {/* Adjustments */}
             <Animated.View entering={FadeInDown.delay(240).duration(320)} style={styles.card} testID="adjustments-card">
               <Text style={styles.h3}>Comment est calculée la fourchette ?</Text>
@@ -277,24 +300,6 @@ export default function PropertyDetailScreen() {
                 <CompletionBadge variant="card" completion={data.completion} testID="completion-card" onPress={() => router.push(`/property/${id}/edit`)} />
               </Animated.View>
             ) : null}
-
-            <Pressable
-              testID="environment-button"
-              accessibilityRole="button"
-              onPress={() => router.push(`/property/${id}/environment`)}
-              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.85 }]}
-            >
-              <TreeIcon size={20} color={colors.onBrandTertiary} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.linkLabel}>Environnement du bien</Text>
-                <Text style={styles.linkSubMuted}>
-                  {est.adjustments.some((a) => a.key.startsWith("env_"))
-                    ? `Analyse intégrée à l’estimation (${formatPct(est.adjustments.filter((a) => a.key.startsWith("env_")).reduce((s, a) => s + a.pct, 0), 1)})`
-                    : "Voisinage, nuisances, risques, urbanisme — affine l’estimation"}
-                </Text>
-              </View>
-              <CaretRightIcon size={18} color={colors.onBrandTertiary} />
-            </Pressable>
 
             <Pressable
               testID="view-comparables-button"
@@ -395,6 +400,10 @@ const useStyles = makeStyles((colors) => ({
   linkRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.brandTertiary, borderRadius: radius.md, padding: spacing.lg, minHeight: 56 },
   linkLabel: { flex: 1, fontFamily: fonts.semibold, fontSize: 15, color: colors.onBrandTertiary },
   linkSubMuted: { fontFamily: fonts.regular, fontSize: 12, color: colors.onBrandTertiary, opacity: 0.8, marginTop: 2 },
+  envRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.brandSecondary, borderWidth: 2, borderColor: colors.brandPrimary, borderRadius: radius.lg, padding: spacing.lg, minHeight: 72 },
+  envIcon: { width: 44, height: 44, borderRadius: radius.pill, backgroundColor: colors.brandPrimary, alignItems: "center", justifyContent: "center" },
+  envLabel: { fontFamily: fonts.bold, fontSize: 17, color: colors.onBrandSecondary },
+  envSub: { fontFamily: fonts.medium, fontSize: 13, lineHeight: 18, color: colors.onBrandSecondary, marginTop: 2 },
   actions: { gap: spacing.md, marginTop: spacing.sm },
   confirmRow: { flexDirection: "row", gap: spacing.md },
   deleteRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, minHeight: 48 },

@@ -31,7 +31,10 @@ RETOUCH_PROMPT = (
     "piscine, clôture, portail ou décoration qui n'existe pas sur la photo.\n\n"
     "Contraintes communes : n'ajoute aucun élément inexistant, ne modifie ni la structure, ni les matériaux, ni les couleurs "
     "des murs, sols et toitures, ni l'environnement ; conserve exactement le même angle de prise de vue et le même cadrage "
-    "(ne recentre pas, ne redessine pas le bâtiment). Renvoie uniquement l'image retouchée."
+    "(ne recentre pas, ne redessine pas le bâtiment).\n\n"
+    "Retouches à appliquer dans tous les cas, avec mesure : améliorer légèrement la luminosité ; corriger les couleurs ; "
+    "améliorer la netteté ; redresser l'image ; équilibrer l'exposition ; supprimer de petits éléments gênants uniquement "
+    "si cela ne modifie pas la réalité du bien. Renvoie uniquement l'image retouchée."
 )
 
 

@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Photo, api, fileUrl, uploadPhoto } from "@/src/api";
 import { PremiumGate, usePackUnlocked } from "@/src/components/PremiumGate";
+import { PhotoOrderCard } from "@/src/components/PhotoOrderCard";
 import { PhotoTutorialCard } from "@/src/components/PhotoTutorialCard";
 import { usePhotoExport } from "@/src/photoExport";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
@@ -182,6 +183,7 @@ export default function PhotosScreen() {
       />
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xl }]}>
         <PhotoTutorialCard />
+        <PhotoOrderCard />
         <View style={styles.pickRow}>
           <Pressable testID="photos-pick-library" accessibilityRole="button" onPress={() => pick("library")} style={styles.pickBtn} disabled={uploading}>
             <ImagesIcon size={22} color={colors.onBrandTertiary} weight="duotone" />
@@ -201,8 +203,8 @@ export default function PhotosScreen() {
           ) : null}
         </View>
         <Text style={styles.hint}>
-          La retouche améliore lumière, contraste et perspective, et efface uniquement de petits objets. Aucun élément n’est
-          ajouté : le visuel retouché reste une représentation fidèle du bien. La première photo sert de couverture dans
+          La retouche améliore légèrement la luminosité, corrige les couleurs et l’exposition, renforce la netteté, redresse
+          l’image et efface uniquement de petits éléments gênants. Aucun élément n’est ajouté : le visuel retouché reste une représentation fidèle du bien. La première photo sert de couverture dans
           l’annonce et les PDF : utilisez les flèches ou « Couverture » pour ordonner vos photos.
         </Text>
         {!pack.loading && !pack.unlocked ? <PremiumGate propertyId={id!} feature="la retouche photo par l’IA" testID="photos-premium-gate" /> : null}
