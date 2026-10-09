@@ -18,7 +18,7 @@ CONDITION = {"a_renover": "à rénover", "travaux": "travaux à prévoir", "corr
              "neuf_renove": "neuf ou entièrement rénové"}
 FIREPLACE_LABELS = {"aucune": "aucune", "insert": "cheminée avec insert", "foyer_ouvert": "cheminée à foyer ouvert",
                     "poele_bois": "poêle à bois", "poele_granules": "poêle à granulés"}
-PARKING_LABELS = {"aucun": "aucun", "exterieur": "place extérieure", "interieur": "place intérieure / box"}
+PARKING_LABELS = {"aucun": "aucun", "exterieur": "place extérieure", "interieur": "place intérieure / box", "garage": "garage fermé"}
 
 SYSTEM = """Tu es un rédacteur d'annonces immobilières français. Tu rédiges UNIQUEMENT à partir des faits fournis.
 RÈGLES ABSOLUES :
@@ -60,9 +60,10 @@ def _facts(prop: PropertyDoc, include_price: bool, extra: str | None, env_block:
         lines.append(f"Chauffage d'appoint / cheminée : {FIREPLACE_LABELS[f.fireplace]}")
     if prop.property_type == "appartement":
         if f.floor is not None:
-            lines.append(f"Étage : {'rez-de-chaussée' if f.floor == 0 else f'{f.floor}e'}" + ("" if f.elevator is None else f" · ascenseur : {'oui' if f.elevator else 'non'}"))
+            lines.append(f"Étage : {'rez-de-chaussée' if f.floor == 0 else f'{f.floor}e'}" + (" (dernier étage)" if f.top_floor and f.floor > 0 else "")
+                         + ("" if f.elevator is None else f" · ascenseur : {'oui' if f.elevator else 'non'}"))
         if f.parking:
-            lines.append(f"Parking : {PARKING_LABELS[f.parking]}")
+            lines.append(f"Stationnement : {PARKING_LABELS[f.parking]}")
         if f.caretaker is not None:
             lines.append(f"Gardien / concierge : {'oui' if f.caretaker else 'non'}")
         if f.condo_fees is not None:
@@ -142,13 +143,13 @@ def headline(prop: PropertyDoc) -> str:
             parts.append(_fmt_land(land))
     else:
         if f.floor is not None:
-            parts.append("Rez-de-chaussée" if f.floor == 0 else f"{f.floor}e étage" + (" avec ascenseur" if f.elevator else ""))
+            parts.append("Rez-de-chaussée" if f.floor == 0 else ("Dernier étage" if f.top_floor else f"{f.floor}e étage") + (" avec ascenseur" if f.elevator else ""))
         if f.balcony:
             parts.append("Balcon")
         if f.terrace:
             parts.append("Terrasse")
         if f.parking and f.parking != "aucun":
-            parts.append("Parking" if f.parking == "exterieur" else "Box / parking intérieur")
+            parts.append({"exterieur": "Parking", "interieur": "Box", "garage": "Garage"}[f.parking])
         if f.cellar:
             parts.append("Cave")
     if f.fireplace in ("poele_bois", "poele_granules"):

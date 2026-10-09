@@ -72,8 +72,9 @@ class Features(BaseModel):
     # Appartement
     floor: Optional[int] = Field(default=None, ge=0, le=60)
     elevator: Optional[bool] = None
+    top_floor: Optional[bool] = None  # dernier étage (appartement)
     balcony: Optional[bool] = None
-    parking: Optional[Literal["aucun", "exterieur", "interieur"]] = None
+    parking: Optional[Literal["aucun", "exterieur", "interieur", "garage"]] = None  # stationnement : place ext. / place int. ou box / garage fermé
     cellar: Optional[bool] = None
     caretaker: Optional[bool] = None  # gardien / concierge
     condo_fees: Optional[float] = Field(default=None, ge=0, le=5000)  # charges mensuelles de copropriété (€)

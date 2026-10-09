@@ -46,14 +46,31 @@ export function FeaturesForm({ propertyType, value, onChange }: Props) {
       {maison ? <Yn k="fenced" label="Terrain clos" testID="feat-fenced" /> : null}
       {maison ? <Yn k="motorized_gate" label="Portail motorisé" testID="feat-gate" /> : null}
       <Yn k="terrace" label="Terrasse" testID="feat-terrace" />
-      <Segmented
-        label="Garage"
-        testID="feat-garage"
-        scroll
-        value={value.garage ?? "na"}
-        onChange={(v) => set("garage", v === "na" ? null : (v as Features["garage"]))}
-        options={[{ value: "na", label: "—" }, { value: "aucun", label: "Aucun" }, { value: "un", label: "1" }, { value: "deux_plus", label: "2+" }]}
-      />
+      {maison ? (
+        <Segmented
+          label="Garage"
+          testID="feat-garage"
+          scroll
+          value={value.garage ?? "na"}
+          onChange={(v) => set("garage", v === "na" ? null : (v as Features["garage"]))}
+          options={[{ value: "na", label: "—" }, { value: "aucun", label: "Aucun" }, { value: "un", label: "1" }, { value: "deux_plus", label: "2+" }]}
+        />
+      ) : (
+        <Segmented
+          label="Stationnement (parking, box, garage)"
+          testID="feat-parking"
+          scroll
+          value={value.parking ?? "na"}
+          onChange={(v) => set("parking", v === "na" ? null : (v as Features["parking"]))}
+          options={[
+            { value: "na", label: "—" },
+            { value: "aucun", label: "Aucun" },
+            { value: "exterieur", label: "Parking extérieur" },
+            { value: "interieur", label: "Parking intérieur / box" },
+            { value: "garage", label: "Garage fermé" },
+          ]}
+        />
+      )}
       {maison ? <Yn k="outbuilding" label="Dépendance / abri" testID="feat-outbuilding" /> : null}
       {maison && value.outbuilding ? (
         <View style={styles.sub}>
@@ -104,6 +121,7 @@ export function FeaturesForm({ propertyType, value, onChange }: Props) {
       {!maison ? (
         <>
           <Stepper label="Étage de l’appartement" value={value.floor ?? 0} onChange={(v) => set("floor", v)} min={0} max={40} testID="feat-floor" />
+          {(value.floor ?? 0) >= 1 ? <Yn k="top_floor" label="Dernier étage" testID="feat-top-floor" /> : null}
           <Yn k="elevator" label="Ascenseur" testID="feat-elevator" />
           <Yn k="balcony" label="Balcon / terrasse" testID="feat-balcony" />
           <Yn k="cellar" label="Cave" testID="feat-cellar" />
@@ -120,14 +138,6 @@ export function FeaturesForm({ propertyType, value, onChange }: Props) {
               const n = Number(t.replace(/[^\d]/g, ""));
               set("condo_fees", t.trim() === "" || Number.isNaN(n) ? null : Math.min(n, 5000));
             }}
-          />
-          <Segmented
-            label="Parking"
-            testID="feat-parking"
-            scroll
-            value={value.parking ?? "na"}
-            onChange={(v) => set("parking", v === "na" ? null : (v as Features["parking"]))}
-            options={[{ value: "na", label: "—" }, { value: "aucun", label: "Aucun" }, { value: "exterieur", label: "Extérieur" }, { value: "interieur", label: "Intérieur / box" }]}
           />
           <Yn k="caretaker" label="Gardien / concierge" testID="feat-caretaker" />
         </>

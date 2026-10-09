@@ -352,8 +352,9 @@ export interface Features {
   solar_panels: boolean | null;
   floor: number | null;
   elevator: boolean | null;
+  top_floor: boolean | null;
   balcony: boolean | null;
-  parking: "aucun" | "exterieur" | "interieur" | null;
+  parking: "aucun" | "exterieur" | "interieur" | "garage" | null;
   cellar: boolean | null;
   caretaker: boolean | null;
   condo_fees: number | null;
@@ -364,7 +365,7 @@ export interface Features {
 export const EMPTY_FEATURES: Features = {
   pool: null, fenced: null, motorized_gate: null, terrace: null, garage: null, outbuilding: null, outbuilding_type: null, outbuilding_surface: null, orientation: null,
   single_storey: null, basement: null, convertible_attic: null, pantry: null, master_suite: null, master_suite_dressing: null, master_suite_bathroom: null, master_suite_wc: null, dressing: null, bathrooms: null, heating: null, sanitation: null, dpe: null,
-  double_glazing: null, air_conditioning: null, fireplace: null, solar_panels: null, floor: null, elevator: null, balcony: null,
+  double_glazing: null, air_conditioning: null, fireplace: null, solar_panels: null, floor: null, elevator: null, top_floor: null, balcony: null,
   parking: null, cellar: null, caretaker: null, condo_fees: null, heating_mode: null, underfloor_heating: null,
 };
 

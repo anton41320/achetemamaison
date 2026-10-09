@@ -193,7 +193,7 @@ LEGAL_DISCLAIMER = (
 )
 
 LEVEL_FR = {"none": "Non concerné", "low": "Faible", "medium": "Moyen", "high": "Fort", "info": "Commune"}
-PARKING_FR = {"aucun": "Aucun", "exterieur": "Place extérieure", "interieur": "Place intérieure / box"}
+PARKING_FR = {"aucun": "Aucun", "exterieur": "Place extérieure", "interieur": "Place intérieure / box", "garage": "Garage fermé"}
 
 
 def condo_section(prop: PropertyDoc, h2: ParagraphStyle, body: ParagraphStyle, small: ParagraphStyle) -> list:
@@ -205,10 +205,10 @@ def condo_section(prop: PropertyDoc, h2: ParagraphStyle, body: ParagraphStyle, s
         rows.append(["Charges de copropriété", f"{eur(f.condo_fees)} / mois · soit {eur(annual)} / an "
                                                 f"({f.condo_fees / prop.surface:.1f} €/m²/mois)".replace(".", ",")])
     if f.floor is not None:
-        rows.append(["Étage", ("Rez-de-chaussée" if f.floor == 0 else f"{f.floor}e étage")
+        rows.append(["Étage", ("Rez-de-chaussée" if f.floor == 0 else f"{f.floor}e étage" + (" (dernier étage)" if f.top_floor else ""))
                      + ("" if f.elevator is None else (" · avec ascenseur" if f.elevator else " · sans ascenseur"))])
     if f.parking:
-        rows.append(["Parking", PARKING_FR[f.parking]])
+        rows.append(["Stationnement", PARKING_FR[f.parking]])
     if f.caretaker is not None:
         rows.append(["Gardien / concierge", "Oui" if f.caretaker else "Non"])
     heat = [x for x in (f.heating_mode and f.heating_mode.capitalize(), f.underfloor_heating and "au sol") if x]

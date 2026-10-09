@@ -67,9 +67,9 @@ def feature_adjustments(ptype: str, f, value_base: float, surface: Optional[floa
         out.append(("feat_gate", "Portail motorisé", 0.01))
     if f.terrace:
         out.append(("feat_terrace", "Terrasse", 0.015))
-    if f.garage == "un":
+    if maison and f.garage == "un":
         out.append(("feat_garage", "Garage", 0.03))
-    elif f.garage == "deux_plus":
+    elif maison and f.garage == "deux_plus":
         out.append(("feat_garage", "Double garage ou plus", 0.05))
     if maison and f.outbuilding:
         label = OUTBUILDING_LABELS.get(f.outbuilding_type or "", "Dépendance")
@@ -131,9 +131,13 @@ def feature_adjustments(ptype: str, f, value_base: float, surface: Optional[floa
                 out.append(("feat_floor", f"{f.floor}e étage sans ascenseur", -0.04))
             elif f.floor >= 2 and f.elevator:
                 out.append(("feat_floor", f"{f.floor}e étage avec ascenseur", 0.02))
+        if f.top_floor and (f.floor or 0) >= 1:
+            out.append(("feat_top_floor", "Dernier étage", 0.03))
         if f.balcony:
             out.append(("feat_balcony", "Balcon / terrasse", 0.03))
-        if f.parking == "interieur":
+        if f.parking == "garage":
+            out.append(("feat_parking", "Garage fermé", 0.06))
+        elif f.parking == "interieur":
             out.append(("feat_parking", "Parking intérieur / box", 0.05))
         elif f.parking == "exterieur":
             out.append(("feat_parking", "Parking extérieur", 0.03))
