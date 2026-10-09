@@ -4,12 +4,12 @@ import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowDownIcon, ArrowUpIcon, CameraIcon, CheckCircleIcon, DownloadSimpleIcon, FolderOpenIcon, ImagesIcon, LockKeyIcon, ShareNetworkIcon, SparkleIcon, StarIcon, TrashIcon, WarningIcon } from "phosphor-react-native";
+import { ArrowDownIcon, ArrowUpIcon, CameraIcon, CheckCircleIcon, DownloadSimpleIcon, FolderOpenIcon, ImagesIcon, LockKeyIcon, ShareNetworkIcon, SortAscendingIcon, SparkleIcon, StarIcon, TrashIcon, WarningIcon } from "phosphor-react-native";
 import { useState } from "react";
 import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Photo, api, fileUrl, uploadPhoto } from "@/src/api";
+import { PHOTO_LABELS, Photo, PhotoLabel, api, fileUrl, uploadPhoto } from "@/src/api";
 import { PremiumGate, usePackUnlocked } from "@/src/components/PremiumGate";
 import { PhotoOrderCard } from "@/src/components/PhotoOrderCard";
 import { PhotoTutorialCard } from "@/src/components/PhotoTutorialCard";
@@ -122,6 +122,19 @@ export default function PhotosScreen() {
     reorder.mutate(ids);
   };
   const setCover = (photoId: string) => reorder.mutate([photoId, ...(photos.data ?? []).map((p) => p.id).filter((x) => x !== photoId)]);
+  const label = useMutation({
+    mutationFn: ({ photoId, value }: { photoId: string; value: PhotoLabel | null }) => api.setPhotoLabel(photoId, value),
+    onMutate: ({ photoId, value }) => {
+      queryClient.setQueryData<Photo[]>(["photos", id], (old) => old?.map((p) => (p.id === photoId ? { ...p, label: value } : p)));
+    },
+    onSuccess: (data) => queryClient.setQueryData(["photos", id], data),
+    onError: () => queryClient.invalidateQueries({ queryKey: ["photos", id] }),
+  });
+  const autosort = useMutation({
+    mutationFn: () => api.autosortPhotos(id!),
+    onSuccess: (data) => queryClient.setQueryData(["photos", id], data),
+  });
+  const labelledCount = (photos.data ?? []).filter((p) => p.label).length;
   const retouched = (photos.data ?? []).filter((p) => p.status === "done" && p.retouched_path);
   const exportName = (index: number, after: boolean) => `achetemamaison-${id!.slice(-6)}-photo-${index + 1}${after ? "-retouchee" : ""}.jpg`;
   const exportOrUnlock = (fn: () => void) => (pack.unlocked ? fn() : router.push(`/property/${id}/pack`));
@@ -213,6 +226,19 @@ export default function PhotosScreen() {
             <WarningIcon size={18} color={colors.error} weight="fill" />
             <Text style={[styles.warnText, { color: colors.error }]}>Impossible d’ouvrir la galerie : {pickError}</Text>
           </View>
+        ) : null}
+
+        {(photos.data?.length ?? 0) >= 2 && labelledCount > 0 ? (
+          <Pressable
+            testID="photos-autosort"
+            accessibilityRole="button"
+            disabled={autosort.isPending}
+            onPress={() => autosort.mutate()}
+            style={({ pressed }) => [styles.saveAll, pressed && { opacity: 0.85 }]}
+          >
+            {autosort.isPending ? <ActivityIndicator color={colors.onBrandTertiary} /> : <SortAscendingIcon size={20} color={colors.onBrandTertiary} weight="bold" />}
+            <Text style={styles.saveAllLabel}>Trier selon l’ordre conseillé · {labelledCount}/{photos.data!.length} étiquetée{labelledCount > 1 ? "s" : ""}</Text>
+          </Pressable>
         ) : null}
 
         {retouched.length >= 2 ? (
@@ -324,6 +350,30 @@ export default function PhotosScreen() {
                       <Text style={styles.overlayText}>Retouche en cours…</Text>
                     </View>
                   ) : null}
+                </View>
+                {/* Étiquette de pièce → tri automatique selon l'ordre conseillé */}
+                <View style={styles.labelBlock}>
+                  <Text style={styles.labelTitle} testID={`photo-label-${i}`}>
+                    {p.label ? `Étiquette : ${p.label}` : "Étiquette : à définir (façade, salon…)"}
+                  </Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.labelChips}>
+                    {PHOTO_LABELS.map((l) => {
+                      const active = p.label === l;
+                      return (
+                        <Pressable
+                          key={l}
+                          testID={`photo-label-${i}-${l}`}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: active }}
+                          disabled={label.isPending}
+                          onPress={() => label.mutate({ photoId: p.id, value: active ? null : l })}
+                          style={[styles.labelChip, active && styles.labelChipActive]}
+                        >
+                          <Text style={[styles.labelChipText, active && styles.labelChipTextActive]}>{l}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
                 </View>
                 {photos.data!.length > 1 ? (
                   <View style={styles.orderRow}>
@@ -440,6 +490,13 @@ const useStyles = makeStyles((colors) => ({
   badgeText: { fontFamily: fonts.semibold, fontSize: 11, color: colors.onHero },
   coverBadge: { position: "absolute", left: spacing.md, top: spacing.md, flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.brandPrimary, paddingHorizontal: spacing.md, height: 26, borderRadius: radius.pill },
   coverText: { fontFamily: fonts.semibold, fontSize: 11, color: colors.onBrandPrimary },
+  labelBlock: { paddingTop: spacing.md, gap: spacing.sm },
+  labelTitle: { fontFamily: fonts.semibold, fontSize: 13, color: colors.onSurfaceSecondary, paddingHorizontal: spacing.lg },
+  labelChips: { flexDirection: "row", gap: spacing.sm, paddingHorizontal: spacing.lg },
+  labelChip: { minHeight: 36, paddingHorizontal: spacing.md, justifyContent: "center", borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  labelChipActive: { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
+  labelChipText: { fontFamily: fonts.medium, fontSize: 13, color: colors.onSurface },
+  labelChipTextActive: { color: colors.onBrandPrimary, fontFamily: fonts.semibold },
   orderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.lg, paddingTop: spacing.md, gap: spacing.sm },
   orderPos: { fontFamily: fonts.medium, fontSize: 13, color: colors.muted },
   orderBtns: { flexDirection: "row", alignItems: "center", gap: spacing.sm },

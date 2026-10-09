@@ -585,6 +585,41 @@ async def set_cover_photo(photo_id: str):
     return await list_photos(doc["property_id"])
 
 
+# Ordre conseillé des photos d'une annonce ; les photos étiquetées sont triées dans cet ordre, les autres suivent.
+PHOTO_LABELS = ["Façade", "Salon", "Cuisine", "Jardin", "Suite parentale", "Chambre", "Salle de bains", "Terrasse", "Garage", "Vue extérieure"]
+
+
+class PhotoLabel(BaseModel):
+    label: Optional[Literal["Façade", "Salon", "Cuisine", "Jardin", "Suite parentale", "Chambre", "Salle de bains", "Terrasse", "Garage", "Vue extérieure"]] = None
+
+
+async def _autosort_photos(pid: str) -> list[dict]:
+    """Tri stable : étiquette (ordre conseillé) puis position actuelle ; les photos sans étiquette gardent leur ordre, à la fin."""
+    docs = await db.photos.find({"property_id": pid, "deleted_at": None}).sort(PHOTO_ORDER).to_list(100)
+    rank = {label: i for i, label in enumerate(PHOTO_LABELS)}
+    ordered = sorted(docs, key=lambda d: (rank.get(d.get("label"), len(PHOTO_LABELS)), d.get("position", 0)))
+    await asyncio.gather(*(db.photos.update_one({"_id": d["_id"]}, {"$set": {"position": pos}}) for pos, d in enumerate(ordered)))
+    return await list_photos(pid)
+
+
+@api.patch("/photos/{photo_id}")
+async def set_photo_label(photo_id: str, body: PhotoLabel):
+    """Étiquette la photo (Façade, Salon…) puis retrie automatiquement les photos du bien selon l'ordre conseillé."""
+    doc = await db.photos.find_one({"_id": _oid(photo_id), "deleted_at": None, **auth.own()})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Photo introuvable")
+    await db.photos.update_one({"_id": doc["_id"]}, {"$set": {"label": body.label}})
+    return await _autosort_photos(doc["property_id"])
+
+
+@api.post("/properties/{pid}/photos/autosort")
+async def autosort_photos(pid: str):
+    """Retrie les photos selon l'ordre conseillé (d'après leurs étiquettes)."""
+    if not await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()}):
+        raise HTTPException(status_code=404, detail="Bien introuvable")
+    return await _autosort_photos(pid)
+
+
 @api.post("/properties/{pid}/photos", status_code=201)
 async def upload_photo(pid: str, file: UploadFile = File(...)):
     doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()})

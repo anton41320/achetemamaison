@@ -531,9 +531,12 @@ export interface Photo {
   error: string | null;
   model: string | null;
   position: number;
+  label: PhotoLabel | null;
   created_at: string;
   retouched_at: string | null;
 }
+export const PHOTO_LABELS = ["Façade", "Salon", "Cuisine", "Jardin", "Suite parentale", "Chambre", "Salle de bains", "Terrasse", "Garage", "Vue extérieure"] as const;
+export type PhotoLabel = (typeof PHOTO_LABELS)[number];
 
 export function fileUrl(path: string): string {
   return `${BASE}/files/${path}`;
@@ -815,6 +818,8 @@ export const api = {
     request<Listing>(`/properties/${id}/listings`, { method: "POST", body: JSON.stringify(body) }),
   deleteListing: (id: string, lid: string) => request<{ deleted: boolean }>(`/properties/${id}/listings/${lid}`, { method: "DELETE" }),
   listPhotos: (id: string) => request<Photo[]>(`/properties/${id}/photos`),
+  setPhotoLabel: (photoId: string, label: PhotoLabel | null) => request<Photo[]>(`/photos/${photoId}`, { method: "PATCH", body: JSON.stringify({ label }) }),
+  autosortPhotos: (id: string) => request<Photo[]>(`/properties/${id}/photos/autosort`, { method: "POST" }),
   reorderPhotos: (id: string, ids: string[]) => request<Photo[]>(`/properties/${id}/photos/order`, { method: "PUT", body: JSON.stringify({ ids }) }),
   setCoverPhoto: (photoId: string) => request<Photo[]>(`/photos/${photoId}/cover`, { method: "POST" }),
   retouchPhoto: (photoId: string) => request<Photo>(`/photos/${photoId}/retouch`, { method: "POST" }),

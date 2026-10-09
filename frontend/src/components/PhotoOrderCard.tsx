@@ -1,9 +1,8 @@
 import { ListNumbersIcon } from "phosphor-react-native";
 import { Text, View } from "react-native";
 
+import { PHOTO_LABELS } from "@/src/api";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
-
-export const PHOTO_ORDER = ["Façade", "Salon", "Cuisine", "Jardin", "Suite parentale", "Chambre", "Salle de bains", "Terrasse", "Garage", "Vue extérieure"] as const;
 
 /** Recommended photo order for the listing — the first one becomes the cover. */
 export function PhotoOrderCard() {
@@ -16,14 +15,14 @@ export function PhotoOrderCard() {
         <Text style={styles.title}>Ordre conseillé des photos pour l’annonce</Text>
       </View>
       <View style={styles.chips}>
-        {PHOTO_ORDER.map((label, i) => (
+        {PHOTO_LABELS.map((label, i) => (
           <View key={label} style={[styles.chip, i === 0 && styles.chipFirst]} testID={`photo-order-${i + 1}`}>
             <Text style={[styles.num, i === 0 && styles.numFirst]}>{i + 1}</Text>
             <Text style={[styles.chipText, i === 0 && styles.chipTextFirst]}>{label}</Text>
           </View>
         ))}
       </View>
-      <Text style={styles.hint}>Importez vos photos dans cet ordre : la façade sert de couverture. Vous pouvez ensuite les réordonner avec les flèches.</Text>
+      <Text style={styles.hint}>Étiquetez chaque photo (Façade, Salon…) : elles sont automatiquement triées dans cet ordre, la façade en couverture. Les flèches permettent d’ajuster à la main.</Text>
     </View>
   );
 }

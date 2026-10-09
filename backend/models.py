@@ -275,6 +275,7 @@ class PhotoDoc(BaseDocument):
     error: Optional[str] = None
     model: Optional[str] = None
     position: int = 0  # display order ; position 0 = photo de couverture (annonce, PDF)
+    label: Optional[str] = None  # étiquette de pièce (Façade, Salon…) — sert au tri automatique selon l'ordre conseillé
     created_at: datetime = Field(default_factory=utcnow)
     retouched_at: Optional[datetime] = None
     deleted_at: Optional[datetime] = None
