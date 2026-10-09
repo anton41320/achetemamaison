@@ -94,6 +94,72 @@ def _parse(text: str) -> dict:
     }
 
 
+HEADLINE_SEPARATOR = "." * 59
+
+
+def _fmt_land(m2: float) -> str:
+    if m2 >= 10_000:
+        ha = m2 / 10_000
+        s = f"{ha:.2f}".rstrip("0").rstrip(".").replace(".", ",")
+        return f"Terrain {s} Hectare{'s' if ha >= 2 else ''}"
+    return f"Terrain {m2:g} m²".replace(".", ",")
+
+
+def headline(prop: PropertyDoc) -> str:
+    """Ligne d'accroche structurée, construite uniquement à partir des faits saisis (jamais par l'IA).
+
+    Ex. « 41200 - Villefranche-sur-Cher - Propriété 6 pièces 185 m² - 4 chambres - Garage - Dépendance - Piscine - Terrain 1,3 Hectare »."""
+    f = prop.features
+    maison = prop.property_type == "maison"
+    land = prop.land_surface if maison else None
+    kind = "Appartement" if not maison else ("Propriété" if (land or 0) >= 5000 else "Maison")
+    surface = f"{prop.surface:g}".replace(".", ",")
+    parts = [prop.postcode, prop.commune, f"{kind} {prop.rooms} pièce{'s' if prop.rooms > 1 else ''} {surface} m²"]
+    if prop.bedrooms:
+        parts.append(f"{prop.bedrooms} chambre{'s' if prop.bedrooms > 1 else ''}")
+    if maison:
+        if f.single_storey:
+            parts.append("Plain-pied")
+        if f.master_suite:
+            parts.append("Suite parentale")
+        if f.garage == "un":
+            parts.append("Garage")
+        elif f.garage == "deux_plus":
+            parts.append("Garages")
+        if f.outbuilding:
+            from estimator import OUTBUILDING_LABELS
+
+            parts.append(OUTBUILDING_LABELS.get(f.outbuilding_type or "", "Dépendance"))
+        if f.pool and f.pool != "aucune":
+            parts.append("Piscine")
+        if f.terrace:
+            parts.append("Terrasse")
+        if f.basement:
+            parts.append("Sous-sol")
+        if f.convertible_attic:
+            parts.append("Combles aménageables")
+        if land:
+            parts.append(_fmt_land(land))
+    else:
+        if f.floor is not None:
+            parts.append("Rez-de-chaussée" if f.floor == 0 else f"{f.floor}e étage" + (" avec ascenseur" if f.elevator else ""))
+        if f.balcony:
+            parts.append("Balcon")
+        if f.terrace:
+            parts.append("Terrasse")
+        if f.parking and f.parking != "aucun":
+            parts.append("Parking" if f.parking == "exterieur" else "Box / parking intérieur")
+        if f.cellar:
+            parts.append("Cave")
+    if f.fireplace in ("poele_bois", "poele_granules"):
+        parts.append("Poêle")
+    elif f.fireplace in ("insert", "foyer_ouvert"):
+        parts.append("Cheminée")
+    if f.dpe:
+        parts.append(f"DPE {f.dpe}")
+    return " - ".join(parts)
+
+
 async def generate_listing(prop: PropertyDoc, style: str, extra_facts: str | None, include_price: bool, env: dict | None = None) -> dict:
     from emergentintegrations.llm.chat import LlmChat, UserMessage  # lazy: keeps the LLM SDKs out of API startup memory
 
@@ -106,4 +172,4 @@ async def generate_listing(prop: PropertyDoc, style: str, extra_facts: str | Non
     prompt = (f"STYLE : {STYLE_GUIDE[style]}\n\nFAITS (seule source autorisée) :\n{_facts(prop, include_price, extra_facts, env_block)}"
               "\n\nRédige l'annonce en français et renvoie uniquement le JSON.")
     text = await chat.send_message(UserMessage(text=prompt))
-    return {**_parse(text), "model": "claude-sonnet-4-6", "used_environment": bool(env_block)}
+    return {**_parse(text), "headline": headline(prop), "model": "claude-sonnet-4-6", "used_environment": bool(env_block)}

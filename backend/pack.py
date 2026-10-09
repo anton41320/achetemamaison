@@ -19,6 +19,7 @@ from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, S
 
 import auth
 import emailer
+from listing import HEADLINE_SEPARATOR
 from models import PropertyDoc, utcnow
 from report import APP_NAME, BRAND, BRAND_SOFT, CONDITION_LABELS, INK, LINE, MUTED, eur
 
@@ -198,6 +199,11 @@ def build_pack_pdf(prop: PropertyDoc, listing: dict, photos: list[tuple[bytes, b
     # Cover: hero photo + title + hook
     if photos:
         story.append(fitted(photos[0][0], 120 * mm))
+        story.append(Spacer(1, 6))
+    if listing.get("headline"):
+        headline_style = ParagraphStyle("headline", parent=body, fontName="Helvetica-Bold", fontSize=11, leading=15, textColor=INK)
+        story.append(Paragraph(listing["headline"], headline_style))
+        story.append(Paragraph(HEADLINE_SEPARATOR, small))
         story.append(Spacer(1, 6))
     story.append(Paragraph(listing["title"], title))
     ptype = "Maison" if prop.property_type == "maison" else "Appartement"

@@ -17,7 +17,9 @@ import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
 const CTA_HEIGHT = 92;
 
-const listingText = (l: Listing) => `${l.title}\n\n${l.hook}\n\n${l.description}\n\n${l.highlights.map((h) => `• ${h}`).join("\n")}`;
+const HEADLINE_SEPARATOR = ".".repeat(59);
+const listingText = (l: Listing) =>
+  `${l.headline ? `${l.headline}\n${HEADLINE_SEPARATOR}\n\n` : ""}${l.title}\n\n${l.hook}\n\n${l.description}\n\n${l.highlights.map((h) => `• ${h}`).join("\n")}`;
 
 export default function ListingScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -208,6 +210,12 @@ export default function ListingScreen() {
                 {l.used_environment ? <Text style={styles.envPill} testID={`listing-env-pill-${i}`}>Quartier mesuré</Text> : null}
                 <Text style={styles.date}>{formatMonth(l.created_at)}</Text>
               </View>
+              {l.headline ? (
+                <View style={styles.headlineBox} testID={`listing-headline-${i}`}>
+                  <Text style={styles.headline} selectable>{l.headline}</Text>
+                  <Text style={styles.headlineSep} numberOfLines={1}>{HEADLINE_SEPARATOR}</Text>
+                </View>
+              ) : null}
               <Text style={styles.title} testID={`listing-title-${i}`}>{l.title}</Text>
               <Text style={styles.hook}>{l.hook}</Text>
               <Text style={styles.body}>{l.description}</Text>
@@ -294,6 +302,9 @@ const useStyles = makeStyles((colors) => ({
   listingHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   stylePill: { fontFamily: fonts.semibold, fontSize: 12, color: colors.onBrandTertiary, backgroundColor: colors.brandTertiary, paddingHorizontal: spacing.md, height: 26, lineHeight: 26, borderRadius: radius.pill },
   date: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
+  headlineBox: { gap: 2 },
+  headline: { fontFamily: fonts.bold, fontSize: 14, lineHeight: 21, color: colors.onSurface },
+  headlineSep: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, letterSpacing: 1 },
   title: { fontFamily: fonts.bold, fontSize: 18, color: colors.onSurfaceSecondary },
   hook: { fontFamily: fonts.medium, fontSize: 15, lineHeight: 22, color: colors.onSurfaceSecondary },
   body: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 21, color: colors.onSurfaceTertiary },

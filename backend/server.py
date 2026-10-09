@@ -40,7 +40,7 @@ import photos as photo_ai
 import storage
 from blend import blend, market_estimate, market_signal
 from estimator import METHOD_VERSION, NoDataError, estimate, run_validation
-from listing import generate_listing
+from listing import generate_listing, headline as listing_headline
 from models import (ChecklistOverride, DocumentDoc, DocumentValidate, Features, ListingDoc, ListingRequest, PhotoDoc,
                     PropertyDoc, PropertyIn, PropertyUpdate, TargetPriceIn, Weights, utcnow)
 from report import build_report
@@ -506,7 +506,14 @@ async def property_next_steps(pid: str):
 @api.get("/properties/{pid}/listings")
 async def list_listings(pid: str):
     docs = await db.listings.find({"property_id": pid, "deleted_at": None}).sort("created_at", -1).to_list(50)
-    return [ListingDoc.from_mongo(d).model_dump(mode="json") for d in docs]
+    out = [ListingDoc.from_mongo(d).model_dump(mode="json") for d in docs]
+    if any(not l.get("headline") for l in out):  # annonces antérieures : accroche structurée calculée à la volée
+        prop_doc = await db.properties.find_one({"_id": _oid(pid), "deleted_at": None, **auth.own()})
+        if prop_doc:
+            line = listing_headline(PropertyDoc.from_mongo(prop_doc))
+            for l in out:
+                l["headline"] = l.get("headline") or line
+    return out
 
 
 @api.post("/properties/{pid}/listings", status_code=201)
@@ -769,6 +776,7 @@ async def pack_pdf(pid: str, style: str = Query(default="sobre"), include_price:
         listing = ListingDoc(property_id=pid, style=style, extra_facts=None, **result)
         await db.listings.insert_one({**listing.to_mongo(), "deleted_at": None, **auth.own()})
         listing = listing.model_dump()
+    listing["headline"] = listing.get("headline") or listing_headline(prop)
     photos = await _property_photos(pid)
     final = blend(prop.estimation, await _get_weights()) if prop.estimation else None
     target = (await _target_payload(doc))["analysis"]

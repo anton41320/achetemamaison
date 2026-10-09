@@ -255,6 +255,7 @@ class ListingDoc(BaseDocument):
     used_environment: bool = False
     property_id: str
     style: str
+    headline: Optional[str] = None  # ligne d'accroche structurée (code postal - commune - type pièces m² - atouts), générée côté serveur
     title: str
     hook: str
     description: str

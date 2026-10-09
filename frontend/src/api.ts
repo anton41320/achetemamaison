@@ -279,6 +279,7 @@ export interface Listing {
   id: string;
   property_id: string;
   style: ListingStyle;
+  headline: string | null;
   title: string;
   hook: string;
   description: string;
