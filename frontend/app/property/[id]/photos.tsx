@@ -191,7 +191,7 @@ export default function PhotosScreen() {
     <View style={styles.screen} testID="photos-screen">
       <ScreenHeader
         title="Photos & retouche IA"
-        subtitle="Gemini Nano Banana · original toujours conservé"
+        subtitle="Retouche IA · original toujours conservé"
         onBack={() => router.back()}
       />
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xl }]}>
@@ -216,8 +216,9 @@ export default function PhotosScreen() {
           ) : null}
         </View>
         <Text style={styles.hint}>
-          La retouche améliore légèrement la luminosité, corrige les couleurs et l’exposition, renforce la netteté, redresse
-          l’image et efface uniquement de petits éléments gênants. Aucun élément n’est ajouté : le visuel retouché reste une représentation fidèle du bien. La première photo sert de couverture dans
+          La retouche donne un rendu de photographie immobilière professionnelle : lumière et contraste optimisés, balance des
+          blancs naturelle, perspectives redressées, netteté renforcée, pièce rangée (éléments fixés aux murs conservés), personnes
+          retirées. Aucun élément n’est ajouté : le visuel retouché reste une représentation fidèle du bien. La première photo sert de couverture dans
           l’annonce et les PDF : utilisez les flèches ou « Couverture » pour ordonner vos photos.
         </Text>
         {!pack.loading && !pack.unlocked ? <PremiumGate propertyId={id!} feature="la retouche photo par l’IA" testID="photos-premium-gate" /> : null}
