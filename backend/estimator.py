@@ -25,7 +25,7 @@ TIGHT_TOL = 0.15  # surface tolerance tried first at each radius (less price/m²
 OUTBUILDING_LABELS = {"bureau": "Bureau indépendant", "hangar": "Hangar", "grange": "Grange", "abri_jardin": "Abri de jardin", "pool_house": "Pool house", "autre": "Dépendance"}
 RANGE_HALF = 0.05  # fourchette affichée : ±5 % autour de la valeur centrale (choix produit) ; l'incertitude réelle est portée par la dispersion
 SIZE_ELASTICITY = 0.20  # price/m² ∝ surface^-0.20 (hedonic log-surface coefficient ≈ 0.80)
-METHOD_VERSION = "comparables_dvf_v4"  # bump when the range/selection/hedonic logic changes: stored estimations auto-refresh
+METHOD_VERSION = "comparables_dvf_v5"  # bump when the range/selection/hedonic logic changes: stored estimations auto-refresh
 
 # (label, radius_m or None = same commune, surface tolerance, restrict to communes of similar size)
 LEVELS = [
@@ -36,20 +36,48 @@ LEVELS = [
     ("10 km, communes similaires", 10000, 0.35, True),
 ]
 
+# Relatif à la vente DVF « typique » (bien habitable, en état correct à bon) : seuls les écarts à ce standard comptent.
 CONDITION_ADJ = {
-    "a_renover": (-0.12, "À rénover"),
-    "travaux": (-0.06, "Travaux à prévoir"),
+    "a_renover": (-0.15, "À rénover"),
+    "travaux": (-0.07, "Travaux à prévoir"),
     "correct": (0.0, "État correct"),
-    "bon": (0.04, "Bon état"),
-    "tres_bon": (0.07, "Très bon état"),
+    "bon": (0.03, "Bon état"),
+    "tres_bon": (0.06, "Très bon état"),
     "neuf_renove": (0.10, "Neuf / rénové"),
 }
 
+# Époque de construction (maison / appartement) : performance énergétique, normes, agencement — relatif au parc vendu,
+# majoritairement construit avant 1990. Si un DPE est renseigné, la part « énergie » est déjà mesurée : effet réduit de 40 %.
+YEAR_ADJ = {
+    "maison": [(1950, -0.04, "Construction ancienne (avant 1950)"), (1975, -0.08, "Construction 1950–1974 (isolation, normes d'époque)"),
+               (1990, -0.05, "Construction 1975–1989 (performance énergétique)"), (2005, -0.01, "Construction 1990–2004"),
+               (2013, 0.05, "Construction 2005–2012 (RT 2005)"), (9999, 0.10, "Construction récente (RT 2012 et après)")],
+    "appartement": [(1950, 0.0, "Immeuble ancien (avant 1950)"), (1975, -0.06, "Construction 1950–1974 (isolation, normes d'époque)"),
+                    (1990, -0.04, "Construction 1975–1989 (performance énergétique)"), (2005, 0.0, "Construction 1990–2004"),
+                    (2013, 0.04, "Construction 2005–2012 (RT 2005)"), (9999, 0.08, "Construction récente (RT 2012 et après)")],
+}
+# Somme des ajustements déclaratifs (état + époque + équipements, hors terrain et environnement) : bornée pour éviter
+# qu'un cumul de petits « plus » ne décroche le bien de son marché ; les moins-values structurelles restent possibles.
+DECLARED_MAX_UP, DECLARED_MAX_DOWN = 0.15, -0.35
+
+
+def year_adjustment(ptype: str, year_built: Optional[int], has_dpe: bool) -> Optional[Adjustment]:
+    if not year_built:
+        return None
+    for upper, pct, label in YEAR_ADJ.get(ptype, YEAR_ADJ["maison"]):
+        if year_built < upper:
+            if has_dpe:
+                pct = round(pct * 0.6, 4)
+            return Adjustment(key="year", label=label, pct=pct, amount=0.0)
+    return None
+
 LAND_PRICE_PER_M2 = 12.0
 
-# Declared feature adjustments (transparent, bounded). DVF has none of these, so they are
-# applied as explicit multiplicative corrections and listed one by one.
-FEATURE_MAX_TOTAL = 0.25
+# Declared feature adjustments (transparent, bounded). DVF has none of these, so they are applied as explicit
+# multiplicative corrections and listed one by one — relative to the typical sold house, which already has a garage,
+# a terrace, a fenced plot… : standard equipment weighs little, premium equipment (pool, PAC, DPE A/B) a bit more,
+# and real drawbacks (fioul, fosse, DPE F/G) keep their full weight.
+FEATURE_MAX_UP, FEATURE_MAX_DOWN = 0.10, -0.25
 
 
 def feature_adjustments(ptype: str, f, value_base: float, surface: Optional[float] = None) -> list[Adjustment]:
@@ -60,17 +88,17 @@ def feature_adjustments(ptype: str, f, value_base: float, surface: Optional[floa
     if f.pool == "hors_sol":
         out.append(("feat_pool", "Piscine hors-sol", 0.01))
     elif f.pool == "enterree":
-        out.append(("feat_pool", "Piscine enterrée", 0.06))
+        out.append(("feat_pool", "Piscine enterrée", 0.04))
     if maison and f.fenced:
-        out.append(("feat_fenced", "Terrain clos", 0.015))
+        out.append(("feat_fenced", "Terrain clos", 0.005))
     if maison and f.motorized_gate:
-        out.append(("feat_gate", "Portail motorisé", 0.01))
+        out.append(("feat_gate", "Portail motorisé", 0.005))
     if f.terrace:
-        out.append(("feat_terrace", "Terrasse", 0.015))
+        out.append(("feat_terrace", "Terrasse", 0.01))
     if maison and f.garage == "un":
-        out.append(("feat_garage", "Garage", 0.03))
+        out.append(("feat_garage", "Garage", 0.015))
     elif maison and f.garage == "deux_plus":
-        out.append(("feat_garage", "Double garage ou plus", 0.05))
+        out.append(("feat_garage", "Double garage ou plus", 0.03))
     if maison and f.outbuilding:
         label = OUTBUILDING_LABELS.get(f.outbuilding_type or "", "Dépendance")
         surf = f.outbuilding_surface or 0
@@ -81,25 +109,21 @@ def feature_adjustments(ptype: str, f, value_base: float, surface: Optional[floa
             pct += 0.01
         out.append(("feat_outbuilding", label + (f" {surf:g} m²" if surf else ""), pct))
     if f.orientation in ("sud", "sud_ouest", "sud_est"):
-        out.append(("feat_orientation", "Exposition sud", 0.02))
+        out.append(("feat_orientation", "Exposition sud", 0.01))
     elif f.orientation == "nord":
         out.append(("feat_orientation", "Exposition nord", -0.02))
     if maison and f.single_storey:
-        out.append(("feat_single_storey", "Plain-pied", 0.03))
+        out.append(("feat_single_storey", "Plain-pied", 0.02))
     if maison and f.basement:
-        out.append(("feat_basement", "Sous-sol / cave", 0.015))
+        out.append(("feat_basement", "Sous-sol / cave", 0.01))
     if maison and f.convertible_attic:
-        out.append(("feat_attic", "Combles aménageables", 0.02))
-    if maison and f.pantry:
-        out.append(("feat_pantry", "Cellier", 0.005))
+        out.append(("feat_attic", "Combles aménageables", 0.01))
     if maison and f.master_suite:
         extras = [lbl for flag, lbl in ((f.master_suite_dressing, "dressing"), (f.master_suite_bathroom, "salle d'eau"), (f.master_suite_wc, "WC")) if flag]
-        out.append(("feat_master_suite", "Suite parentale" + (f" ({', '.join(extras)})" if extras else ""), 0.015 + 0.005 * len(extras)))
-    if maison and f.dressing:
-        out.append(("feat_dressing", "Dressing indépendant", 0.005))
+        out.append(("feat_master_suite", "Suite parentale" + (f" ({', '.join(extras)})" if extras else ""), 0.01 + 0.005 * len(extras)))
     if f.bathrooms is not None and f.bathrooms >= 2:
-        out.append(("feat_bathrooms", f"{f.bathrooms} salles de bain", 0.015))
-    heating = {"pompe_a_chaleur": ("Pompe à chaleur", 0.03), "electrique": ("Chauffage électrique", -0.02),
+        out.append(("feat_bathrooms", f"{f.bathrooms} salles de bain", 0.01))
+    heating = {"pompe_a_chaleur": ("Pompe à chaleur", 0.02), "electrique": ("Chauffage électrique", -0.02),
                "fioul": ("Chauffage au fioul", -0.04)}
     if f.heating in heating:
         label, pct = heating[f.heating]
@@ -113,16 +137,14 @@ def feature_adjustments(ptype: str, f, value_base: float, surface: Optional[floa
     dpe = {"A": 0.06, "B": 0.06, "C": 0.03, "D": 0.0, "E": -0.04, "F": -0.09, "G": -0.14}
     if f.dpe in dpe and dpe[f.dpe] != 0:
         out.append(("feat_dpe", f"DPE {f.dpe}", dpe[f.dpe]))
-    if f.double_glazing:
-        out.append(("feat_glazing", "Double vitrage", 0.01))
     if f.air_conditioning:
-        out.append(("feat_ac", "Climatisation", 0.015))
+        out.append(("feat_ac", "Climatisation", 0.01))
     if f.fireplace and f.fireplace != "aucune":
-        fire = {"insert": ("Cheminée avec insert", 0.015), "foyer_ouvert": ("Cheminée à foyer ouvert", 0.005),
-                "poele_bois": ("Poêle à bois", 0.015), "poele_granules": ("Poêle à granulés", 0.02)}[f.fireplace]
+        fire = {"insert": ("Cheminée avec insert", 0.01), "foyer_ouvert": ("Cheminée à foyer ouvert", 0.0),
+                "poele_bois": ("Poêle à bois", 0.01), "poele_granules": ("Poêle à granulés", 0.01)}[f.fireplace]
         out.append(("feat_fireplace", *fire))
     if f.solar_panels:
-        out.append(("feat_solar", "Panneaux solaires", 0.02))
+        out.append(("feat_solar", "Panneaux solaires", 0.01))
     if not maison:
         if f.floor is not None:
             if f.floor == 0:
@@ -158,8 +180,10 @@ def feature_adjustments(ptype: str, f, value_base: float, surface: Optional[floa
                 out.append(("feat_condo_fees", f"Charges de copropriété supérieures à la moyenne ({fees})", -0.02))
             elif per_m2 <= 2:
                 out.append(("feat_condo_fees", f"Charges de copropriété modérées ({fees})", 0.01))
+    out = [(k, lbl, p) for k, lbl, p in out if p != 0]
     total = sum(p for _, _, p in out)
-    scale = min(1.0, FEATURE_MAX_TOTAL / abs(total)) if abs(total) > FEATURE_MAX_TOTAL else 1.0
+    cap = FEATURE_MAX_UP if total > 0 else FEATURE_MAX_DOWN
+    scale = min(1.0, abs(cap) / abs(total)) if abs(total) > abs(cap) else 1.0
     return [Adjustment(key=k, label=lbl, pct=round(p * scale, 4), amount=value_base * p * scale) for k, lbl, p in out]
 
 
@@ -374,18 +398,22 @@ def estimate_from_candidates(cands: list[dict], *, surface: float, ptype: str, c
     cond_pct, cond_label = CONDITION_ADJ.get(condition, (0.0, "État correct"))
     adjustments.append(Adjustment(key="condition", label=cond_label, pct=cond_pct, amount=value_base * cond_pct))
 
-    if year_built:
-        if year_built < 1950:
-            y_pct, y_label = -0.03, "Construction ancienne (avant 1950)"
-        elif year_built < 1980:
-            y_pct, y_label = -0.04, "Construction 1950–1979 (performance énergétique)"
-        elif year_built < 2005:
-            y_pct, y_label = 0.0, "Construction 1980–2004"
-        else:
-            y_pct, y_label = 0.05, "Construction récente (2005+)"
-        adjustments.append(Adjustment(key="year", label=y_label, pct=y_pct, amount=value_base * y_pct))
+    year_adj = year_adjustment(ptype, year_built, bool(getattr(features, "dpe", None)))
+    if year_adj:
+        year_adj.amount = value_base * year_adj.pct
+        adjustments.append(year_adj)
 
     adjustments.extend(feature_adjustments(ptype, features, value_base, surface))
+
+    # Borne globale des ajustements déclaratifs (état + époque + équipements) : un cumul de petits « plus » ne doit pas
+    # décrocher le bien de son marché ; en cas de dépassement, chaque ligne est réduite proportionnellement.
+    declared = sum(a.pct for a in adjustments)
+    cap = DECLARED_MAX_UP if declared > 0 else DECLARED_MAX_DOWN
+    if abs(declared) > abs(cap):
+        scale = abs(cap) / abs(declared)
+        for a in adjustments:
+            a.pct, a.amount = round(a.pct * scale, 4), value_base * a.pct * scale
+        notes.append(f"Les ajustements déclarés ont été plafonnés à {cap * 100:+.0f} % au total pour rester cohérents avec les ventes réelles du secteur.")
 
     land_amount = 0.0
     if ptype == "maison" and land_surface is not None:
