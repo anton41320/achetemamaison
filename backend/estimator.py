@@ -56,9 +56,11 @@ YEAR_ADJ = {
                     (1990, -0.04, "Construction 1975–1989 (performance énergétique)"), (2005, 0.0, "Construction 1990–2004"),
                     (2013, 0.04, "Construction 2005–2012 (RT 2005)"), (9999, 0.08, "Construction récente (RT 2012 et après)")],
 }
-# Somme des ajustements déclaratifs (état + époque + équipements, hors terrain et environnement) : bornée pour éviter
-# qu'un cumul de petits « plus » ne décroche le bien de son marché ; les moins-values structurelles restent possibles.
-DECLARED_MAX_UP, DECLARED_MAX_DOWN = 0.15, -0.35
+# Maison récente (≤ 15 ans) : dans les secteurs où le parc vendu est ancien et bon marché, la décote « ancien » du marché ne
+# s'applique pas à une construction neuve, dont la valeur reste adossée à son coût de construction actuel (maison + terrain
+# courant, hors frais) : ≈ 2 000 €/m² en 2025–2026, amorti de 1,5 %/an. La prime « récent » est alors relevée jusqu'à ce
+# plancher (bornée à +45 %), ce qui évite de sous-estimer un bien neuf comparé à des maisons des années 1960–1980.
+NEW_BUILD_FLOOR_PM2, NEW_BUILD_DEPRECIATION, NEW_BUILD_MAX_AGE, NEW_BUILD_MAX_PCT = 2000.0, 0.015, 15, 0.45
 
 
 def year_adjustment(ptype: str, year_built: Optional[int], has_dpe: bool) -> Optional[Adjustment]:
@@ -400,20 +402,20 @@ def estimate_from_candidates(cands: list[dict], *, surface: float, ptype: str, c
 
     year_adj = year_adjustment(ptype, year_built, bool(getattr(features, "dpe", None)))
     if year_adj:
+        age = datetime.now(timezone.utc).year - (year_built or 0)
+        if ptype == "maison" and 0 <= age <= NEW_BUILD_MAX_AGE:
+            floor_pm2 = NEW_BUILD_FLOOR_PM2 * (1 - NEW_BUILD_DEPRECIATION * age)
+            implied = floor_pm2 / base_pm2 - 1
+            if implied > year_adj.pct:
+                year_adj.pct = round(min(implied, NEW_BUILD_MAX_PCT), 4)
+                year_adj.label = f"Construction récente ({year_built}) : valeur adossée au coût de construction actuel (≈{floor_pm2:,.0f} €/m²)".replace(",", "\u202f")
+                notes.append("Maison récente dans un secteur où les ventes portent surtout sur du bâti ancien : la prime « récent » est relevée "
+                             f"jusqu'au coût de construction actuel amorti (≈{floor_pm2:,.0f} €/m² terrain courant compris), plutôt que de "
+                             "l'aligner sur des maisons des années 1960–1980.".replace(",", "\u202f"))
         year_adj.amount = value_base * year_adj.pct
         adjustments.append(year_adj)
 
     adjustments.extend(feature_adjustments(ptype, features, value_base, surface))
-
-    # Borne globale des ajustements déclaratifs (état + époque + équipements) : un cumul de petits « plus » ne doit pas
-    # décrocher le bien de son marché ; en cas de dépassement, chaque ligne est réduite proportionnellement.
-    declared = sum(a.pct for a in adjustments)
-    cap = DECLARED_MAX_UP if declared > 0 else DECLARED_MAX_DOWN
-    if abs(declared) > abs(cap):
-        scale = abs(cap) / abs(declared)
-        for a in adjustments:
-            a.pct, a.amount = round(a.pct * scale, 4), value_base * a.pct * scale
-        notes.append(f"Les ajustements déclarés ont été plafonnés à {cap * 100:+.0f} % au total pour rester cohérents avec les ventes réelles du secteur.")
 
     land_amount = 0.0
     if ptype == "maison" and land_surface is not None:
