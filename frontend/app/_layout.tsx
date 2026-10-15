@@ -12,6 +12,7 @@ import { ErrorBoundary } from "@/src/components/error-boundary";
 import { SessionProvider, useSession } from "@/src/auth";
 import { queryClient } from "@/src/query-client";
 import { useTheme } from "@/src/theme";
+import { WebShell } from "@/src/web/WebShell";
 
 // Disable logbox errors etc so that users can see the app
 // and agent works as expected.
@@ -30,56 +31,102 @@ function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
   if (!fontsReady || loading) return null;
   if (startupError && !user) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 12, backgroundColor: colors.surface }} testID="startup-error">
-        <Text style={{ fontFamily: "PlusJakartaSans-SemiBold", fontSize: 18, color: colors.onSurface, textAlign: "center" }}>Serveur momentanément indisponible</Text>
-        <Text style={{ fontFamily: "PlusJakartaSans-Regular", fontSize: 14, color: colors.onSurfaceTertiary, textAlign: "center" }}>{startupError}</Text>
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 24,
+          gap: 12,
+          backgroundColor: colors.surface,
+        }}
+        testID="startup-error"
+      >
+        <Text
+          style={{
+            fontFamily: "PlusJakartaSans-SemiBold",
+            fontSize: 18,
+            color: colors.onSurface,
+            textAlign: "center",
+          }}
+        >
+          Serveur momentanément indisponible
+        </Text>
+        <Text
+          style={{
+            fontFamily: "PlusJakartaSans-Regular",
+            fontSize: 14,
+            color: colors.onSurfaceTertiary,
+            textAlign: "center",
+          }}
+        >
+          {startupError}
+        </Text>
         <Pressable
           testID="startup-retry"
           accessibilityRole="button"
           onPress={retry}
-          style={{ minHeight: 48, paddingHorizontal: 24, borderRadius: 12, backgroundColor: colors.brandPrimary, alignItems: "center", justifyContent: "center", marginTop: 8 }}
+          style={{
+            minHeight: 48,
+            paddingHorizontal: 24,
+            borderRadius: 12,
+            backgroundColor: colors.brandPrimary,
+            alignItems: "center",
+            justifyContent: "center",
+            marginTop: 8,
+          }}
         >
-          <Text style={{ fontFamily: "PlusJakartaSans-SemiBold", fontSize: 15, color: colors.onBrandPrimary }}>Réessayer</Text>
+          <Text
+            style={{
+              fontFamily: "PlusJakartaSans-SemiBold",
+              fontSize: 15,
+              color: colors.onBrandPrimary,
+            }}
+          >
+            Réessayer
+          </Text>
         </Pressable>
       </View>
     );
   }
   const signedIn = !!user;
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: colors.surface },
-        animation: "slide_from_right",
-      }}
-    >
-      <Stack.Screen name="welcome" />
-      <Stack.Protected guard={!signedIn}>
-        <Stack.Screen name="sign-in" />
-        <Stack.Screen name="sign-up" />
-        <Stack.Screen name="forgot-password" />
-      </Stack.Protected>
-      <Stack.Protected guard={signedIn}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="new" />
-        <Stack.Screen name="data" />
-        <Stack.Screen name="account" />
-        <Stack.Screen name="property/[id]/index" />
-        <Stack.Screen name="property/[id]/vente" />
-        <Stack.Screen name="property/[id]/vendu" />
-        <Stack.Screen name="property/[id]/edit" />
-        <Stack.Screen name="property/[id]/environment" />
-        <Stack.Screen name="property/[id]/visites" />
-        <Stack.Screen name="property/[id]/comparables" />
-        <Stack.Screen name="property/[id]/dossier" />
-        <Stack.Screen name="property/[id]/listing" />
-        <Stack.Screen name="property/[id]/photos" />
-        <Stack.Screen name="property/[id]/pack" />
-        <Stack.Screen name="property/[id]/document/[docId]" />
-      </Stack.Protected>
-      <Stack.Screen name="reset-password" />
-      <Stack.Screen name="privacy" />
-    </Stack>
+    <WebShell>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.surface },
+          animation: "slide_from_right",
+        }}
+      >
+        <Stack.Screen name="welcome" />
+        <Stack.Protected guard={!signedIn}>
+          <Stack.Screen name="sign-in" />
+          <Stack.Screen name="sign-up" />
+          <Stack.Screen name="forgot-password" />
+        </Stack.Protected>
+        <Stack.Protected guard={signedIn}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="new" />
+          <Stack.Screen name="data" />
+          <Stack.Screen name="account" />
+          <Stack.Screen name="property/[id]/index" />
+          <Stack.Screen name="property/[id]/vente" />
+          <Stack.Screen name="property/[id]/vendu" />
+          <Stack.Screen name="property/[id]/edit" />
+          <Stack.Screen name="property/[id]/environment" />
+          <Stack.Screen name="property/[id]/visites" />
+          <Stack.Screen name="property/[id]/comparables" />
+          <Stack.Screen name="property/[id]/dossier" />
+          <Stack.Screen name="property/[id]/listing" />
+          <Stack.Screen name="property/[id]/photos" />
+          <Stack.Screen name="property/[id]/pack" />
+          <Stack.Screen name="property/[id]/document/[docId]" />
+        </Stack.Protected>
+        <Stack.Screen name="reset-password" />
+        <Stack.Screen name="privacy" />
+      </Stack>
+    </WebShell>
   );
 }
 

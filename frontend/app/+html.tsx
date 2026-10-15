@@ -4,9 +4,21 @@ import type { PropsWithChildren } from "react";
 
 export default function Root({ children }: PropsWithChildren) {
   return (
-    <html lang="en" style={{ height: "100%" }}>
+    <html lang="fr" style={{ height: "100%" }}>
       <head>
         <meta charSet="utf-8" />
+        <title>Achète ma maison — Estimation immobilière gratuite et vente entre particuliers</title>
+        <meta
+          name="description"
+          content="Estimez gratuitement votre maison ou appartement à partir des ventes réelles (DVF), puis vendez entre particuliers : photos retouchées par IA, annonce, dossier de vente complet."
+        />
+        <meta name="theme-color" content="#1656C9" />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Achète ma maison" />
+        <meta property="og:title" content="Achète ma maison — Estimation immobilière gratuite" />
+        <meta property="og:description" content="Combien vaut ma maison ? Estimation gratuite basée sur les ventes réelles, puis accompagnement jusqu’à la vente." />
+        <meta property="og:image" content="/app-image.png" />
+        <meta name="twitter:card" content="summary_large_image" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta
           name="viewport"

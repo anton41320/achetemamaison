@@ -27,7 +27,8 @@ export default function WelcomeScreen() {
   const { user } = useSession();
   const [index, setIndex] = useState(0);
   const listRef = useRef<FlatList>(null);
-  const width = Dimensions.get("window").width;
+  // Largeur mesurée du conteneur (sur le Web « ordinateur », l'écran est affiché dans une carte centrée plus étroite que la fenêtre).
+  const [width, setWidth] = useState(Dimensions.get("window").width);
 
   const goTo = (i: number) => {
     listRef.current?.scrollToIndex({ index: i, animated: true });
@@ -54,6 +55,8 @@ export default function WelcomeScreen() {
       </View>
 
       <FlatList
+        key={width}
+        onLayout={(e) => setWidth(Math.round(e.nativeEvent.layout.width) || width)}
         ref={listRef}
         data={STEPS}
         horizontal
