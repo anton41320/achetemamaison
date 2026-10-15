@@ -15,11 +15,15 @@ const STEP_SUFFIX = ["", "/vente", "/vendu"] as const;
  * Coque Web « ordinateur » : barre latérale de navigation + colonne de contenu centrée.
  * Ne s'active que dans un navigateur ≥ 1024 px ; sur iOS/Android et sur mobile web, les écrans sont rendus tels quels.
  */
+/** Pages publiques (SEO) : elles ont leur propre en-tête et pied de page, la coque ne s'applique pas. */
+const PUBLIC_PREFIXES = ["/estimation-maison", "/estimation-immobiliere", "/combien-vaut-ma-maison", "/vendre-sa-maison", "/prix-immobilier", "/privacy"];
+
 export function WebShell({ children }: PropsWithChildren) {
   const { isDesktop } = useBreakpoint();
   const { user } = useSession();
   const styles = useStyles();
-  if (!isDesktop) return <>{children}</>;
+  const pathname = usePathname();
+  if (!isDesktop || PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"))) return <>{children}</>;
   if (!user) {
     return (
       <View style={styles.authRoot} testID="web-shell-auth">

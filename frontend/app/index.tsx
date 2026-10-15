@@ -14,6 +14,7 @@ import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { PropertyCard } from "@/src/components/PropertyCard";
 import { ScreenHeader } from "@/src/components/ScreenHeader";
 import { stageOf, stepRoute } from "@/src/steps";
+import { useBreakpoint } from "@/src/web/useBreakpoint";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
 const EMPTY_IMAGE =
@@ -23,6 +24,7 @@ export default function HomeScreen() {
   const styles = useStyles();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const { isDesktop } = useBreakpoint();
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -94,13 +96,16 @@ export default function HomeScreen() {
         </View>
       ) : (
         <FlatList
+          key={`cols-${isDesktop ? 2 : 1}`}
+          numColumns={isDesktop ? 2 : 1}
+          columnWrapperStyle={isDesktop ? { gap: spacing.md } : undefined}
           data={data}
           keyExtractor={(p) => p.id}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 96 }]}
           ListHeaderComponent={<AlertsBanner />}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={colors.brandPrimary} />}
           renderItem={({ item, index }) => (
-            <Animated.View entering={FadeInDown.delay(Math.min(index, 6) * 60).duration(320)}>
+            <Animated.View entering={FadeInDown.delay(Math.min(index, 6) * 60).duration(320)} style={isDesktop ? { flex: 1 } : undefined}>
               <PropertyCard
                 property={item}
                 onPress={() => router.push(stepRoute(item.id, stageOf(stepsById.get(item.id)).stage) as any)}

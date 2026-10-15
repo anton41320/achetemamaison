@@ -9,6 +9,8 @@ import { useState } from "react";
 import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useBreakpoint } from "@/src/web/useBreakpoint";
+
 import { PHOTO_LABELS, Photo, PhotoLabel, api, fileUrl, uploadPhoto } from "@/src/api";
 import { PremiumGate, usePackUnlocked } from "@/src/components/PremiumGate";
 import { PhotoOrderCard } from "@/src/components/PhotoOrderCard";
@@ -48,6 +50,9 @@ export default function PhotosScreen() {
   const styles = useStyles();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  // Web « ordinateur » : grille 2–3 colonnes ; mobile : une colonne (inchangé).
+  const { isDesktop, isWeb, isTablet } = useBreakpoint();
+  const columns = isDesktop ? 3 : isWeb && isTablet ? 2 : 1;
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -327,11 +332,12 @@ export default function PhotosScreen() {
             <Text style={styles.hint}>Ajoutez une photo de votre bien pour la retoucher avec l’IA.</Text>
           </View>
         ) : (
-          photos.data.map((p, i) => {
+          <View style={[styles.photoGrid, columns > 1 && { flexDirection: "row", flexWrap: "wrap" }]} testID="photo-grid">
+          {photos.data.map((p, i) => {
             const after = (showAfter[p.id] ?? true) && p.status === "done" && !!p.retouched_path;
             const uri = fileUrl(after ? p.retouched_path! : p.original_path);
             return (
-              <View key={p.id} style={styles.card} testID={`photo-card-${i}`}>
+              <View key={p.id} style={[styles.card, columns > 1 && { width: `${100 / columns - 1.5}%` as any }]} testID={`photo-card-${i}`}>
                 <View style={styles.imageWrap}>
                   <Image source={{ uri }} style={styles.image} contentFit="cover" transition={250} cachePolicy="memory-disk" />
                   {after ? (
@@ -456,7 +462,8 @@ export default function PhotosScreen() {
                 </View>
               </View>
             );
-          })
+          })}
+          </View>
         )}
       </ScrollView>
     </View>
@@ -484,6 +491,7 @@ const useStyles = makeStyles((colors) => ({
   skeleton: { height: 260, borderRadius: radius.lg, backgroundColor: colors.skeleton },
   empty: { alignItems: "center", gap: spacing.sm, paddingVertical: spacing.xxl },
   emptyTitle: { fontFamily: fonts.semibold, fontSize: 17, color: colors.onSurface },
+  photoGrid: { gap: spacing.lg },
   card: { backgroundColor: colors.surfaceSecondary, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, overflow: "hidden" },
   imageWrap: { height: 240, backgroundColor: colors.skeleton },
   image: { width: "100%", height: "100%" },

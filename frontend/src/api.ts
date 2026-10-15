@@ -790,7 +790,24 @@ export async function uploadDocument(propertyId: string, itemKey: string, uri: s
   return multipart<SaleDocument>(`/properties/${propertyId}/documents`, form);
 }
 
+export interface PublicPriceStat { median_pm2: number; median_price: number; median_surface: number; count: number }
+export interface PublicCommune { insee: string; name: string; slug: string; code_postal: string; maison: PublicPriceStat | null; appartement: PublicPriceStat | null; count: number; population?: number | null }
+export interface PublicDept { code: string; name: string; maison: PublicPriceStat | null; appartement: PublicPriceStat | null; count: number }
+export interface PublicDeptDetail extends PublicDept { years: [number, number]; communes: PublicCommune[] }
+export interface PublicCommuneDetail extends PublicCommune {
+  dept: string; dept_name: string; years: [number, number]; dept_maison: PublicPriceStat | null; dept_appartement: PublicPriceStat | null;
+  trend: { type: PropertyType; year: number; median_pm2: number; count: number }[];
+  recent_sales: { date: string; type: PropertyType; surface: number; rooms: number | null; land_surface: number | null; price: number; price_m2: number }[];
+  neighbours: PublicCommune[];
+}
+
 export const api = {
+  /** Estimation publique (sans compte) : même moteur que l'app, résultat non sauvegardé. */
+  estimatePreview: (body: PropertyIn) =>
+    request<Estimation>("/estimate/preview", { method: "POST", body: JSON.stringify(body) }),
+  publicDepts: () => request<{ years: [number, number]; departements: PublicDept[] }>("/public/prices"),
+  publicDept: (dept: string) => request<PublicDeptDetail>(`/public/prices/${dept}`),
+  publicCommune: (dept: string, insee: string) => request<PublicCommuneDetail>(`/public/prices/${dept}/${insee}`),
   geocode: (q: string) => request<{ results: GeocodeResult[]; covered_departments: string[] }>(
     `/geocode?q=${encodeURIComponent(q)}`,
   ),

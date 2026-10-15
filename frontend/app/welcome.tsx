@@ -1,10 +1,11 @@
-import { useRouter } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
 import { ArrowRightIcon, ChartLineUpIcon, FolderOpenIcon, HandshakeIcon } from "phosphor-react-native";
 import { useRef, useState } from "react";
 import { Dimensions, FlatList, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useSession } from "@/src/auth";
+import { useBreakpoint } from "@/src/web/useBreakpoint";
 import { BrandLogo } from "@/src/components/BrandLogo";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
@@ -26,6 +27,7 @@ export default function WelcomeScreen() {
   const router = useRouter();
   const { user } = useSession();
   const [index, setIndex] = useState(0);
+  const { isDesktop } = useBreakpoint();
   const listRef = useRef<FlatList>(null);
   // Largeur mesurée du conteneur (sur le Web « ordinateur », l'écran est affiché dans une carte centrée plus étroite que la fenêtre).
   const [width, setWidth] = useState(Dimensions.get("window").width);
@@ -35,6 +37,9 @@ export default function WelcomeScreen() {
     setIndex(i);
   };
   const next = () => (index < STEPS.length - 1 ? goTo(index + 1) : router.push(user ? "/" : "/sign-up"));
+
+  // Sur ordinateur (navigateur), la page d'accueil publique remplace le carrousel de bienvenue mobile.
+  if (isDesktop && !user) return <Redirect href="/estimation-maison" />;
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top, paddingBottom: insets.bottom + spacing.lg }]} testID="welcome-screen">

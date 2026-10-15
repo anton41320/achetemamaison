@@ -1306,6 +1306,10 @@ async def validation(n: int = Query(default=40, ge=5, le=150)):
 
 
 app.include_router(public)
+import public_prices  # noqa: E402
+
+public_prices.db = db
+app.include_router(public_prices.router)
 app.include_router(legal.router, prefix="/api")  # https://<domaine>/api/privacy
 app.include_router(legal.router)  # https://<domaine>/privacy (hôte déployé : la racine est servie par l'API)
 app.include_router(auth.router)

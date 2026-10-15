@@ -1,0 +1,35 @@
+{
+  "summary": "Phases 2-4 (coque Web + pages publiques SEO + prix immobilier DVF) — ALL GREEN. Backend pytest 6/6 (iter26_public_web.xml) : GET /api/public/prices renvoie 97 départements avec code/name/maison/appartement (41 présent, 2A/2B présents) ; GET /api/public/prices/41 → communes triées par count DESC, Blois en tête ; GET /api/public/prices/41/41061 → Cormeray maison.median_pm2=1914, count=29, recent_sales=12, neighbours=10, trend=5 (dept_name=Loir-et-Cher) ; GET /api/public/prices/99 → 404 ; GET /api/public/sitemap.xml → 17 368 <loc> (> 10 000), content-type xml ; GET /robots.txt (servi par le frontend) contient 'Sitemap: /api/public/sitemap.xml'. Frontend web desktop (1440×900) non connecté : / redirige bien vers /estimation-maison, Title '… | Achète ma maison', H1 'Estimation de maison gratuite…', widget free-estimate OK (free-address → free-suggestion-* '23 Rue Guy Sallé 41120 Cormeray', free-surface=110, free-year=1985, free-submit → free-result-value='199 000 €' ∈ [190–205 k€], free-result-cta → /sign-up). Les 3 pages SEO (/estimation-immobiliere, /combien-vaut-ma-maison, /vendre-sa-maison) ont Title correct, H1 et contenu FAQ ; en-tête public visible avec liens 'Estimation gratuite / Prix immobilier / Vendre sa maison' et bouton 'Se connecter'. /prix-immobilier : depts-table OK, price-row-41 clic → /prix-immobilier/41 (dept-stat-maison OK, communes-table présente), price-row-41061 clic → /prix-immobilier/41/41061-cormeray (commune-stat-maison 'MAISONS 1914 €/m² Prix médian 201 000 € · 103 m² · 29 ventes', texte 'ventes enregistrées' présent SANS 'NaN', recent-sales + neighbours-table présents). Web desktop connecté (delivered@resend.dev) : web-sidebar + nav-home/new/account/signout ; accueil en grille 2 colonnes (property-card x=310, 382) ; bien 6aa02db9efd8f90925a5a758 → nav-step-1/2/3 visibles ; clic nav-step-2 → /vente ; clic photos-button → /photos → photo-grid affiché. Pages publiques accessibles connecté : sidebar masquée, en-tête public avec 'Mon espace'. Mobile web (390×844) : /welcome affiche welcome-screen + welcome-stepper + welcome-slide-* (pas de redirection, pas de sidebar) ; après login, l'accueil est bien en 1 colonne (vérifié visuellement) et la fiche du bien affiche step-tabs (sidebar masquée). Aucune erreur console rouge, aucun écran blanc.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "RN-Web deprecated style props", "issue": "Warning console existant (déjà noté iter25) : '\"shadow*\" style props are deprecated. Use \"boxShadow\"'. Non bloquant pour la nouvelle version web."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_public_prices_web.py",
+    "/app/test_reports/pytest/iter26_public_web.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "public_prices.py : cache mémoire 24 h avec verrou par clé (asyncio.Lock) — bon pattern anti-thundering herd, charge Mongo épargnée. MIN_SALES_COMMUNE=5 / MIN_SALES_SITEMAP=10 protègent contre les médianes aberrantes et évitent la publication de pages faibles pour le SEO.",
+    "Agrégation $median (Mongo ≥ 7, 'approximate') pertinente ; _fmt() filtre les groupes à faible count — Cormeray (29 ventes) passe sans problème. median_price arrondi à 1 000 € volontairement (price_m2 arrondi à l'unité).",
+    "sitemap.xml : URLs construites avec x-forwarded-proto/host (compatible ingress Kubernetes), échappement XML via xml.sax.saxutils.escape — pas d'injection possible via les noms de communes. 17 368 <loc> générés, bien au-dessus du seuil.",
+    "PricePages.tsx : les testIDs price-row-{dept}/price-row-{insee}, depts-table, communes-table, recent-sales, neighbours-table, commune-stat-maison/appartement, dept-stat-maison/appartement sont tous présents et stables. Le slug est inclus dans la route (/prix-immobilier/41/41061-cormeray) pour le SEO.",
+    "FreeEstimate.tsx : suggestions BAN cliquables (testID free-suggestion-{id}), submit désactivé tant qu'une adresse n'est pas sélectionnée, free-result-cta route vers /sign-up (non connecté) ou /new (connecté). Pas d'auth requise pour l'estimation gratuite — conforme à la spec.",
+    "WebShell/PublicPage : la coque desktop (web-sidebar) ne s'affiche QUE si connecté ET non-page publique ; les pages publiques utilisent toujours PublicPage (en-tête public). Conforme : pages publiques accessibles connecté sans sidebar, avec bouton 'Mon espace'.",
+    "robots.txt bien servi par le frontend (Expo) avec la ligne 'Sitemap: /api/public/sitemap.xml' et Disallow sur /property/ /account /data /new (routes authentifiées, hors SEO)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_public_prices_web.py (new)"
+  ],
+  "success_rate": {"backend": "100% (6/6)", "frontend": "100% (6/6 flows web + mobile vérifiés)"},
+  "seed_data_creation": "Aucune — tests en lecture seule sur données DVF existantes et un compte test non modifié.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Pour tester les pages publiques : viewport 1440x900 en desktop, 390x844 en mobile. Les testIDs du widget free-estimate : free-address / free-suggestion-{id} / free-surface / free-year / free-submit / free-result-value / free-result-cta. Les testIDs des pages prix : depts-table, price-row-{code}, communes-table, commune-stat-maison, recent-sales, neighbours-table. Le welcome mobile a 'welcome-screen', 'welcome-stepper', 'welcome-slide-{key}' (il n'y a PAS de 'welcome-carousel' direct — chercher 'welcome-slide-*' pour vérifier). La coque Web (web-sidebar + nav-home/new/account/signout) n'apparaît que sur desktop ET connecté ET pages privées — jamais sur mobile ni sur les pages publiques, même connecté (header 'Mon espace' à la place).",
+  "rca_of_issue": "N/A — iteration de vérification. Toutes les cibles passent (backend 6/6, UI web desktop + mobile)."
+}
