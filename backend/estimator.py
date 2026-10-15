@@ -43,7 +43,7 @@ CONDITION_ADJ = {
     "correct": (-0.02, "État correct"),
     "bon": (0.0, "Bon état (état de la vente type)"),
     "tres_bon": (0.04, "Très bon état"),
-    "neuf_renove": (0.08, "Neuf / rénové"),
+    "neuf_renove": (0.10, "Neuf / rénové"),
 }
 RENOVATED_OLD_PCT = 0.06  # « rénové » sur un bâti de plus de 15 ans : la structure et l'agencement restent d'époque
 
@@ -404,6 +404,7 @@ def estimate_from_candidates(cands: list[dict], *, surface: float, ptype: str, c
         cond_pct, cond_label = RENOVATED_OLD_PCT, "Rénové (bâti d'époque)"
     adjustments.append(Adjustment(key="condition", label=cond_label, pct=cond_pct, amount=value_base * cond_pct))
 
+    cost_floor_active = False
     year_adj = year_adjustment(ptype, year_built, bool(getattr(features, "dpe", None)))
     if year_adj:
         age = datetime.now(timezone.utc).year - (year_built or 0)
@@ -411,6 +412,7 @@ def estimate_from_candidates(cands: list[dict], *, surface: float, ptype: str, c
             floor_pm2 = NEW_BUILD_FLOOR_PM2 * (1 - NEW_BUILD_DEPRECIATION * age)
             implied = floor_pm2 / base_pm2 - 1
             if implied > year_adj.pct:
+                cost_floor_active = True
                 year_adj.pct = round(min(implied, NEW_BUILD_MAX_PCT), 4)
                 year_adj.label = f"Construction récente ({year_built}) : valeur adossée au coût de construction actuel (≈{floor_pm2:,.0f} €/m²)".replace(",", "\u202f")
                 notes.append("Maison récente dans un secteur où les ventes portent surtout sur du bâti ancien : la prime « récent » est relevée "
@@ -421,10 +423,12 @@ def estimate_from_candidates(cands: list[dict], *, surface: float, ptype: str, c
 
     adjustments.extend(feature_adjustments(ptype, features, value_base, surface))
 
+    # Le plafond ne s'applique pas quand la valeur est adossée au coût de construction : ce plancher correspond à une maison
+    # neuve standard, l'état neuf et les équipements (PAC, DPE A…) s'y ajoutent réellement.
     declared = [a for a in adjustments if a.key != "year"]
     total = sum(a.pct for a in declared)
     cap = DECLARED_MAX_UP if total > 0 else DECLARED_MAX_DOWN
-    if abs(total) > abs(cap):
+    if abs(total) > abs(cap) and not (cost_floor_active and total > 0):
         scale = abs(cap) / abs(total)
         for a in declared:
             a.pct, a.amount = round(a.pct * scale, 4), value_base * a.pct * scale
