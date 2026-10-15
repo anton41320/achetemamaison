@@ -48,7 +48,7 @@ export function PublicPage({ title, description, path, jsonLd, testID, children 
       </Head>
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <View style={styles.headerInner}>
-          <Link href="/" asChild>
+          <Link href={user ? "/" : "/accueil"} asChild>
             <Pressable style={styles.brand} accessibilityRole="link" testID="public-brand">
               <Image source={require("../../assets/images/icon.png")} style={styles.brandIcon} contentFit="cover" />
               <Text style={styles.brandName}>{SITE_NAME}</Text>

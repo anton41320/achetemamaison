@@ -165,7 +165,7 @@ async def prices_commune(dept: str, insee: str):
     return await cached(f"commune:{dept}:{insee}", build)
 
 
-STATIC_PAGES = ["/", "/estimation-maison", "/estimation-immobiliere", "/combien-vaut-ma-maison", "/vendre-sa-maison", "/prix-immobilier", "/privacy"]
+STATIC_PAGES = ["/", "/accueil", "/estimation-maison", "/estimation-immobiliere", "/combien-vaut-ma-maison", "/vendre-sa-maison", "/prix-immobilier", "/privacy"]
 
 
 @router.get("/sitemap.xml")

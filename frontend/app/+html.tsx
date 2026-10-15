@@ -7,11 +7,6 @@ export default function Root({ children }: PropsWithChildren) {
     <html lang="fr" style={{ height: "100%" }}>
       <head>
         <meta charSet="utf-8" />
-        <title>Achète ma maison — Estimation immobilière gratuite et vente entre particuliers</title>
-        <meta
-          name="description"
-          content="Estimez gratuitement votre maison ou appartement à partir des ventes réelles (DVF), puis vendez entre particuliers : photos retouchées par IA, annonce, dossier de vente complet."
-        />
         <meta name="theme-color" content="#1656C9" />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Achète ma maison" />

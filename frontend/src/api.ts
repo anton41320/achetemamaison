@@ -1,6 +1,11 @@
 import { Platform } from "react-native";
 
-const BASE = `${process.env.EXPO_PUBLIC_BACKEND_URL}/api`;
+// Web : l'API est servie sur la même origine que la page (preview comme production) ; natif : URL du backend configurée.
+const ORIGIN =
+  Platform.OS === "web" && typeof window !== "undefined" && window.location?.origin?.startsWith("http")
+    ? window.location.origin
+    : process.env.EXPO_PUBLIC_BACKEND_URL;
+const BASE = `${ORIGIN}/api`;
 
 /** Multipart file part: a Blob on the web, the React Native `{ uri, name, type }` descriptor on iOS/Android.
  *  (Never sniff `document`: it exists in Expo's native runtime too.) */

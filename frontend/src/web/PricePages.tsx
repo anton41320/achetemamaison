@@ -74,11 +74,11 @@ export function DeptPage({ dept }: { dept: string }) {
   const q = useQuery({ queryKey: ["public-dept", dept], queryFn: () => api.publicDept(dept), staleTime: 3600_000, enabled: !!dept });
   const d = q.data;
   const rows = (d?.communes ?? []).map((c: PublicCommune) => ({ key: c.insee, href: `/prix-immobilier/${dept}/${c.insee}-${c.slug}`, name: c.name, sub: `${c.code_postal}${c.population ? ` · ${formatInt(c.population)} hab.` : ""}`, maison: c.maison, appartement: c.appartement, count: c.count }));
-  const name = d?.name ?? `département ${dept}`;
+  const name = d?.name ?? "";
   return (
-    <PublicPage title={`Prix immobilier ${name} (${dept}) : prix au m² par commune`} description={`Prix médian au m² des maisons et appartements dans le ${name} et dans chacune de ses communes, d'après les ventes réelles DVF.`} path={`/prix-immobilier/${dept}`} testID="prices-dept">
+    <PublicPage title={d ? `Prix immobilier ${name} (${dept}) : prix au m² par commune` : "Prix immobilier par commune"} description={d ? `Prix médian au m² des maisons et appartements dans le ${name} et dans chacune de ses communes, d'après les ventes réelles DVF.` : "Prix médian au m² par commune, d'après les ventes réelles DVF."} path={d ? `/prix-immobilier/${dept}` : "/prix-immobilier"} testID="prices-dept">
       <Link href="/prix-immobilier" asChild><Pressable accessibilityRole="link"><Text style={styles.crumb}>← Tous les départements</Text></Pressable></Link>
-      <Text style={styles.h1} accessibilityRole="header">Prix immobilier {name} ({dept})</Text>
+      <Text style={styles.h1} accessibilityRole="header">Prix immobilier {d ? `${name} (${dept})` : ""}</Text>
       {q.isLoading ? <Loading /> : d ? (
         <>
           <View style={styles.stats}>

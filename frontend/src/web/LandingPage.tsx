@@ -1,0 +1,153 @@
+import { Link, useRouter } from "expo-router";
+import { ChartBarIcon, FolderOpenIcon, ImagesIcon, ShieldCheckIcon, SparkleIcon, StarIcon } from "phosphor-react-native";
+import { Pressable, Text, View } from "react-native";
+
+import { PrimaryButton } from "@/src/components/PrimaryButton";
+import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
+import { FreeEstimate } from "@/src/web/FreeEstimate";
+import { PublicPage, SITE_NAME } from "@/src/web/PublicPage";
+import { useBreakpoint } from "@/src/web/useBreakpoint";
+
+const STEPS = [
+  { n: 1, title: "Estimation", icon: ChartBarIcon, text: "Fourchette fondée sur les ventes réelles autour de chez vous, expliquée ligne par ligne : état, époque, terrain, environnement, tendance du marché." },
+  { n: 2, title: "Mise en vente", icon: ImagesIcon, text: "Prix cible, photos retouchées par IA en qualité professionnelle, annonce rédigée avec une accroche structurée, conseils pour les visites." },
+  { n: 3, title: "Vendu", icon: FolderOpenIcon, text: "Dossier de vente complet : diagnostics et documents obligatoires adaptés à votre bien, lecture automatique, PDF prêt pour le notaire." },
+];
+
+const TRUST = [
+  { icon: ShieldCheckIcon, title: "Données officielles", text: "DVF (ventes réelles), BAN, cadastre, IGN, Géorisques, OpenStreetMap. 97 départements couverts." },
+  { icon: SparkleIcon, title: "IA au service du réel", text: "Les retouches photo n’inventent rien ; l’annonce ne cite que des faits vérifiés. L’original est toujours conservé." },
+  { icon: StarIcon, title: "Sans commission", text: "Estimation gratuite. Pack premium 49 € par bien, paiement unique, contre 4 à 6 % de commission en agence." },
+];
+
+// À remplacer par vos témoignages réels (prénom, commune, autorisation de publication).
+const TESTIMONIALS = [
+  { name: "Sophie", place: "Loir-et-Cher", text: "L’estimation correspondait à ce que deux agences m’avaient annoncé, mais avec le détail du calcul. J’ai vendu en six semaines au prix fixé." },
+  { name: "Marc", place: "Indre-et-Loire", text: "Les photos retouchées ont changé mon annonce du tout au tout, sans rien inventer. Le dossier de vente m’a évité des allers-retours avec le notaire." },
+  { name: "Nadia", place: "Loiret", text: "Simple et honnête : on comprend pourquoi la maison vaut ce prix. Le rapport PDF a rassuré les acheteurs pendant les visites." },
+];
+
+/** Page d'accueil vitrine (Web) : promesse, estimation gratuite, 3 étapes, confiance, témoignages, appel à l'action. */
+export function LandingPage() {
+  const styles = useStyles();
+  const { colors } = useTheme();
+  const { isDesktop, isTablet } = useBreakpoint();
+  const router = useRouter();
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: SITE_NAME,
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web, iOS, Android",
+    description: "Estimation immobilière gratuite fondée sur les ventes réelles, puis accompagnement jusqu’à la vente entre particuliers.",
+    offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
+  };
+
+  return (
+    <PublicPage
+      title="Estimation immobilière gratuite et vente entre particuliers"
+      description="Estimez gratuitement votre maison ou appartement à partir des ventes réelles (DVF), puis vendez entre particuliers : photos retouchées par IA, annonce, dossier de vente complet."
+      path="/accueil"
+      jsonLd={jsonLd}
+      testID="landing-page"
+    >
+      <View style={[styles.hero, isDesktop && { flexDirection: "row", alignItems: "center" }]}>
+        <View style={{ flex: 1, gap: spacing.md }}>
+          <Text style={styles.kicker}>De l’estimation à la vente, sans agence</Text>
+          <Text style={styles.h1} accessibilityRole="header">Combien vaut votre maison ? La réponse est dans les ventes réelles.</Text>
+          <Text style={styles.lead}>
+            {SITE_NAME} estime votre bien gratuitement à partir des transactions enregistrées autour de chez vous, puis vous accompagne en 3 étapes
+            jusqu’à la signature : prix, photos, annonce, dossier de vente.
+          </Text>
+          <View style={styles.badges}>
+            {["Gratuit et sans inscription", "97 départements", "Fourchette ±5 %"].map((b) => (
+              <View key={b} style={styles.badge}><Text style={styles.badgeText}>{b}</Text></View>
+            ))}
+          </View>
+        </View>
+        <View style={{ flex: 1, width: "100%" }}>
+          <FreeEstimate />
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.h2} accessibilityRole="header">Un parcours en 3 étapes</Text>
+        <View style={[styles.cards, isTablet && { flexDirection: "row" }]}>
+          {STEPS.map((s) => (
+            <View key={s.n} style={styles.stepCard} testID={`landing-step-${s.n}`}>
+              <View style={styles.stepBadge}><Text style={styles.stepBadgeText}>{s.n}</Text></View>
+              <s.icon size={28} color={colors.brandPrimary} weight="duotone" />
+              <Text style={styles.cardTitle}>{s.title}</Text>
+              <Text style={styles.cardText}>{s.text}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.h2} accessibilityRole="header">Pourquoi nous faire confiance</Text>
+        <View style={[styles.cards, isTablet && { flexDirection: "row" }]}>
+          {TRUST.map((t) => (
+            <View key={t.title} style={styles.trustCard}>
+              <t.icon size={26} color={colors.onBrandTertiary} weight="fill" />
+              <Text style={[styles.cardTitle, { color: colors.onBrandTertiary }]}>{t.title}</Text>
+              <Text style={[styles.cardText, { color: colors.onBrandTertiary }]}>{t.text}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.h2} accessibilityRole="header">Ils ont vendu avec {SITE_NAME}</Text>
+        <View style={[styles.cards, isTablet && { flexDirection: "row" }]}>
+          {TESTIMONIALS.map((t) => (
+            <View key={t.name} style={styles.quoteCard} testID="landing-testimonial">
+              <View style={{ flexDirection: "row", gap: 2 }}>{[0, 1, 2, 3, 4].map((i) => <StarIcon key={i} size={16} color={colors.warning} weight="fill" />)}</View>
+              <Text style={styles.quote}>« {t.text} »</Text>
+              <Text style={styles.quoteAuthor}>{t.name} · {t.place}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.ctaBlock} testID="landing-cta">
+        <Text style={styles.ctaTitle}>Prêt à connaître la valeur de votre bien ?</Text>
+        <Text style={styles.ctaText}>Estimation gratuite en 2 minutes, puis créez votre compte pour sauvegarder le bien et préparer la vente — sur le site comme dans l’application mobile.</Text>
+        <View style={[styles.ctaRow, isTablet && { flexDirection: "row" }]}>
+          <PrimaryButton title="Estimer gratuitement" onPress={() => router.navigate("/estimation-maison")} testID="landing-cta-estimate" />
+          <PrimaryButton title="Créer mon compte" variant="secondary" onPress={() => router.navigate("/sign-up")} testID="landing-cta-signup" />
+        </View>
+        <Link href="/prix-immobilier" asChild>
+          <Pressable accessibilityRole="link"><Text style={styles.link}>Voir les prix immobiliers par commune →</Text></Pressable>
+        </Link>
+      </View>
+    </PublicPage>
+  );
+}
+
+const useStyles = makeStyles((colors) => ({
+  hero: { gap: spacing.xl, paddingTop: spacing.lg },
+  kicker: { fontFamily: fonts.semibold, fontSize: 13, letterSpacing: 1.2, textTransform: "uppercase", color: colors.brandPrimary },
+  h1: { fontFamily: fonts.bold, fontSize: 36, lineHeight: 44, color: colors.onSurface },
+  lead: { fontFamily: fonts.regular, fontSize: 17, lineHeight: 26, color: colors.onSurfaceTertiary },
+  badges: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  badge: { backgroundColor: colors.brandTertiary, borderRadius: radius.pill, paddingHorizontal: spacing.md, minHeight: 32, justifyContent: "center" },
+  badgeText: { fontFamily: fonts.semibold, fontSize: 13, color: colors.onBrandTertiary },
+  section: { gap: spacing.md },
+  h2: { fontFamily: fonts.bold, fontSize: 26, lineHeight: 34, color: colors.onSurface },
+  cards: { flexDirection: "column", gap: spacing.md },
+  stepCard: { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.sm },
+  stepBadge: { width: 32, height: 32, borderRadius: radius.pill, backgroundColor: colors.brandPrimary, alignItems: "center", justifyContent: "center" },
+  stepBadgeText: { fontFamily: fonts.bold, fontSize: 15, color: colors.onBrandPrimary },
+  cardTitle: { fontFamily: fonts.bold, fontSize: 18, color: colors.onSurface },
+  cardText: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 21, color: colors.onSurfaceTertiary },
+  trustCard: { flex: 1, backgroundColor: colors.brandTertiary, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.sm },
+  quoteCard: { flex: 1, backgroundColor: colors.surfaceSecondary, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.sm, borderWidth: 1, borderColor: colors.border },
+  quote: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 23, color: colors.onSurfaceSecondary, fontStyle: "italic" },
+  quoteAuthor: { fontFamily: fonts.semibold, fontSize: 13, color: colors.muted },
+  ctaBlock: { backgroundColor: colors.brandPrimary, borderRadius: radius.lg, padding: spacing.xl, gap: spacing.md, alignItems: "center" },
+  ctaTitle: { fontFamily: fonts.bold, fontSize: 26, lineHeight: 34, color: colors.onBrandPrimary, textAlign: "center" },
+  ctaText: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, color: colors.onBrandPrimary, textAlign: "center", maxWidth: 680 },
+  ctaRow: { flexDirection: "column", gap: spacing.sm, width: "100%", maxWidth: 560 },
+  link: { fontFamily: fonts.semibold, fontSize: 14, color: colors.onBrandPrimary, minHeight: 36, lineHeight: 36, textDecorationLine: "underline" },
+}));

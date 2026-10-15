@@ -39,7 +39,7 @@ export default function WelcomeScreen() {
   const next = () => (index < STEPS.length - 1 ? goTo(index + 1) : router.push(user ? "/" : "/sign-up"));
 
   // Sur ordinateur (navigateur), la page d'accueil publique remplace le carrousel de bienvenue mobile.
-  if (isDesktop && !user) return <Redirect href="/estimation-maison" />;
+  if (isDesktop && !user) return <Redirect href="/accueil" />;
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top, paddingBottom: insets.bottom + spacing.lg }]} testID="welcome-screen">

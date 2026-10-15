@@ -72,7 +72,7 @@ export function FreeEstimate() {
       ) : null}
 
       <View style={[styles.grid, isTablet && { flexDirection: "row" }]}>
-        <View style={styles.col}>
+        <View style={[styles.col, { flex: 1.6 }]}>
           <Text style={styles.label}>Type de bien</Text>
           <View style={styles.seg}>
             {(["maison", "appartement"] as const).map((t) => (

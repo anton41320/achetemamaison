@@ -16,14 +16,16 @@ const STEP_SUFFIX = ["", "/vente", "/vendu"] as const;
  * Ne s'active que dans un navigateur ≥ 1024 px ; sur iOS/Android et sur mobile web, les écrans sont rendus tels quels.
  */
 /** Pages publiques (SEO) : elles ont leur propre en-tête et pied de page, la coque ne s'applique pas. */
-const PUBLIC_PREFIXES = ["/estimation-maison", "/estimation-immobiliere", "/combien-vaut-ma-maison", "/vendre-sa-maison", "/prix-immobilier", "/privacy"];
+const PUBLIC_PREFIXES = ["/accueil", "/estimation-maison", "/estimation-immobiliere", "/combien-vaut-ma-maison", "/vendre-sa-maison", "/prix-immobilier", "/privacy"];
+
+export const isPublicPath = (pathname: string) => PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
 
 export function WebShell({ children }: PropsWithChildren) {
   const { isDesktop } = useBreakpoint();
   const { user } = useSession();
   const styles = useStyles();
   const pathname = usePathname();
-  if (!isDesktop || PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"))) return <>{children}</>;
+  if (!isDesktop || isPublicPath(pathname)) return <>{children}</>;
   if (!user) {
     return (
       <View style={styles.authRoot} testID="web-shell-auth">

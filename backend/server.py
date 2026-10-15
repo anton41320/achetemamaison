@@ -1317,6 +1317,12 @@ app.include_router(iap.router, prefix="/api")
 app.include_router(promo.router, prefix="/api", dependencies=[Depends(auth.require_user)])
 app.include_router(iap.webhook_router, prefix="/api")
 app.include_router(api, dependencies=[Depends(auth.require_user)])
+
+# Version Web (export statique Expo dans backend/webdist) servie à la racine — enregistrée en dernier (catch-all).
+import webapp  # noqa: E402
+
+if webapp.mount_web(app):
+    logger.info("Version Web servie depuis %s", webapp.WEBDIST)
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
