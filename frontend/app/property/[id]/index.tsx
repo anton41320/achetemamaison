@@ -235,9 +235,10 @@ export default function PropertyDetailScreen() {
                 tant que cela rend la valeur centrale plus robuste. La fourchette affichée correspond à ±5 % autour de
                 la valeur centrale : c’est la marge de négociation usuelle, pas l’écart entre ventes individuelles, qui
                 est indiqué par la dispersion ci-dessus. Les ajustements (état, époque de construction, équipements)
-                s’entendent par rapport à la maison type vendue dans le secteur : un équipement courant pèse peu, une
-                construction d’avant 1990 est dépréciée face au récent, et leur cumul est plafonné à +15 % pour rester
-                cohérent avec les ventes réelles.
+                s’entendent par rapport à la maison type vendue dans le secteur (habitable, en bon état, équipée) : un
+                équipement courant est neutre, une construction d’avant 1990 est dépréciée face au récent, et le cumul
+                état + équipements est plafonné à +12 %. Une maison de moins de 15 ans est adossée au coût de construction
+                actuel lorsque le marché local ne porte que sur de l’ancien.
               </Text>
             </Animated.View>
 

@@ -39,21 +39,22 @@ LEVELS = [
 # Relatif à la vente DVF « typique » (bien habitable, en état correct à bon) : seuls les écarts à ce standard comptent.
 CONDITION_ADJ = {
     "a_renover": (-0.15, "À rénover"),
-    "travaux": (-0.07, "Travaux à prévoir"),
-    "correct": (0.0, "État correct"),
-    "bon": (0.03, "Bon état"),
-    "tres_bon": (0.06, "Très bon état"),
-    "neuf_renove": (0.10, "Neuf / rénové"),
+    "travaux": (-0.08, "Travaux à prévoir"),
+    "correct": (-0.02, "État correct"),
+    "bon": (0.0, "Bon état (état de la vente type)"),
+    "tres_bon": (0.04, "Très bon état"),
+    "neuf_renove": (0.08, "Neuf / rénové"),
 }
+RENOVATED_OLD_PCT = 0.06  # « rénové » sur un bâti de plus de 15 ans : la structure et l'agencement restent d'époque
 
 # Époque de construction (maison / appartement) : performance énergétique, normes, agencement — relatif au parc vendu,
 # majoritairement construit avant 1990. Si un DPE est renseigné, la part « énergie » est déjà mesurée : effet réduit de 40 %.
 YEAR_ADJ = {
-    "maison": [(1950, -0.04, "Construction ancienne (avant 1950)"), (1975, -0.08, "Construction 1950–1974 (isolation, normes d'époque)"),
-               (1990, -0.05, "Construction 1975–1989 (performance énergétique)"), (2005, -0.01, "Construction 1990–2004"),
+    "maison": [(1950, -0.05, "Construction ancienne (avant 1950)"), (1975, -0.09, "Construction 1950–1974 (isolation, normes d'époque)"),
+               (1990, -0.06, "Construction 1975–1989 (performance énergétique)"), (2005, -0.02, "Construction 1990–2004"),
                (2013, 0.05, "Construction 2005–2012 (RT 2005)"), (9999, 0.10, "Construction récente (RT 2012 et après)")],
-    "appartement": [(1950, 0.0, "Immeuble ancien (avant 1950)"), (1975, -0.06, "Construction 1950–1974 (isolation, normes d'époque)"),
-                    (1990, -0.04, "Construction 1975–1989 (performance énergétique)"), (2005, 0.0, "Construction 1990–2004"),
+    "appartement": [(1950, 0.0, "Immeuble ancien (avant 1950)"), (1975, -0.07, "Construction 1950–1974 (isolation, normes d'époque)"),
+                    (1990, -0.05, "Construction 1975–1989 (performance énergétique)"), (2005, -0.01, "Construction 1990–2004"),
                     (2013, 0.04, "Construction 2005–2012 (RT 2005)"), (9999, 0.08, "Construction récente (RT 2012 et après)")],
 }
 # Maison récente (≤ 15 ans) : dans les secteurs où le parc vendu est ancien et bon marché, la décote « ancien » du marché ne
@@ -61,6 +62,10 @@ YEAR_ADJ = {
 # courant, hors frais) : ≈ 2 000 €/m² en 2025–2026, amorti de 1,5 %/an. La prime « récent » est alors relevée jusqu'à ce
 # plancher (bornée à +45 %), ce qui évite de sous-estimer un bien neuf comparé à des maisons des années 1960–1980.
 NEW_BUILD_FLOOR_PM2, NEW_BUILD_DEPRECIATION, NEW_BUILD_MAX_AGE, NEW_BUILD_MAX_PCT = 2000.0, 0.015, 15, 0.45
+# État + équipements déclarés (hors époque de construction, terrain et environnement) : la vente DVF « typique » est déjà
+# une maison habitable et équipée ; une rénovation complète avec tous les équipements vaut en pratique +10 à +12 % au plus
+# par rapport à elle. Au-delà, chaque ligne est réduite proportionnellement (les moins-values restent possibles jusqu'à −35 %).
+DECLARED_MAX_UP, DECLARED_MAX_DOWN = 0.12, -0.35
 
 
 def year_adjustment(ptype: str, year_built: Optional[int], has_dpe: bool) -> Optional[Adjustment]:
@@ -91,16 +96,13 @@ def feature_adjustments(ptype: str, f, value_base: float, surface: Optional[floa
         out.append(("feat_pool", "Piscine hors-sol", 0.01))
     elif f.pool == "enterree":
         out.append(("feat_pool", "Piscine enterrée", 0.04))
-    if maison and f.fenced:
-        out.append(("feat_fenced", "Terrain clos", 0.005))
-    if maison and f.motorized_gate:
-        out.append(("feat_gate", "Portail motorisé", 0.005))
+    # terrain clos, portail motorisé, double vitrage, cellier, dressing : équipements de la maison type → neutres
     if f.terrace:
-        out.append(("feat_terrace", "Terrasse", 0.01))
-    if maison and f.garage == "un":
-        out.append(("feat_garage", "Garage", 0.015))
+        out.append(("feat_terrace", "Terrasse", 0.005))
+    if maison and f.garage == "aucun":
+        out.append(("feat_garage", "Sans garage", -0.02))
     elif maison and f.garage == "deux_plus":
-        out.append(("feat_garage", "Double garage ou plus", 0.03))
+        out.append(("feat_garage", "Double garage ou plus", 0.02))
     if maison and f.outbuilding:
         label = OUTBUILDING_LABELS.get(f.outbuilding_type or "", "Dépendance")
         surf = f.outbuilding_surface or 0
@@ -117,9 +119,9 @@ def feature_adjustments(ptype: str, f, value_base: float, surface: Optional[floa
     if maison and f.single_storey:
         out.append(("feat_single_storey", "Plain-pied", 0.02))
     if maison and f.basement:
-        out.append(("feat_basement", "Sous-sol / cave", 0.01))
+        out.append(("feat_basement", "Sous-sol / cave", 0.005))
     if maison and f.convertible_attic:
-        out.append(("feat_attic", "Combles aménageables", 0.01))
+        out.append(("feat_attic", "Combles aménageables", 0.005))
     if maison and f.master_suite:
         extras = [lbl for flag, lbl in ((f.master_suite_dressing, "dressing"), (f.master_suite_bathroom, "salle d'eau"), (f.master_suite_wc, "WC")) if flag]
         out.append(("feat_master_suite", "Suite parentale" + (f" ({', '.join(extras)})" if extras else ""), 0.01 + 0.005 * len(extras)))
@@ -398,6 +400,8 @@ def estimate_from_candidates(cands: list[dict], *, surface: float, ptype: str, c
     value_base = base_pm2 * surface
 
     cond_pct, cond_label = CONDITION_ADJ.get(condition, (0.0, "État correct"))
+    if condition == "neuf_renove" and year_built and datetime.now(timezone.utc).year - year_built > NEW_BUILD_MAX_AGE:
+        cond_pct, cond_label = RENOVATED_OLD_PCT, "Rénové (bâti d'époque)"
     adjustments.append(Adjustment(key="condition", label=cond_label, pct=cond_pct, amount=value_base * cond_pct))
 
     year_adj = year_adjustment(ptype, year_built, bool(getattr(features, "dpe", None)))
@@ -416,6 +420,16 @@ def estimate_from_candidates(cands: list[dict], *, surface: float, ptype: str, c
         adjustments.append(year_adj)
 
     adjustments.extend(feature_adjustments(ptype, features, value_base, surface))
+
+    declared = [a for a in adjustments if a.key != "year"]
+    total = sum(a.pct for a in declared)
+    cap = DECLARED_MAX_UP if total > 0 else DECLARED_MAX_DOWN
+    if abs(total) > abs(cap):
+        scale = abs(cap) / abs(total)
+        for a in declared:
+            a.pct, a.amount = round(a.pct * scale, 4), value_base * a.pct * scale
+        notes.append(f"État et équipements déclarés plafonnés à {cap * 100:+.0f} % au total : la vente type du secteur est déjà une maison "
+                     "habitable et équipée, l'écart avec elle reste donc borné.")
 
     land_amount = 0.0
     if ptype == "maison" and land_surface is not None:
