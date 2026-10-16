@@ -125,6 +125,7 @@ async def create_checkout(db, pid: str, return_url: str, owner_id: Optional[str]
         success_url=f"{return_url}{sep}status=success&order_id={order_id}",
         cancel_url=f"{return_url}{sep}status=cancelled&order_id={order_id}",
         metadata={"order_id": order_id, "property_id": pid},
+        locale="fr",
     )
     await db.orders.insert_one({"_id": ObjectId(order_id), "property_id": pid, "amount": PACK_PRICE_CENTS, "currency": PACK_CURRENCY,
                                 "status": "pending", "return_url": return_url, "session_id": session.id, "owner_id": owner_id, "created_at": utcnow()})
