@@ -1335,6 +1335,7 @@ app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=["*"], 
 async def startup():
     if os.environ.get("DVF_AUTO_REFRESH", "1") == "1":
         asyncio.create_task(_dvf_refresh_loop())
+    asyncio.create_task(free_estimate.reminder_loop())
     await db.properties.create_index([("deleted_at", 1), ("created_at", -1)])
     await db.photos.create_index([("property_id", 1), ("deleted_at", 1)])
     await db.documents.create_index([("property_id", 1), ("deleted_at", 1), ("created_at", -1)])
