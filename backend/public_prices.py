@@ -168,7 +168,7 @@ async def prices_commune(dept: str, insee: str):
 STATIC_PAGES = ["/", "/accueil", "/estimation-maison", "/estimation-immobiliere", "/combien-vaut-ma-maison", "/vendre-sa-maison", "/prix-immobilier", "/privacy"]
 
 
-@router.get("/sitemap.xml")
+@router.api_route("/sitemap.xml", methods=["GET", "HEAD"])
 async def sitemap(request: Request):
     """Plan du site : pages publiques + départements + communes avec assez de ventes. Référencé par /robots.txt."""
     proto = request.headers.get("x-forwarded-proto", request.url.scheme)

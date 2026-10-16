@@ -54,7 +54,7 @@ def mount_web(app: FastAPI, dist: Path = WEBDIST) -> bool:
                 return file
         return not_found if not_found.exists() else dist / "index.html"
 
-    @app.get("/{full_path:path}", include_in_schema=False)
+    @app.api_route("/{full_path:path}", methods=["GET", "HEAD"], include_in_schema=False)
     async def web_catch_all(full_path: str, request: Request):
         if full_path.startswith("api/") or full_path == "api":
             raise HTTPException(status_code=404, detail="Not Found")
