@@ -1,4 +1,4 @@
-import { Link, useRouter } from "expo-router";
+import { Href, Link, useRouter } from "expo-router";
 import { useState } from "react";
 import { Text } from "react-native";
 
@@ -6,6 +6,7 @@ import { useSession } from "@/src/auth";
 import { AuthShell } from "@/src/components/AuthShell";
 import { Field } from "@/src/components/Form";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
+import { consumeFreeDraft } from "@/src/freeDraft";
 import { fonts, makeStyles } from "@/src/theme";
 
 export default function SignInScreen() {
@@ -26,7 +27,7 @@ export default function SignInScreen() {
     setError(null);
     try {
       await signIn(email, password);
-      router.replace("/");
+      router.replace(((await consumeFreeDraft()) ?? "/") as Href);
     } catch (e) {
       setError((e as Error).message);
     } finally {

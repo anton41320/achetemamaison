@@ -69,21 +69,22 @@ export function LandingPage() {
       jsonLd={jsonLd}
       testID="landing-page"
     >
-      <View style={[styles.hero, isDesktop && { flexDirection: "row", alignItems: "center" }]}>
-        <View style={{ flex: 1, gap: spacing.md }}>
+      <View style={styles.hero}>
+        <View style={[styles.heroText, isDesktop && { maxWidth: 760 }]}>
           <Text style={styles.kicker}>De l’estimation à la vente, sans agence</Text>
           <Text style={styles.h1} accessibilityRole="header">Combien vaut votre maison ? La réponse est dans les ventes réelles.</Text>
           <Text style={styles.lead}>
-            {SITE_NAME} estime votre bien gratuitement à partir des transactions enregistrées autour de chez vous, puis vous accompagne en 3 étapes
-            jusqu’à la signature : prix, photos, annonce, dossier de vente.
+            {SITE_NAME} estime votre bien gratuitement et précisément : le questionnaire complet de l’application (adresse, surface, état, année,
+            terrain, équipements) confronté aux transactions enregistrées autour de chez vous. Créez ensuite un compte gratuit pour accéder au
+            dossier environnement et aux étapes suivantes : prix, photos, annonce, dossier de vente.
           </Text>
           <View style={styles.badges}>
-            {["Gratuit et sans inscription", "97 départements", "Fourchette ±5 %"].map((b) => (
+            {["Gratuit et sans inscription", "Questionnaire complet", "97 départements", "Fourchette ±5 %"].map((b) => (
               <View key={b} style={styles.badge}><Text style={styles.badgeText}>{b}</Text></View>
             ))}
           </View>
         </View>
-        <View style={{ flex: 1, width: "100%" }}>
+        <View style={[styles.heroForm, isDesktop && { maxWidth: 820 }]}>
           <FreeEstimate />
         </View>
       </View>
@@ -144,11 +145,13 @@ export function LandingPage() {
 }
 
 const useStyles = makeStyles((colors) => ({
-  hero: { gap: spacing.xl, paddingTop: spacing.lg },
-  kicker: { fontFamily: fonts.semibold, fontSize: 13, letterSpacing: 1.2, textTransform: "uppercase", color: colors.brandPrimary },
-  h1: { fontFamily: fonts.bold, fontSize: 36, lineHeight: 44, color: colors.onSurface },
-  lead: { fontFamily: fonts.regular, fontSize: 17, lineHeight: 26, color: colors.onSurfaceTertiary },
-  badges: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  hero: { gap: spacing.xl, paddingTop: spacing.lg, alignItems: "center" },
+  heroText: { width: "100%", gap: spacing.md, alignItems: "center" },
+  heroForm: { width: "100%" },
+  kicker: { fontFamily: fonts.semibold, fontSize: 13, letterSpacing: 1.2, textTransform: "uppercase", color: colors.brandPrimary, textAlign: "center" },
+  h1: { fontFamily: fonts.bold, fontSize: 36, lineHeight: 44, color: colors.onSurface, textAlign: "center" },
+  lead: { fontFamily: fonts.regular, fontSize: 17, lineHeight: 26, color: colors.onSurfaceTertiary, textAlign: "center" },
+  badges: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, justifyContent: "center" },
   badge: { backgroundColor: colors.brandTertiary, borderRadius: radius.pill, paddingHorizontal: spacing.md, minHeight: 32, justifyContent: "center" },
   badgeText: { fontFamily: fonts.semibold, fontSize: 13, color: colors.onBrandTertiary },
   section: { gap: spacing.md },
