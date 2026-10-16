@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { ArrowLeftIcon, LockKeyIcon } from "phosphor-react-native";
+import { ArrowLeftIcon, EnvelopeSimpleIcon, LockKeyIcon } from "phosphor-react-native";
 import { useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text, TextInput, View } from "react-native";
 
 import { Estimation, PropertyIn, api, formatEuro, formatInt } from "@/src/api";
 import { useSession } from "@/src/auth";
@@ -30,6 +30,7 @@ export function FreeEstimate() {
   const { user } = useSession();
   const [step, setStep] = useState(0);
   const [body, setBody] = useState<PropertyIn | null>(null);
+  const [email, setEmail] = useState("");
 
   const estimate = useMutation({
     mutationFn: (b: PropertyIn) => api.estimatePreview(b),
@@ -46,9 +47,12 @@ export function FreeEstimate() {
     },
   });
 
+  const sendEmail = useMutation({ mutationFn: () => api.freeEstimateEmail(email.trim(), body!) });
+
   const est: Estimation | undefined = estimate.data;
   const reset = () => {
     estimate.reset();
+    sendEmail.reset();
     setBody(null);
     setStep(0);
   };
@@ -90,6 +94,47 @@ export function FreeEstimate() {
           {LOCKED_NEXT.map((l) => (
             <Text key={l} style={styles.lockItem}>• {l}</Text>
           ))}
+        </View>
+
+        <View style={styles.emailBlock} testID="free-email-block">
+          <View style={styles.lockHeader}>
+            <EnvelopeSimpleIcon size={18} color={colors.brandPrimary} weight="fill" />
+            <Text style={styles.blockTitle}>Recevoir le rapport PDF par e-mail</Text>
+          </View>
+          {sendEmail.isSuccess ? (
+            <Text style={styles.emailOk} testID="free-email-sent">
+              Rapport envoyé à {email.trim()}. Pensez à vérifier vos courriers indésirables. Le lien reste valable 90 jours.
+            </Text>
+          ) : (
+            <>
+              <Text style={styles.lockItem}>Calcul détaillé, ajustements et marché local, au format PDF — gratuit, sans autre sollicitation.</Text>
+              <View style={styles.emailRow}>
+                <TextInput
+                  testID="free-email-input"
+                  style={styles.emailInput}
+                  placeholder="vous@exemple.fr"
+                  placeholderTextColor={colors.muted}
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="email-address"
+                  inputMode="email"
+                  onSubmitEditing={() => sendEmail.mutate()}
+                />
+                <PrimaryButton
+                  title="Envoyer"
+                  variant="secondary"
+                  onPress={() => sendEmail.mutate()}
+                  loading={sendEmail.isPending}
+                  disabled={!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email.trim())}
+                  testID="free-email-submit"
+                  style={styles.emailBtn}
+                />
+              </View>
+              {sendEmail.isError ? <Text style={styles.error} testID="free-email-error">{(sendEmail.error as Error).message}</Text> : null}
+            </>
+          )}
         </View>
 
         <PrimaryButton
@@ -168,6 +213,11 @@ const useStyles = makeStyles((colors) => ({
   adjLabel: { flex: 1, fontFamily: fonts.regular, fontSize: 13, color: colors.onSurfaceSecondary },
   adjPct: { fontFamily: fonts.semibold, fontSize: 13 },
   lockBlock: { backgroundColor: colors.surfaceSecondary, borderRadius: radius.md, padding: spacing.lg, gap: spacing.xs },
+  emailBlock: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.lg, gap: spacing.sm },
+  emailRow: { flexDirection: "row", gap: spacing.sm, alignItems: "center", flexWrap: "wrap" },
+  emailInput: { flex: 1, minWidth: 200, minHeight: 48, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, fontFamily: fonts.regular, fontSize: 15, color: colors.onSurface, backgroundColor: colors.surface },
+  emailBtn: { minWidth: 120 },
+  emailOk: { fontFamily: fonts.medium, fontSize: 13, lineHeight: 19, color: colors.success },
   lockHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   lockItem: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 19, color: colors.onSurfaceSecondary },
   hint: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 19, color: colors.onSurfaceTertiary, textAlign: "center" },

@@ -810,6 +810,11 @@ export const api = {
   /** Estimation publique (sans compte) : même moteur que l'app, résultat non sauvegardé. */
   estimatePreview: (body: PropertyIn) =>
     request<Estimation>("/estimate/preview", { method: "POST", body: JSON.stringify(body) }),
+  /** Envoi de l'estimation gratuite par e-mail (PDF) ; le jeton permet de reprendre le bien à l'inscription. */
+  freeEstimateEmail: (email: string, property: PropertyIn) =>
+    request<{ sent: boolean; token: string; pdf_url: string }>("/public/free-estimate", { method: "POST", body: JSON.stringify({ email, property }) }),
+  freeEstimateDraft: (token: string) =>
+    request<{ property: PropertyIn; estimation: Estimation }>(`/public/free-estimate/${encodeURIComponent(token)}`),
   publicDepts: () => request<{ years: [number, number]; departements: PublicDept[] }>("/public/prices"),
   publicDept: (dept: string) => request<PublicDeptDetail>(`/public/prices/${dept}`),
   publicCommune: (dept: string, insee: string) => request<PublicCommuneDetail>(`/public/prices/${dept}/${insee}`),

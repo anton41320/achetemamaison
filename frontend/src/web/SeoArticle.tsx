@@ -4,29 +4,37 @@ import { Pressable, Text, View } from "react-native";
 import { fonts, makeStyles, spacing } from "@/src/theme";
 import { FreeEstimate } from "@/src/web/FreeEstimate";
 import { PublicPage } from "@/src/web/PublicPage";
-import { SEO_PAGES } from "@/src/web/seoContent";
+import { LEGAL_PAGES } from "@/src/web/legalContent";
+import { SEO_PAGES, SeoPageContent } from "@/src/web/seoContent";
 import { useBreakpoint } from "@/src/web/useBreakpoint";
 
+export const ALL_PAGES: Record<string, SeoPageContent> = { ...SEO_PAGES, ...LEGAL_PAGES };
+
 /** Page publique éditoriale (SEO) : H1 + estimation gratuite, sections, FAQ (schema.org FAQPage). */
-export function SeoArticle({ slug }: { slug: keyof typeof SEO_PAGES }) {
-  const c = SEO_PAGES[slug];
+export function SeoArticle({ slug }: { slug: keyof typeof ALL_PAGES }) {
+  const c = ALL_PAGES[slug];
   const styles = useStyles();
   const { isDesktop } = useBreakpoint();
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: c.faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
-  };
+  const showEstimate = c.showEstimate !== false;
+  const jsonLd = c.faq.length
+    ? {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: c.faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+    }
+    : undefined;
   return (
     <PublicPage title={c.title} description={c.description} path={c.path} jsonLd={jsonLd} testID={`seo-${slug}`}>
-      <View style={[styles.hero, isDesktop && { flexDirection: "row", alignItems: "flex-start" }]}>
+      <View style={[styles.hero, showEstimate && isDesktop && { flexDirection: "row", alignItems: "flex-start" }]}>
         <View style={{ flex: 1, gap: spacing.md }}>
           <Text style={styles.h1} accessibilityRole="header">{c.h1}</Text>
           <Text style={styles.intro}>{c.intro}</Text>
         </View>
-        <View style={{ flex: 1, width: "100%" }}>
-          <FreeEstimate />
-        </View>
+        {showEstimate ? (
+          <View style={{ flex: 1, width: "100%" }}>
+            <FreeEstimate />
+          </View>
+        ) : null}
       </View>
       {c.sections.map((s) => (
         <View key={s.h2} style={styles.section}>
@@ -35,17 +43,19 @@ export function SeoArticle({ slug }: { slug: keyof typeof SEO_PAGES }) {
           {s.bullets?.map((b) => <Text key={b} style={styles.p}>• {b}</Text>)}
         </View>
       ))}
-      <View style={styles.section}>
-        <Text style={styles.h2} accessibilityRole="header">Questions fréquentes</Text>
-        {c.faq.map((f) => (
-          <View key={f.q} style={{ gap: 4 }}>
-            <Text style={styles.q}>{f.q}</Text>
-            <Text style={styles.p}>{f.a}</Text>
-          </View>
-        ))}
-      </View>
+      {c.faq.length ? (
+        <View style={styles.section}>
+          {c.sections.length ? <Text style={styles.h2} accessibilityRole="header">Questions fréquentes</Text> : null}
+          {c.faq.map((f) => (
+            <View key={f.q} style={{ gap: 4 }}>
+              <Text style={styles.q}>{f.q}</Text>
+              <Text style={styles.p}>{f.a}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
       <View style={styles.links}>
-        {Object.values(SEO_PAGES).filter((p) => p.path !== c.path).map((p) => (
+        {Object.values(ALL_PAGES).filter((p) => p.path !== c.path && !p.footerOnly).map((p) => (
           <Link key={p.path} href={p.path as any} asChild>
             <Pressable accessibilityRole="link"><Text style={styles.link}>{p.h1} →</Text></Pressable>
           </Link>

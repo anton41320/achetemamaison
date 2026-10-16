@@ -1310,6 +1310,11 @@ import public_prices  # noqa: E402
 
 public_prices.db = db
 app.include_router(public_prices.router)
+import free_estimate  # noqa: E402
+
+free_estimate.db = db
+free_estimate.run_estimation = _run_estimation
+app.include_router(free_estimate.router)
 app.include_router(legal.router, prefix="/api")  # https://<domaine>/api/privacy
 app.include_router(legal.router)  # https://<domaine>/privacy (hôte déployé : la racine est servie par l'API)
 app.include_router(auth.router)
@@ -1335,6 +1340,7 @@ async def startup():
     await db.documents.create_index([("property_id", 1), ("deleted_at", 1), ("created_at", -1)])
     await db.checklist_state.create_index([("property_id", 1)])
     await db.orders.create_index([("property_id", 1), ("status", 1)])
+    await free_estimate.ensure_indexes()
     try:
         await asyncio.to_thread(storage.init_storage)
     except Exception as exc:  # noqa: BLE001

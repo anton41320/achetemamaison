@@ -1,20 +1,30 @@
-import { Href, Link, useRouter } from "expo-router";
-import { useState } from "react";
+import { Href, Link, useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 
-import { formatEuro } from "@/src/api";
+import { api, formatEuro } from "@/src/api";
 import { passwordIssue, useSession } from "@/src/auth";
 import { AuthShell } from "@/src/components/AuthShell";
 import { Field } from "@/src/components/Form";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
-import { consumeFreeDraft, loadFreeDraft } from "@/src/freeDraft";
+import { consumeFreeDraft, loadFreeDraft, saveFreeDraft } from "@/src/freeDraft";
 import { fonts, makeStyles, radius, spacing } from "@/src/theme";
 
 export default function SignUpScreen() {
   const styles = useStyles();
   const { signUp } = useSession();
   const router = useRouter();
-  const [draft] = useState(loadFreeDraft);
+  const { draft: draftToken } = useLocalSearchParams<{ draft?: string }>();
+  const [draft, setDraft] = useState(loadFreeDraft);
+
+  // Lien « Créer mon compte » de l'e-mail d'estimation : la fiche estimée est rechargée depuis le serveur.
+  useEffect(() => {
+    if (!draftToken || draft) return;
+    api.freeEstimateDraft(draftToken).then((d) => {
+      saveFreeDraft(d.property, d.estimation);
+      setDraft(loadFreeDraft());
+    }).catch(() => {});
+  }, [draftToken, draft]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");

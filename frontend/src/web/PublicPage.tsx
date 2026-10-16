@@ -87,7 +87,7 @@ export function PublicPage({ title, description, path, jsonLd, testID, children 
             <Text style={styles.footerBrand}>{SITE_NAME}</Text>
             <Text style={styles.footerText}>Estimation immobilière gratuite fondée sur les ventes réelles (DVF), puis accompagnement jusqu’à la vente entre particuliers.</Text>
             <View style={styles.footerLinks}>
-              {[...NAV_LINKS, { href: "/combien-vaut-ma-maison", label: "Combien vaut ma maison ?" }, { href: "/estimation-immobiliere", label: "Estimation immobilière" }, { href: "/privacy", label: "Confidentialité" }].map((l) => (
+              {[...NAV_LINKS, { href: "/combien-vaut-ma-maison", label: "Combien vaut ma maison ?" }, { href: "/estimation-immobiliere", label: "Estimation immobilière" }, { href: "/conseils-vente", label: "Conseils pour vendre" }, { href: "/faq", label: "FAQ" }, { href: "/mentions-legales", label: "Mentions légales" }, { href: "/cgu", label: "CGU / CGV" }, { href: "/privacy", label: "Confidentialité" }].map((l) => (
                 <Link key={l.href} href={l.href as any} asChild>
                   <Pressable accessibilityRole="link"><Text style={styles.footerLink}>{l.label}</Text></Pressable>
                 </Link>

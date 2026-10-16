@@ -6,6 +6,10 @@ export interface SeoPageContent {
   intro: string;
   sections: { h2: string; paragraphs: string[]; bullets?: string[] }[];
   faq: { q: string; a: string }[];
+  /** Afficher le questionnaire d'estimation gratuite en tête (défaut : oui). */
+  showEstimate?: boolean;
+  /** Page utilitaire (mentions légales, CGU) : liée depuis le pied de page seulement, pas dans les liens croisés. */
+  footerOnly?: boolean;
 }
 
 const SOURCES = "Nos estimations s’appuient sur les ventes réelles publiées par l’État (base DVF – Demandes de valeurs foncières), enrichies par les données officielles d’adresse (BAN), de cadastre et d’environnement (IGN, Géorisques, OpenStreetMap).";
