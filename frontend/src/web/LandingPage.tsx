@@ -5,7 +5,7 @@ import { Pressable, Text, View } from "react-native";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 import { FreeEstimate } from "@/src/web/FreeEstimate";
-import { PublicPage, SITE_NAME } from "@/src/web/PublicPage";
+import { PublicPage, SITE_NAME, SITE_URL } from "@/src/web/PublicPage";
 import { useBreakpoint } from "@/src/web/useBreakpoint";
 
 const STEPS = [
@@ -33,19 +33,37 @@ export function LandingPage() {
   const { colors } = useTheme();
   const { isDesktop, isTablet } = useBreakpoint();
   const router = useRouter();
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: SITE_NAME,
-    applicationCategory: "BusinessApplication",
-    operatingSystem: "Web, iOS, Android",
-    description: "Estimation immobilière gratuite fondée sur les ventes réelles, puis accompagnement jusqu’à la vente entre particuliers.",
-    offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
-  };
+  const jsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: SITE_NAME,
+      alternateName: ["Achete ma maison", "achetemamaison", "Achète ma maison — estimation immobilière"],
+      url: SITE_URL || undefined,
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      name: SITE_NAME,
+      url: SITE_URL || undefined,
+      logo: SITE_URL ? `${SITE_URL}/app-image.png` : undefined,
+      email: "contact@achetesmamaison.fr",
+      areaServed: "FR",
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      name: SITE_NAME,
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Web, iOS, Android",
+      description: "Estimation immobilière gratuite fondée sur les ventes réelles, puis accompagnement jusqu’à la vente entre particuliers.",
+      offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
+    },
+  ];
 
   return (
     <PublicPage
-      title="Estimation immobilière gratuite et vente entre particuliers"
+      title="Achète ma maison : estimation immobilière gratuite et vente entre particuliers"
       description="Estimez gratuitement votre maison ou appartement à partir des ventes réelles (DVF), puis vendez entre particuliers : photos retouchées par IA, annonce, dossier de vente complet."
       path="/accueil"
       jsonLd={jsonLd}

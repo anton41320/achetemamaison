@@ -10,6 +10,10 @@ import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 import { CONTENT_MAX_WIDTH, useBreakpoint } from "@/src/web/useBreakpoint";
 
 export const SITE_NAME = "Achète ma maison";
+/** Origine publique du site (URL canoniques absolues au pré-rendu statique) ; à défaut, l'origine courante du navigateur. */
+export const SITE_URL: string =
+  process.env.EXPO_PUBLIC_SITE_URL ||
+  (Platform.OS === "web" && typeof window !== "undefined" ? window.location.origin : "");
 export const NAV_LINKS = [
   { href: "/estimation-maison", label: "Estimation gratuite" },
   { href: "/prix-immobilier", label: "Prix immobilier" },
@@ -33,15 +37,16 @@ export function PublicPage({ title, description, path, jsonLd, testID, children 
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user } = useSession();
-  const canonical = Platform.OS === "web" && typeof window !== "undefined" ? `${window.location.origin}${path}` : path;
+  const canonical = `${SITE_URL}${path}`;
+  const fullTitle = title.includes(SITE_NAME) ? title : `${title} | ${SITE_NAME}`;
 
   return (
     <View style={styles.screen} testID={testID ?? "public-page"}>
       <Head>
-        <title>{`${title} | ${SITE_NAME}`}</title>
+        <title>{fullTitle}</title>
         <meta name="description" content={description} />
         <link rel="canonical" href={canonical} />
-        <meta property="og:title" content={title} />
+        <meta property="og:title" content={fullTitle} />
         <meta property="og:description" content={description} />
         <meta property="og:url" content={canonical} />
         {jsonLd ? <script type="application/ld+json">{JSON.stringify(jsonLd)}</script> : null}

@@ -21,6 +21,17 @@ LogBox.ignoreAllLogs(true);
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
+/** Balises <head> par défaut (titre de marque) — rendues aussi pendant le chargement pour que le pré-rendu de « / » ait un titre. */
+function DefaultHead() {
+  return (
+    <Head>
+      <title>Achète ma maison — Estimation immobilière gratuite et vente entre particuliers</title>
+      <meta name="description" content="Estimez gratuitement votre maison ou appartement à partir des ventes réelles (DVF), puis vendez entre particuliers : photos retouchées par IA, annonce, dossier de vente complet." />
+    </Head>
+  );
+}
+
+
 function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
   const { colors } = useTheme();
   const { user, loading, startupError, retry } = useSession();
@@ -32,7 +43,7 @@ function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
     if (fontsReady && !loading) SplashScreen.hideAsync().catch(() => {});
   }, [fontsReady, loading]);
 
-  if ((!fontsReady || loading) && !publicWeb) return null;
+  if ((!fontsReady || loading) && !publicWeb) return <DefaultHead />;
   if (startupError && !user) {
     return (
       <View
@@ -96,10 +107,7 @@ function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
   const signedIn = !!user;
   return (
     <WebShell>
-      <Head>
-        <title>Achète ma maison — Estimation immobilière gratuite et vente entre particuliers</title>
-        <meta name="description" content="Estimez gratuitement votre maison ou appartement à partir des ventes réelles (DVF), puis vendez entre particuliers : photos retouchées par IA, annonce, dossier de vente complet." />
-      </Head>
+      <DefaultHead />
       <Stack
         screenOptions={{
           headerShown: false,

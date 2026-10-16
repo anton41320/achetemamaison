@@ -13,7 +13,7 @@ import os
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 WEBDIST = Path(__file__).parent / "webdist"
@@ -58,6 +58,10 @@ def mount_web(app: FastAPI, dist: Path = WEBDIST) -> bool:
     async def web_catch_all(full_path: str, request: Request):
         if full_path.startswith("api/") or full_path == "api":
             raise HTTPException(status_code=404, detail="Not Found")
+        # Vérification Google Search Console par fichier HTML : GOOGLE_SITE_VERIFICATION=google<token>.html (backend/.env)
+        verification = os.environ.get("GOOGLE_SITE_VERIFICATION", "").strip()
+        if verification and full_path == verification:
+            return PlainTextResponse(f"google-site-verification: {verification}")
         file = resolve(full_path)
         headers = HTML_HEADERS if file.suffix == ".html" else {"Cache-Control": "public, max-age=31536000, immutable" if "/_expo/" in file.as_posix() else "public, max-age=3600"}
         return FileResponse(file, headers=headers, status_code=404 if file == not_found else 200)
