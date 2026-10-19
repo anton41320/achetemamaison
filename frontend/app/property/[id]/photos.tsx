@@ -4,7 +4,7 @@ import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowDownIcon, ArrowUpIcon, CameraIcon, CheckCircleIcon, DownloadSimpleIcon, FolderOpenIcon, ImagesIcon, LockKeyIcon, ShareNetworkIcon, SortAscendingIcon, SparkleIcon, StarIcon, TrashIcon, WarningIcon } from "phosphor-react-native";
+import { ArrowDownIcon, ArrowUpIcon, ArrowsOutIcon, CameraIcon, CheckCircleIcon, DownloadSimpleIcon, FolderOpenIcon, ImagesIcon, LockKeyIcon, ShareNetworkIcon, SortAscendingIcon, SparkleIcon, StarIcon, TrashIcon, WarningIcon } from "phosphor-react-native";
 import { useState } from "react";
 import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBreakpoint } from "@/src/web/useBreakpoint";
 
 import { PHOTO_LABELS, Photo, PhotoLabel, api, fileUrl, uploadPhoto } from "@/src/api";
+import { ImageViewerModal } from "@/src/components/ImageViewerModal";
 import { PremiumGate, usePackUnlocked } from "@/src/components/PremiumGate";
 import { PhotoOrderCard } from "@/src/components/PhotoOrderCard";
 import { PhotoTutorialCard } from "@/src/components/PhotoTutorialCard";
@@ -59,6 +60,7 @@ export default function PhotosScreen() {
   const [permissionBlocked, setPermissionBlocked] = useState<Source | null>(null);
   const [pickError, setPickError] = useState<string | null>(null);
   const [showAfter, setShowAfter] = useState<Record<string, boolean>>({});
+  const [viewer, setViewer] = useState<{ uri: string; title: string; after: boolean } | null>(null);
 
   const photos = useQuery({
     queryKey: ["photos", id],
@@ -338,8 +340,15 @@ export default function PhotosScreen() {
             const uri = fileUrl(after ? p.retouched_path! : p.original_path);
             return (
               <View key={p.id} style={[styles.card, columns > 1 && { width: `${100 / columns - 1.5}%` as any }]} testID={`photo-card-${i}`}>
-                <View style={styles.imageWrap}>
+                <Pressable
+                  style={({ pressed }) => [styles.imageWrap, pressed && { opacity: 0.92 }]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Voir la photo en plein écran"
+                  testID={`photo-open-${i}`}
+                  onPress={() => setViewer({ uri, title: `${p.label ?? `Photo ${i + 1}`} · ${after ? "retouchée par IA" : "originale"}`, after })}
+                >
                   <Image source={{ uri }} style={styles.image} contentFit="cover" transition={250} cachePolicy="memory-disk" />
+                  <View style={styles.zoomHint}><ArrowsOutIcon size={14} color={colors.onHero} weight="bold" /></View>
                   {after ? (
                     <View style={styles.badge} testID={`photo-badge-${i}`}>
                       <Text style={styles.badgeText}>Visuel retouché par IA · non contractuel</Text>
@@ -357,7 +366,7 @@ export default function PhotosScreen() {
                       <Text style={styles.overlayText}>Retouche en cours…</Text>
                     </View>
                   ) : null}
-                </View>
+                </Pressable>
                 {/* Étiquette de pièce → tri automatique selon l'ordre conseillé */}
                 <View style={styles.labelBlock}>
                   <Text style={styles.labelTitle} testID={`photo-label-${i}`}>
@@ -466,6 +475,15 @@ export default function PhotosScreen() {
           </View>
         )}
       </ScrollView>
+      <ImageViewerModal
+        visible={!!viewer}
+        onClose={() => setViewer(null)}
+        source={{ uri: viewer?.uri ?? "" }}
+        ratio={4 / 3}
+        title={viewer?.title ?? ""}
+        caption={viewer?.after ? "Visuel retouché par IA · non contractuel · pincez pour zoomer" : "Photo originale · pincez pour zoomer"}
+        testID="photo-viewer"
+      />
     </View>
   );
 }
@@ -494,6 +512,7 @@ const useStyles = makeStyles((colors) => ({
   photoGrid: { gap: spacing.lg },
   card: { backgroundColor: colors.surfaceSecondary, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, overflow: "hidden" },
   imageWrap: { height: 240, backgroundColor: colors.skeleton },
+  zoomHint: { position: "absolute", top: spacing.sm, right: spacing.sm, width: 28, height: 28, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", backgroundColor: colors.scrimBottom },
   image: { width: "100%", height: "100%" },
   badge: { position: "absolute", left: spacing.md, bottom: spacing.md, backgroundColor: colors.scrimBottom, paddingHorizontal: spacing.md, height: 26, borderRadius: radius.pill, justifyContent: "center" },
   badgeText: { fontFamily: fonts.semibold, fontSize: 11, color: colors.onHero },
