@@ -59,17 +59,25 @@ export function FreeEstimate() {
 
   if (est && body) {
     const shown = est.adjustments.filter((a) => Math.abs(a.pct) >= 0.1);
+    // Même chiffre que dans l'application : valeur finale pondérée (comparables, modèle hédonique, marché local)
+    const v = est.final ?? est;
+    const models = est.final?.components.filter((c) => c.effective_weight > 0 && c.value !== null) ?? [];
     return (
       <View style={styles.card} testID="free-estimate">
         <View style={styles.result} testID="free-result">
           <Text style={styles.resultLabel}>Valeur estimée · {body.address_label}</Text>
-          <Text style={styles.resultValue} testID="free-result-value">{formatEuro(est.value)}</Text>
+          <Text style={styles.resultValue} testID="free-result-value">{formatEuro(v.value)}</Text>
           <Text style={styles.resultRange}>
-            Fourchette {formatEuro(est.low)} – {formatEuro(est.high)} · {formatInt(est.price_m2)} €/m²
+            Fourchette {formatEuro(v.low)} – {formatEuro(v.high)} · {formatInt(Math.round(v.value / body.surface / 10) * 10)} €/m²
           </Text>
           <Text style={styles.resultMeta}>
             {est.confidence.n_comparables} ventes comparables ({est.confidence.radius_label}) · {body.property_type === "maison" ? "Maison" : "Appartement"} {body.surface} m² · {body.rooms} pièces
           </Text>
+          {models.length > 1 ? (
+            <Text style={styles.resultMeta} testID="free-result-models">
+              Valeur pondérée : {models.map((c) => `${c.label} ${formatEuro(c.value ?? 0)} (${Math.round(c.effective_weight * 100)} %)`).join(" · ")}
+            </Text>
+          ) : null}
         </View>
 
         {shown.length > 0 ? (

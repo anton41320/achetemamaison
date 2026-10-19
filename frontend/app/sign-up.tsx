@@ -71,7 +71,7 @@ export default function SignUpScreen() {
         <View style={styles.draft} testID="signup-draft-banner">
           <Text style={styles.draftTitle}>Votre estimation sera enregistrée</Text>
           <Text style={styles.draftText}>
-            {draft.body.address_label} · {formatEuro(draft.estimation.value)} — le bien apparaîtra dans votre espace (web et application mobile) dès la création du compte.
+            {draft.body.address_label} · {formatEuro(draft.estimation.final?.value ?? draft.estimation.value)} — le bien apparaîtra dans votre espace (web et application mobile) dès la création du compte.
           </Text>
         </View>
       ) : null}

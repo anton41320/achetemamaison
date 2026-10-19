@@ -312,6 +312,8 @@ export interface MlModelInfo {
 export interface Estimation {
   method: string;
   created_at: string;
+  /** Valeur finale pondérée (comparables, hédonique, marché, ML) — renvoyée par /estimate/preview. */
+  final?: BlendResult;
   value: number;
   low: number;
   high: number;

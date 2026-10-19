@@ -111,6 +111,12 @@ async def _run_estimation(p: PropertyIn | PropertyDoc):
             est.price_m2 = float(int(round(est.value / p.surface / 10)) * 10)
             est.notes.append(f"Ajustement environnement {env_pct * 100:+.1f} % appliqué à partir de l'analyse de l'environnement (distances mesurées, sources publiques).")
     features_pct = sum(a.pct for a in est.adjustments if a.key.startswith("feat_"))
+    # Terrain non renseigné pour une maison : les modèles hédonique / ML reçoivent la médiane des comparables
+    # (effet terrain neutre) plutôt que 0 m², qui équivaudrait à « sans terrain » et écraserait la valeur.
+    land_for_models = p.land_surface
+    if p.property_type == "maison" and land_for_models is None:
+        comp_land = sorted(c.land_surface for c in est.comparables if c.land_surface)
+        land_for_models = comp_land[len(comp_land) // 2] if comp_land else None
     model = await hedonic.load_model(db)
     if model:
         cond = next((a for a in est.adjustments if a.key == "condition"), None)
@@ -118,7 +124,7 @@ async def _run_estimation(p: PropertyIn | PropertyDoc):
         try:
             local = await hedonic.local_effect(db, model, lat=p.lat, lon=p.lon, ptype=p.property_type)
             est.hedonic = hedonic.explain(
-                model, surface=p.surface, rooms=p.rooms, land=p.land_surface, ptype=p.property_type,
+                model, surface=p.surface, rooms=p.rooms, land=land_for_models, ptype=p.property_type,
                 code_commune=p.code_commune, commune=p.commune, dept=p.code_commune[:2],
                 condition_pct=cond.pct if cond else 0.0, condition_label=cond.label if cond else "État correct",
                 year_pct=year.pct if year else 0.0, year_label=year.label if year else None,
@@ -133,7 +139,7 @@ async def _run_estimation(p: PropertyIn | PropertyDoc):
         year = next((a for a in est.adjustments if a.key == "year"), None)
         try:
             est.ml = await asyncio.to_thread(
-                ml_model.predict, ml_meta, surface=p.surface, rooms=p.rooms, land=p.land_surface,
+                ml_model.predict, ml_meta, surface=p.surface, rooms=p.rooms, land=land_for_models,
                 ptype=p.property_type, code_commune=p.code_commune, lat=p.lat, lon=p.lon,
                 condition_pct=cond.pct if cond else 0.0, year_pct=(year.pct if year else 0.0) + features_pct)
         except Exception:  # noqa: BLE001
@@ -1295,8 +1301,9 @@ async def delete_property(pid: str):
 
 @public.post("/estimate/preview")
 async def estimate_preview(payload: PropertyIn):
+    """Estimation sans compte : mêmes modèles que l'app ; `final` = valeur pondérée (comparables, hédonique, marché, ML)."""
     est = await _run_estimation(payload)
-    return est.model_dump(mode="json")
+    return {**est.model_dump(mode="json"), "final": blend(est, await _get_weights())}
 
 
 @public.get("/validation")
@@ -1314,6 +1321,7 @@ import free_estimate  # noqa: E402
 
 free_estimate.db = db
 free_estimate.run_estimation = _run_estimation
+free_estimate.get_weights = _get_weights
 app.include_router(free_estimate.router)
 app.include_router(legal.router, prefix="/api")  # https://<domaine>/api/privacy
 app.include_router(legal.router)  # https://<domaine>/privacy (hôte déployé : la racine est servie par l'API)

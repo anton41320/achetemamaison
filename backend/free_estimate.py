@@ -21,12 +21,14 @@ from pydantic import BaseModel, Field
 
 import emailer
 import report
+from blend import blend
 from models import PropertyDoc, PropertyIn
 
 log = logging.getLogger("free_estimate")
 router = APIRouter(prefix="/api/public/free-estimate", tags=["public"])
 db = None  # injecté par server.py
 run_estimation = None  # injecté par server.py (server._run_estimation)
+get_weights = None  # injecté par server.py (server._get_weights)
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]{2,}$")
 TTL_DAYS = 90
@@ -76,7 +78,7 @@ def _email_html(*, origin: str, token: str, prop: PropertyIn, est, brand: str) -
         '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#e8f0fd;border-radius:10px;padding:16px">'
         f'<tr><td><p style="margin:0;font-size:12px;color:#51607a;text-transform:uppercase;letter-spacing:1px">Valeur estimée</p>'
         f'<p style="margin:4px 0 6px;font-size:32px;font-weight:bold;color:#1656c9">{eur(est.value)}</p>'
-        f'<p style="margin:0;font-size:14px">Fourchette {eur(est.low)} – {eur(est.high)} · {eur(est.price_m2)}/m² · '
+        f'<p style="margin:0;font-size:14px">Fourchette {eur(est.low)} – {eur(est.high)} · {eur(round(est.value / prop.surface / 10) * 10)}/m² · '
         f'{est.confidence.n_comparables} ventes comparables ({escape(est.confidence.radius_label)})</p></td></tr></table>'
         f'<p style="margin:20px 0 8px;font-size:14px">Le rapport détaillé (calcul, ajustements, marché local) est joint sous forme de PDF :</p>'
         f'<p style="margin:0 0 20px"><a href="{pdf_url}" style="font-size:14px;color:#1656c9;font-weight:bold">Télécharger le rapport PDF</a></p>'
@@ -109,14 +111,16 @@ async def send_free_estimate(payload: FreeEstimateRequest, request: Request):
         raise HTTPException(status_code=429, detail="Trop de demandes, réessayez dans une heure.")
 
     est = await run_estimation(payload.property)
+    final = blend(est, await get_weights())
     prop = PropertyDoc(**payload.property.model_dump(), estimation=est, created_at=now)
-    pdf = report.build_report(prop)
+    pdf = report.build_report(prop, final)
     token = secrets.token_urlsafe(24)
     origin = _origin(request)
-    subject, html = _email_html(origin=origin, token=token, prop=payload.property, est=est, brand=emailer.EMAIL_FROM_NAME)
+    shown = _FinalView(est, final)  # l'e-mail affiche la valeur finale pondérée, comme l'app et le site
+    subject, html = _email_html(origin=origin, token=token, prop=payload.property, est=shown, brand=emailer.EMAIL_FROM_NAME)
     await db.free_estimates.insert_one({
         "token": token, "email": email, "ip": ip, "created_at": now, "origin": origin,
-        "property": payload.property.model_dump(mode="json"), "estimation": est.model_dump(mode="json"), "pdf": pdf,
+        "property": payload.property.model_dump(mode="json"), "estimation": {**est.model_dump(mode="json"), "final": final}, "pdf": pdf,
     })
     try:
         message_id = await emailer.send_email(to=email, subject=subject, html=html)
@@ -225,14 +229,28 @@ async def send_due_reminders() -> int:
 
 
 class _EstView:
-    """Accès attribut sur l'estimation stockée (dict) pour les gabarits d'e-mail."""
+    """Accès attribut sur l'estimation stockée (dict) pour les gabarits d'e-mail ; `final` (valeur pondérée) prime si présent."""
 
     def __init__(self, d: dict):
         self._d = d
 
     def __getattr__(self, k):
+        if k in ("value", "low", "high") and isinstance(self._d.get("final"), dict):
+            return self._d["final"][k]
         v = self._d[k]
         return _EstView(v) if isinstance(v, dict) else v
+
+
+class _FinalView:
+    """Estimation dont value/low/high sont remplacées par la valeur finale pondérée."""
+
+    def __init__(self, est, final: dict):
+        self._est, self._final = est, final
+
+    def __getattr__(self, k):
+        if k in ("value", "low", "high"):
+            return self._final[k]
+        return getattr(self._est, k)
 
 
 async def reminder_loop() -> None:

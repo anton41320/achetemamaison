@@ -25,7 +25,7 @@ TIGHT_TOL = 0.15  # surface tolerance tried first at each radius (less price/m²
 OUTBUILDING_LABELS = {"bureau": "Bureau indépendant", "hangar": "Hangar", "grange": "Grange", "abri_jardin": "Abri de jardin", "pool_house": "Pool house", "autre": "Dépendance"}
 RANGE_HALF = 0.05  # fourchette affichée : ±5 % autour de la valeur centrale (choix produit) ; l'incertitude réelle est portée par la dispersion
 SIZE_ELASTICITY = 0.20  # price/m² ∝ surface^-0.20 (hedonic log-surface coefficient ≈ 0.80)
-METHOD_VERSION = "comparables_dvf_v5"  # bump when the range/selection/hedonic logic changes: stored estimations auto-refresh
+METHOD_VERSION = "comparables_dvf_v6"  # bump when the range/selection/hedonic logic changes: stored estimations auto-refresh
 
 # (label, radius_m or None = same commune, surface tolerance, restrict to communes of similar size)
 LEVELS = [
@@ -78,7 +78,11 @@ def year_adjustment(ptype: str, year_built: Optional[int], has_dpe: bool) -> Opt
             return Adjustment(key="year", label=label, pct=pct, amount=0.0)
     return None
 
-LAND_PRICE_PER_M2 = 12.0
+LAND_PRICE_PER_M2 = 12.0            # excédent de terrain jusqu'à LAND_FULL_PRICE_M2 au-delà de la médiane locale
+LAND_EXTRA_PRICE_PER_M2 = 3.0       # au-delà : terrain d'agrément, valorisé beaucoup moins (zones rurales)
+LAND_FULL_PRICE_M2 = 500.0
+LAND_CAP_UP = 0.04                  # un grand terrain ne fait pas une maison chère : bonus plafonné à +4 %
+LAND_CAP_DOWN = 0.10
 
 # Declared feature adjustments (transparent, bounded). DVF has none of these, so they are applied as explicit
 # multiplicative corrections and listed one by one — relative to the typical sold house, which already has a garage,
@@ -440,7 +444,11 @@ def estimate_from_candidates(cands: list[dict], *, surface: float, ptype: str, c
         comp_land = [c.get("land_surface") or 0.0 for c in comps]
         med_land = median(comp_land) if comp_land else 0.0
         excess = land_surface - med_land
-        land_amount = clamp(excess * LAND_PRICE_PER_M2, -0.10 * value_base, 0.10 * value_base)
+        if excess > LAND_FULL_PRICE_M2:  # dégressif : au-delà de +500 m², le m² supplémentaire vaut 3 € et non 12 €
+            raw = LAND_FULL_PRICE_M2 * LAND_PRICE_PER_M2 + (excess - LAND_FULL_PRICE_M2) * LAND_EXTRA_PRICE_PER_M2
+        else:
+            raw = excess * LAND_PRICE_PER_M2
+        land_amount = clamp(raw, -LAND_CAP_DOWN * value_base, LAND_CAP_UP * value_base)
         adjustments.append(Adjustment(
             key="land", label=f"Terrain {int(land_surface)} m² vs {int(med_land)} m² (médiane des comparables)",
             pct=land_amount / value_base if value_base else 0.0, amount=land_amount))
