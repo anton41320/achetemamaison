@@ -1,12 +1,13 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowsClockwiseIcon, CaretDownIcon, CaretUpIcon, InfoIcon, LinkIcon, MapPinIcon, ScalesIcon, SparkleIcon, WarningIcon } from "phosphor-react-native";
+import { ArrowsClockwiseIcon, ArrowsOutIcon, CaretDownIcon, CaretUpIcon, InfoIcon, LinkIcon, MapPinIcon, ScalesIcon, SparkleIcon, WarningIcon } from "phosphor-react-native";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { EnvAnalysis, EnvItem, EnvironmentJob, EnvironmentResult, api, formatK, formatPct } from "@/src/api";
+import { ImageViewerModal } from "@/src/components/ImageViewerModal";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { ScreenHeader } from "@/src/components/ScreenHeader";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
@@ -121,6 +122,7 @@ function Progress({ job }: { job: EnvironmentJob | null }) {
 function Body({ data, open, toggle, onRefresh, onEstimation }: { data: EnvironmentResult; open: Record<string, boolean>; toggle: (k: string) => void; onRefresh: () => void; onEstimation: () => void }) {
   const styles = useStyles();
   const { colors } = useTheme();
+  const [mapOpen, setMapOpen] = useState(false);
   const a = data.analysis;
   const r = data.report;
   const sections = r?.sections ?? null;
@@ -143,11 +145,27 @@ function Body({ data, open, toggle, onRefresh, onEstimation }: { data: Environme
 
   return (
     <>
-      <View style={styles.mapWrap} testID="environment-map">
+      <Pressable
+        style={({ pressed }) => [styles.mapWrap, pressed && { opacity: 0.92 }]}
+        testID="environment-map"
+        accessibilityRole="button"
+        accessibilityLabel="Agrandir le plan cadastral"
+        onPress={() => setMapOpen(true)}
+      >
         <Image source={{ uri: api.environmentMapUrl(a.coordinates.lon, a.coordinates.lat) }} style={styles.map} contentFit="cover" transition={300} />
         <View style={styles.pin}><MapPinIcon size={30} color={colors.error} weight="fill" /></View>
+        <View style={styles.mapZoom}><ArrowsOutIcon size={16} color={colors.onHero} weight="bold" /><Text style={styles.mapZoomText}>Agrandir</Text></View>
         <Text style={styles.mapCredit}>Orthophoto & parcellaire © IGN — {a.parcel ? `parcelle ${a.parcel.section} ${a.parcel.numero}${a.parcel.contenance_m2 ? ` · ${a.parcel.contenance_m2} m²` : ""}` : "parcelle non identifiée"}</Text>
-      </View>
+      </Pressable>
+      <ImageViewerModal
+        visible={mapOpen}
+        onClose={() => setMapOpen(false)}
+        source={{ uri: api.environmentMapUrl(a.coordinates.lon, a.coordinates.lat, 160, 1400, 1400) }}
+        ratio={1}
+        title={a.parcel ? `Plan cadastral · parcelle ${a.parcel.section} ${a.parcel.numero}` : "Plan cadastral"}
+        caption="Orthophoto & parcellaire © IGN · pincez pour zoomer, double-touchez pour agrandir"
+        testID="environment-map-viewer"
+      />
       <Text style={styles.addr} testID="environment-address">{a.address.label ?? a.address.input ?? `Point ${a.coordinates.lat.toFixed(5)}, ${a.coordinates.lon.toFixed(5)}`}</Text>
 
       {/* Impact estimation */}
@@ -285,6 +303,8 @@ const useStyles = makeStyles((colors) => ({
   skelCard: { height: 96, borderRadius: radius.lg, backgroundColor: colors.skeleton },
   mapWrap: { borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.skeleton },
   map: { width: "100%", aspectRatio: 1.6 },
+  mapZoom: { position: "absolute", top: spacing.md, right: spacing.md, flexDirection: "row", alignItems: "center", gap: 6, minHeight: 32, paddingHorizontal: spacing.md, borderRadius: radius.pill, backgroundColor: colors.scrimBottom },
+  mapZoomText: { fontFamily: fonts.semibold, fontSize: 12, color: colors.onHero },
   pin: { position: "absolute", left: "50%", top: "50%", marginLeft: -15, marginTop: -30 },
   mapCredit: { fontFamily: fonts.regular, fontSize: 11, color: colors.onSurfaceTertiary, padding: spacing.sm, backgroundColor: colors.surfaceSecondary },
   addr: { fontFamily: fonts.semibold, fontSize: 15, color: colors.onSurface },
