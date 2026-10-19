@@ -11,11 +11,14 @@ import { PropertyWizard, WIZARD_STEPS } from "@/src/components/PropertyWizard";
 import { saveFreeDraft } from "@/src/freeDraft";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
-const LOCKED_NEXT = [
+const FREE_NEXT = [
+  "Estimation enregistrée et recalculée automatiquement, sur le site et dans l’application mobile",
   "Dossier environnement du bien (écoles, commerces, transports, risques, urbanisme)",
-  "Ventes comparables détaillées et tendance du marché",
-  "Étape 2 · Mise en vente : prix cible, photos, annonce, conseils visites",
-  "Étape 3 · Dossier de vente : diagnostics et documents, PDF pour le notaire",
+  "Ventes comparables détaillées et tendance du marché local",
+];
+const PREMIUM_NEXT = [
+  "Étape 2 · Mise en vente : prix cible, photos retouchées par IA, annonce rédigée par IA, conseils visites",
+  "Étape 3 · Dossier de vente : diagnostics et documents, lecture automatique, PDF pour le notaire",
 ];
 
 /**
@@ -99,7 +102,11 @@ export function FreeEstimate() {
             <LockKeyIcon size={18} color={colors.brandPrimary} weight="fill" />
             <Text style={styles.blockTitle}>Inclus avec votre compte gratuit</Text>
           </View>
-          {LOCKED_NEXT.map((l) => (
+          {FREE_NEXT.map((l) => (
+            <Text key={l} style={styles.lockItem}>• {l}</Text>
+          ))}
+          <Text style={[styles.blockTitle, { marginTop: spacing.sm }]} testID="free-premium-title">Pack premium · 49 € par bien, paiement unique</Text>
+          {PREMIUM_NEXT.map((l) => (
             <Text key={l} style={styles.lockItem}>• {l}</Text>
           ))}
         </View>

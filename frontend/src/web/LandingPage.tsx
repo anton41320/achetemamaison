@@ -75,8 +75,8 @@ export function LandingPage() {
           <Text style={styles.h1} accessibilityRole="header">Combien vaut votre maison ? La réponse est dans les ventes réelles.</Text>
           <Text style={styles.lead}>
             {SITE_NAME} estime votre bien gratuitement et précisément : le questionnaire complet de l’application (adresse, surface, état, année,
-            terrain, équipements) confronté aux transactions enregistrées autour de chez vous. Créez ensuite un compte gratuit pour accéder au
-            dossier environnement et aux étapes suivantes : prix, photos, annonce, dossier de vente.
+            terrain, équipements) confronté aux transactions enregistrées autour de chez vous. Créez ensuite un compte gratuit pour enregistrer le bien
+            et accéder au dossier environnement ; le Pack premium (49 €, paiement unique) ouvre les étapes 2 et 3 : photos, annonce, dossier de vente.
           </Text>
           <View style={styles.badges}>
             {["Gratuit et sans inscription", "Questionnaire complet", "97 départements", "Fourchette ±5 %"].map((b) => (
