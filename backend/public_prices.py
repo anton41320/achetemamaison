@@ -131,11 +131,23 @@ async def prices_dept(dept: str):
     return await cached(f"dept:{dept}", build)
 
 
+async def _insee_from_slug(dept: str, slug: str) -> str:
+    """Résout un slug de commune (« cormeray », « saint-aignan ») en code INSEE au sein du département."""
+    wanted = _slug(slug)
+    data = await prices_dept(dept)
+    hit = next((c for c in data["communes"] if c["slug"] == wanted), None)
+    if not hit:
+        raise HTTPException(status_code=404, detail="Commune inconnue dans ce département")
+    return hit["insee"]
+
+
 @router.get("/prices/{dept}/{insee}")
 async def prices_commune(dept: str, insee: str):
     dept = dept.upper()
     if dept not in DEPT_NAMES:
         raise HTTPException(status_code=404, detail="Département inconnu")
+    # Tolérance d'URL : « 41061-cormeray » (INSEE + slug) ou « cormeray » (slug seul) → code INSEE
+    insee = insee.split("-")[0].upper() if insee[:1].isdigit() else await _insee_from_slug(dept, insee)
     y0, y1 = _years()
 
     async def build():
