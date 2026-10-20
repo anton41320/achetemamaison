@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { ArrowLeftIcon, EnvelopeSimpleIcon, LockKeyIcon } from "phosphor-react-native";
-import { useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { ArrowLeftIcon, CheckIcon, EnvelopeSimpleIcon, LockKeyIcon } from "phosphor-react-native";
+import { useEffect, useRef, useState } from "react";
+import { Platform, Pressable, Text, TextInput, View } from "react-native";
 
 import { Estimation, PropertyIn, api, formatEuro, formatInt } from "@/src/api";
 import { useSession } from "@/src/auth";
@@ -32,6 +32,8 @@ export function FreeEstimate() {
   const queryClient = useQueryClient();
   const { user } = useSession();
   const [step, setStep] = useState(0);
+  const cardRef = useRef<View>(null);
+  const firstRender = useRef(true);
   const [body, setBody] = useState<PropertyIn | null>(null);
   const [email, setEmail] = useState("");
 
@@ -50,6 +52,18 @@ export function FreeEstimate() {
     },
   });
 
+  // À chaque changement d'étape (et à l'affichage du résultat), revenir en haut de la carte plutôt que rester en bas de page.
+  const resultShown = !!estimate.data;
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    if (Platform.OS !== "web") return;
+    const node = cardRef.current as unknown as { scrollIntoView?: (o: ScrollIntoViewOptions) => void } | null;
+    node?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  }, [step, resultShown]);
+
   const sendEmail = useMutation({ mutationFn: () => api.freeEstimateEmail(email.trim(), body!) });
 
   const est: Estimation | undefined = estimate.data;
@@ -66,7 +80,7 @@ export function FreeEstimate() {
     const v = est.final ?? est;
     const models = est.final?.components.filter((c) => c.effective_weight > 0 && c.value !== null) ?? [];
     return (
-      <View style={styles.card} testID="free-estimate">
+      <View ref={cardRef} style={styles.card} testID="free-estimate">
         <View style={styles.result} testID="free-result">
           <Text style={styles.resultLabel}>Valeur estimée · {body.address_label}</Text>
           <Text style={styles.resultValue} testID="free-result-value">{formatEuro(v.value)}</Text>
@@ -175,7 +189,7 @@ export function FreeEstimate() {
   }
 
   return (
-    <View style={styles.card} testID="free-estimate">
+    <View ref={cardRef} style={styles.card} testID="free-estimate">
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>Estimation gratuite, précise, sans compte</Text>
@@ -190,10 +204,28 @@ export function FreeEstimate() {
           </Pressable>
         ) : null}
       </View>
-      <View style={styles.progress}>
-        {WIZARD_STEPS.map((s, i) => (
-          <View key={s} style={[styles.progressSeg, i <= step && styles.progressSegActive]} />
-        ))}
+      <View style={styles.steps} testID="free-steps">
+        {WIZARD_STEPS.map((s, i) => {
+          const done = i < step;
+          const active = i === step;
+          return (
+            <Pressable
+              key={s}
+              testID={`free-step-${i + 1}`}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active, disabled: !done }}
+              disabled={!done}
+              onPress={() => setStep(i)}
+              style={styles.stepItem}
+            >
+              <View style={[styles.stepDot, (done || active) && styles.stepDotActive]}>
+                {done ? <CheckIcon size={12} color={colors.onBrandPrimary} weight="bold" /> : <Text style={[styles.stepNum, active && { color: colors.onBrandPrimary }]}>{i + 1}</Text>}
+              </View>
+              <Text style={[styles.stepLabel, active && styles.stepLabelActive]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{s}</Text>
+              <View style={[styles.progressSeg, i <= step && styles.progressSegActive]} />
+            </Pressable>
+          );
+        })}
       </View>
       <PropertyWizard
         step={step}
@@ -214,8 +246,14 @@ const useStyles = makeStyles((colors) => ({
   sub: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.onSurfaceTertiary, marginTop: 4 },
   backBtn: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 44, paddingHorizontal: spacing.sm },
   backText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.brandPrimary },
-  progress: { flexDirection: "row", gap: spacing.sm },
-  progressSeg: { flex: 1, height: 4, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary },
+  steps: { flexDirection: "row", gap: spacing.sm },
+  stepItem: { flex: 1, gap: 6, alignItems: "center" },
+  stepDot: { width: 24, height: 24, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary, alignItems: "center", justifyContent: "center" },
+  stepDotActive: { backgroundColor: colors.brandPrimary },
+  stepNum: { fontFamily: fonts.bold, fontSize: 12, color: colors.muted },
+  stepLabel: { fontFamily: fonts.medium, fontSize: 11, color: colors.muted, textAlign: "center" },
+  stepLabelActive: { color: colors.brandPrimary, fontFamily: fonts.semibold },
+  progressSeg: { alignSelf: "stretch", height: 4, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary },
   progressSegActive: { backgroundColor: colors.brandPrimary },
   result: { backgroundColor: colors.brandTertiary, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.xs },
   resultLabel: { fontFamily: fonts.semibold, fontSize: 12, letterSpacing: 0.6, textTransform: "uppercase", color: colors.onBrandTertiary },
