@@ -1,3 +1,4 @@
+import { Image } from "expo-image";
 import { Link, useRouter } from "expo-router";
 import { ChartBarIcon, FolderOpenIcon, ImagesIcon, ShieldCheckIcon, SparkleIcon, StarIcon } from "phosphor-react-native";
 import { Pressable, Text, View } from "react-native";
@@ -7,6 +8,19 @@ import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 import { FreeEstimate } from "@/src/web/FreeEstimate";
 import { PublicPage, SITE_NAME, SITE_URL } from "@/src/web/PublicPage";
 import { useBreakpoint } from "@/src/web/useBreakpoint";
+
+const HERO_IMG = require("../../assets/web/hero-house.jpg");
+const MAP_IMG = require("../../assets/web/map-data.jpg");
+
+/** Ce que le moteur prend en compte (sans nommer les sources de données). */
+const DATA_POINTS = [
+  { title: "Ventes réelles du voisinage", text: "Les transactions récentes de biens comparables autour de l’adresse, ramenées à votre surface : c’est la base de la fourchette." },
+  { title: "Votre bien, tel qu’il est", text: "Surface, pièces, état, époque de construction, terrain, équipements : chaque critère devient un ajustement affiché en % et en €." },
+  { title: "Écoles, commerces, transports", text: "Distances réelles à pied aux services du quotidien, et accès aux transports : un atout mesuré, pas une impression." },
+  { title: "Nature et cadre de vie", text: "Parcs, espaces verts, relief et exposition : ce qui rend un quartier agréable compte dans la valeur." },
+  { title: "Nuisances et risques", text: "Routes passantes, voies ferrées, installations industrielles, zones inondables ou sols sensibles : identifiés et pris en compte." },
+  { title: "Tendance du marché local", text: "Évolution des prix et délais de vente dans la commune : votre estimation suit le marché, pas une moyenne nationale." },
+];
 
 const STEPS = [
   { n: 1, title: "Estimation", icon: ChartBarIcon, text: "Fourchette fondée sur les ventes réelles autour de chez vous, expliquée ligne par ligne : état, époque, terrain, environnement, tendance du marché." },
@@ -70,19 +84,29 @@ export function LandingPage() {
       testID="landing-page"
     >
       <View style={styles.hero}>
-        <View style={[styles.heroText, isDesktop && { maxWidth: 760 }]}>
-          <Text style={styles.kicker}>De l’estimation à la vente, sans agence</Text>
-          <Text style={styles.h1} accessibilityRole="header">Combien vaut votre maison ? La réponse est dans les ventes réelles.</Text>
-          <Text style={styles.lead}>
+        <View style={[styles.heroTop, isDesktop && { flexDirection: "row", alignItems: "center" }]}>
+          <View style={[styles.heroText, isDesktop && { flex: 1, alignItems: "flex-start" }]}>
+          <Text style={[styles.kicker, isDesktop && { textAlign: "left" }]}>De l’estimation à la vente, sans agence</Text>
+          <Text style={[styles.h1, isDesktop && { textAlign: "left" }]} accessibilityRole="header">Combien vaut votre maison ? La réponse est dans les ventes réelles.</Text>
+          <Text style={[styles.lead, isDesktop && { textAlign: "left" }]}>
             {SITE_NAME} estime votre bien gratuitement et précisément : le questionnaire complet de l’application (adresse, surface, état, année,
             terrain, équipements) confronté aux transactions enregistrées autour de chez vous. Créez ensuite un compte gratuit pour enregistrer le bien
             et accéder au dossier environnement ; le Pack premium (49 €, paiement unique) ouvre les étapes 2 et 3 : photos, annonce, dossier de vente.
           </Text>
-          <View style={styles.badges}>
-            {["Gratuit et sans inscription", "Questionnaire complet", "97 départements", "Fourchette ±5 %"].map((b) => (
-              <View key={b} style={styles.badge}><Text style={styles.badgeText}>{b}</Text></View>
-            ))}
+            <View style={[styles.badges, isDesktop && { justifyContent: "flex-start" }]}>
+              {["Gratuit et sans inscription", "Questionnaire complet", "97 départements", "Fourchette ±5 %"].map((b) => (
+                <View key={b} style={styles.badge}><Text style={styles.badgeText}>{b}</Text></View>
+              ))}
+            </View>
           </View>
+          <Image
+            source={HERO_IMG}
+            style={[styles.heroImage, isDesktop && { flex: 1, maxWidth: 560 }]}
+            contentFit="contain"
+            accessibilityLabel="Illustration : maison estimée"
+            transition={300}
+            testID="landing-hero-image"
+          />
         </View>
         <View style={[styles.heroForm, isDesktop && { maxWidth: 820 }]}>
           <FreeEstimate />
@@ -100,6 +124,35 @@ export function LandingPage() {
               <Text style={styles.cardText}>{s.text}</Text>
             </View>
           ))}
+        </View>
+      </View>
+
+      <View style={styles.section} testID="landing-data">
+        <Text style={styles.h2} accessibilityRole="header">Une estimation qui regarde tout ce qui compte</Text>
+        <Text style={styles.sectionLead}>
+          Votre maison n’est pas qu’une surface : son prix dépend de ce qui s’est réellement vendu autour, de ce qu’elle est, et de tout ce qui l’entoure.
+          Voici ce que notre moteur analyse pour chaque adresse.
+        </Text>
+        <View style={[styles.dataWrap, isDesktop && { flexDirection: "row", alignItems: "center" }]}>
+          <Image
+            source={MAP_IMG}
+            style={[styles.mapImage, isDesktop && { flex: 1.1 }]}
+            contentFit="contain"
+            accessibilityLabel="Illustration : la maison au centre, reliée aux écoles, commerces, transports, parcs, nuisances, risques et aux ventes voisines"
+            transition={300}
+            testID="landing-map-image"
+          />
+          <View style={[styles.dataList, isDesktop && { flex: 1 }]}>
+            {DATA_POINTS.map((d, i) => (
+              <View key={d.title} style={styles.dataRow}>
+                <View style={styles.dataNum}><Text style={styles.dataNumText}>{i + 1}</Text></View>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={styles.dataTitle}>{d.title}</Text>
+                  <Text style={styles.cardText}>{d.text}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
         </View>
       </View>
 
@@ -146,8 +199,18 @@ export function LandingPage() {
 
 const useStyles = makeStyles((colors) => ({
   hero: { gap: spacing.xl, paddingTop: spacing.lg, alignItems: "center" },
+  heroTop: { width: "100%", gap: spacing.xl, alignItems: "center" },
   heroText: { width: "100%", gap: spacing.md, alignItems: "center" },
+  heroImage: { width: "100%", aspectRatio: 1.6, borderRadius: radius.lg },
   heroForm: { width: "100%" },
+  sectionLead: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 24, color: colors.onSurfaceTertiary, maxWidth: 760 },
+  dataWrap: { gap: spacing.xl },
+  mapImage: { width: "100%", aspectRatio: 1.6, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary },
+  dataList: { gap: spacing.md },
+  dataRow: { flexDirection: "row", gap: spacing.md, alignItems: "flex-start" },
+  dataNum: { width: 28, height: 28, borderRadius: radius.pill, backgroundColor: colors.brandTertiary, alignItems: "center", justifyContent: "center", marginTop: 2 },
+  dataNumText: { fontFamily: fonts.bold, fontSize: 13, color: colors.onBrandTertiary },
+  dataTitle: { fontFamily: fonts.semibold, fontSize: 15, color: colors.onSurface },
   kicker: { fontFamily: fonts.semibold, fontSize: 13, letterSpacing: 1.2, textTransform: "uppercase", color: colors.brandPrimary, textAlign: "center" },
   h1: { fontFamily: fonts.bold, fontSize: 36, lineHeight: 44, color: colors.onSurface, textAlign: "center" },
   lead: { fontFamily: fonts.regular, fontSize: 17, lineHeight: 26, color: colors.onSurfaceTertiary, textAlign: "center" },
