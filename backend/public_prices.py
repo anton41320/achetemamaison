@@ -8,12 +8,13 @@ from __future__ import annotations
 
 import asyncio
 import time
+from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable
 from xml.sax.saxutils import escape
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import Response
+from fastapi.responses import FileResponse, Response
 
 from departements import ALL_FRANCE
 
@@ -166,6 +167,15 @@ async def prices_commune(dept: str, insee: str):
 
 
 STATIC_PAGES = ["/", "/accueil", "/estimation-maison", "/estimation-immobiliere", "/combien-vaut-ma-maison", "/vendre-sa-maison", "/conseils-vente", "/faq", "/prix-immobilier", "/privacy", "/mentions-legales", "/cgu"]
+
+
+@router.get("/web-bundle.zip", include_in_schema=False)
+async def web_bundle():
+    """Kit du projet web séparé (webproject/ + export statique webdist/), généré par scripts/build-web.sh."""
+    path = Path(__file__).parent / "web-bundle.zip"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Bundle non généré (scripts/build-web.sh)")
+    return FileResponse(path, media_type="application/zip", filename="web-bundle.zip")
 
 
 @router.api_route("/sitemap.xml", methods=["GET", "HEAD"])
