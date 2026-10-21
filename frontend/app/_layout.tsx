@@ -1,6 +1,6 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
-import { Stack, usePathname } from "expo-router";
+import { Redirect, Stack, usePathname } from "expo-router";
 import Head from "expo-router/head";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
@@ -105,6 +105,8 @@ function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
     );
   }
   const signedIn = !!user;
+  // Site web : un visiteur non connecté qui arrive sur la racine voit la vitrine publique, pas le tunnel de connexion.
+  if (Platform.OS === "web" && !signedIn && pathname === "/") return <Redirect href="/accueil" />;
   return (
     <WebShell>
       <DefaultHead />
