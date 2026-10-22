@@ -136,3 +136,8 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 - [x] Invités ajoutés : deltonranch41@gmail.com, a.goemaere@proprietes-privees.com (PREMIUM_COMP_EMAILS).
 - [x] Module « Signaler un problème » supprimé (bouton ScreenHeader, composant, `sendFeedback`, `backend/feedback.py`, route /api/feedback).
 - [x] Dépendance détaillée : `features.outbuilding_type` (bureau, hangar, grange, abri_jardin, pool_house, autre) + `outbuilding_surface` (m²) ; formulaire (sous-champs affichés si « Oui »), estimateur (+1 % abri, +2 % autres, +1 % ≥ 40 m², +2 % ≥ 100 m², libellé « Grange 120 m² »), faits d'annonce (« Dépendance : grange de 120 m² »).
+
+## 2026-10-22 — Fiabilisation IAP pour la revue Apple
+- `REVENUECAT_SECRET_KEY` renseignée côté serveur (clé validée contre l'API RevenueCat) → `/api/iap/claim` peut vérifier un achat même si le webhook tarde.
+- `iap.py` : accepte aussi le code 201 renvoyé par RevenueCat pour un abonné inconnu.
+- Procédure App Store : resoumettre la version 1.0.7 (refusée) avec un **nouveau build** (mode visiteur), IAP `pack_premium_49` attaché à la version, remettre l'app en vente (Tarifs et disponibilité).
