@@ -142,6 +142,7 @@ function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
           <Stack.Screen name="property/[id]/document/[docId]" />
         </Stack.Protected>
         <Stack.Screen name="reset-password" />
+        <Stack.Screen name="estimate-free" />
         <Stack.Screen name="privacy" />
       </Stack>
     </WebShell>

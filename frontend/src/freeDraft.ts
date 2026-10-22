@@ -10,9 +10,14 @@ export interface FreeDraft {
   saved_at: string;
 }
 
-const storage = () => (Platform.OS === "web" && typeof localStorage !== "undefined" ? localStorage : null);
+/** Web : localStorage (survit au rechargement) ; natif : mémoire du processus (le parcours visiteur → inscription se fait dans la même session). */
+const memory: Record<string, string> = {};
+const storage = () =>
+  Platform.OS === "web" && typeof localStorage !== "undefined"
+    ? localStorage
+    : { getItem: (k: string) => memory[k] ?? null, setItem: (k: string, v: string) => { memory[k] = v; }, removeItem: (k: string) => { delete memory[k]; } };
 
-/** Estimation gratuite réalisée sans compte sur le site : conservée dans le navigateur jusqu'à la création du compte. */
+/** Estimation gratuite réalisée sans compte (site ou app) : conservée jusqu'à la création du compte / connexion. */
 export function saveFreeDraft(body: PropertyIn, estimation: Estimation) {
   storage()?.setItem(KEY, JSON.stringify({ body, estimation, saved_at: new Date().toISOString() } satisfies FreeDraft));
 }

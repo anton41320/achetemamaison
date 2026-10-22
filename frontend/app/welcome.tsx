@@ -100,9 +100,11 @@ export default function WelcomeScreen() {
           </>
         ) : (
           <>
-            <PrimaryButton title="Créer un compte" onPress={() => router.push("/sign-up")} testID="welcome-signup-button" />
+            <PrimaryButton title="Estimer mon bien gratuitement" onPress={() => router.push("/estimate-free")} testID="welcome-estimate-button" />
             <PrimaryButton title="J’ai déjà un compte" variant="secondary" onPress={() => router.push("/sign-in")} testID="welcome-signin-button" />
-            <Text style={styles.legal}>Estimation gratuite ; outils IA et dossier de vente avec le Pack premium (49 € par bien). Vos données restent privées et liées à votre compte.</Text>
+            <Text style={styles.legal} onPress={() => router.push("/sign-up")} testID="welcome-signup-button">
+              Sans compte ni inscription. Un compte gratuit sert ensuite à enregistrer le bien et accéder au dossier environnement ; outils IA et dossier de vente avec le Pack premium (49 € par bien). <Text style={styles.link}>Créer un compte</Text>
+            </Text>
           </>
         )}
       </View>
@@ -131,5 +133,6 @@ const useStyles = makeStyles((colors) => ({
   nextHint: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: spacing.sm, paddingHorizontal: spacing.md, minHeight: 36, borderRadius: radius.pill, backgroundColor: colors.brandTertiary },
   nextHintText: { fontFamily: fonts.semibold, fontSize: 13, color: colors.brandPrimary },
   actions: { paddingHorizontal: spacing.lg, gap: spacing.md },
+  link: { fontFamily: fonts.semibold, color: colors.brandPrimary },
   legal: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, textAlign: "center", color: colors.muted },
 }));
