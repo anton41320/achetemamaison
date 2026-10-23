@@ -26,12 +26,12 @@ export function SeoArticle({ slug }: { slug: keyof typeof ALL_PAGES }) {
   return (
     <PublicPage title={c.title} description={c.description} path={c.path} jsonLd={jsonLd} testID={`seo-${slug}`}>
       <View style={[styles.hero, showEstimate && isDesktop && { flexDirection: "row", alignItems: "flex-start" }]}>
-        <View style={{ flex: 1, gap: spacing.md }}>
+        <View style={[{ gap: spacing.md }, isDesktop && { flex: 1 }]}>
           <Text style={styles.h1} accessibilityRole="header">{c.h1}</Text>
           <Text style={styles.intro}>{c.intro}</Text>
         </View>
         {showEstimate ? (
-          <View style={{ flex: 1, width: "100%" }}>
+          <View style={[{ width: "100%" }, isDesktop && { flex: 1 }]}>
             <FreeEstimate />
           </View>
         ) : null}

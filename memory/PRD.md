@@ -141,3 +141,4 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 - `REVENUECAT_SECRET_KEY` renseignée côté serveur (clé validée contre l'API RevenueCat) → `/api/iap/claim` peut vérifier un achat même si le webhook tarde.
 - `iap.py` : accepte aussi le code 201 renvoyé par RevenueCat pour un abonné inconnu.
 - Procédure App Store : resoumettre la version 1.0.7 (refusée) avec un **nouveau build** (mode visiteur), IAP `pack_premium_49` attaché à la version, remettre l'app en vente (Tarifs et disponibilité).
+- Web mobile : le questionnaire gratuit des pages SEO (`SeoArticle.tsx`) débordait sur les sections suivantes (flex:1 en colonne → hauteur 0). Corrigé : flex:1 uniquement en desktop. Export web + web-bundle.zip régénérés.
