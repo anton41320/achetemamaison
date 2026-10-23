@@ -46,6 +46,25 @@ export function FeaturesForm({ propertyType, value, onChange }: Props) {
       {maison ? <Yn k="fenced" label="Terrain clos" testID="feat-fenced" /> : null}
       {maison ? <Yn k="motorized_gate" label="Portail motorisé" testID="feat-gate" /> : null}
       <Yn k="terrace" label="Terrasse" testID="feat-terrace" />
+      <Yn k="veranda" label="Véranda" testID="feat-veranda" />
+      {value.veranda ? (
+        <View style={styles.sub}>
+          <Field
+            label="Surface de la véranda"
+            testID="feat-veranda-surface"
+            placeholder="15"
+            suffix="m²"
+            keyboardType="number-pad"
+            value={value.veranda_surface === null ? "" : String(value.veranda_surface)}
+            onChangeText={(t) => {
+              const n = Number(t.replace(/[^\d]/g, ""));
+              set("veranda_surface", t.trim() === "" || Number.isNaN(n) || n === 0 ? null : Math.min(n, 200));
+            }}
+          />
+          <Yn k="veranda_heated" label="Chauffée" testID="feat-veranda-heated" />
+          <Yn k="veranda_air_conditioned" label="Climatisée" testID="feat-veranda-ac" />
+        </View>
+      ) : null}
       {maison ? (
         <Segmented
           label="Garage"

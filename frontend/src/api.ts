@@ -330,6 +330,11 @@ export interface Estimation {
   market_estimate: MarketEstimate | null;
 }
 
+export type WorkItem = "toiture" | "assainissement" | "electricite" | "rafraichissement" | "autre";
+export const WORK_ITEM_LABELS: Record<WorkItem, string> = {
+  toiture: "Toiture", assainissement: "Assainissement", electricite: "Électricité", rafraichissement: "Rafraîchissement", autre: "Autre",
+};
+
 export interface Features {
   pool: "aucune" | "hors_sol" | "enterree" | null;
   fenced: boolean | null;
@@ -340,6 +345,13 @@ export interface Features {
   outbuilding_type: "bureau" | "hangar" | "grange" | "abri_jardin" | "pool_house" | "autre" | null;
   outbuilding_surface: number | null;
   orientation: "nord" | "est" | "sud" | "ouest" | "sud_ouest" | "sud_est" | "nord_est" | "nord_ouest" | null;
+  veranda: boolean | null;
+  veranda_surface: number | null;
+  veranda_heated: boolean | null;
+  veranda_air_conditioned: boolean | null;
+  works: boolean | null;
+  works_items: WorkItem[];
+  works_other: string | null;
   single_storey: boolean | null;
   basement: boolean | null;
   convertible_attic: boolean | null;
@@ -374,6 +386,7 @@ export const EMPTY_FEATURES: Features = {
   single_storey: null, basement: null, convertible_attic: null, pantry: null, master_suite: null, master_suite_dressing: null, master_suite_bathroom: null, master_suite_wc: null, dressing: null, bathrooms: null, heating: null, sanitation: null, dpe: null,
   double_glazing: null, air_conditioning: null, fireplace: null, solar_panels: null, floor: null, elevator: null, top_floor: null, balcony: null,
   parking: null, cellar: null, caretaker: null, condo_fees: null, heating_mode: null, underfloor_heating: null,
+  veranda: null, veranda_surface: null, veranda_heated: null, veranda_air_conditioned: null, works: null, works_items: [], works_other: null,
 };
 
 export interface PropertyUpdate {

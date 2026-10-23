@@ -37,6 +37,7 @@ class BaseDocument(BaseModel):
 
 PropertyType = Literal["appartement", "maison"]
 Condition = Literal["a_renover", "travaux", "correct", "bon", "tres_bon", "neuf_renove"]
+WorkItem = Literal["toiture", "assainissement", "electricite", "rafraichissement", "autre"]
 
 
 class Features(BaseModel):
@@ -50,6 +51,15 @@ class Features(BaseModel):
     outbuilding_type: Optional[Literal["bureau", "hangar", "grange", "abri_jardin", "pool_house", "autre"]] = None
     outbuilding_surface: Optional[float] = Field(default=None, ge=1, le=2000)  # m²
     orientation: Optional[Literal["nord", "est", "sud", "ouest", "sud_ouest", "sud_est", "nord_est", "nord_ouest"]] = None
+    # Véranda
+    veranda: Optional[bool] = None
+    veranda_surface: Optional[float] = Field(default=None, ge=1, le=200)  # m²
+    veranda_heated: Optional[bool] = None
+    veranda_air_conditioned: Optional[bool] = None
+    # Travaux à prévoir (complète l'état général)
+    works: Optional[bool] = None
+    works_items: list[WorkItem] = Field(default_factory=list)
+    works_other: Optional[str] = Field(default=None, max_length=200)
     # Configuration
     single_storey: Optional[bool] = None
     basement: Optional[bool] = None

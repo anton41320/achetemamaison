@@ -23,6 +23,9 @@ SEARCH_RADIUS_M = 10000
 SIZE_RATIO = (0.4, 2.5)  # a commune is "of similar size" when its population is within 0,4× – 2,5× the target's
 TIGHT_TOL = 0.15  # surface tolerance tried first at each radius (less price/m² dispersion)
 OUTBUILDING_LABELS = {"bureau": "Bureau indépendant", "hangar": "Hangar", "grange": "Grange", "abri_jardin": "Abri de jardin", "pool_house": "Pool house", "autre": "Dépendance"}
+# Travaux déclarés : décote par poste (ordre de grandeur du coût rapporté à la valeur d'une maison type), total plafonné à -10 %.
+WORKS_ADJ = {"toiture": ("toiture", -0.04), "assainissement": ("assainissement", -0.02), "electricite": ("électricité", -0.02),
+             "rafraichissement": ("rafraîchissement", -0.015), "autre": ("autre", -0.01)}
 RANGE_HALF = 0.05  # fourchette affichée : ±5 % autour de la valeur centrale (choix produit) ; l'incertitude réelle est portée par la dispersion
 SIZE_ELASTICITY = 0.20  # price/m² ∝ surface^-0.20 (hedonic log-surface coefficient ≈ 0.80)
 METHOD_VERSION = "comparables_dvf_v6"  # bump when the range/selection/hedonic logic changes: stored estimations auto-refresh
@@ -188,6 +191,17 @@ def feature_adjustments(ptype: str, f, value_base: float, surface: Optional[floa
                 out.append(("feat_condo_fees", f"Charges de copropriété supérieures à la moyenne ({fees})", -0.02))
             elif per_m2 <= 2:
                 out.append(("feat_condo_fees", f"Charges de copropriété modérées ({fees})", 0.01))
+    if f.veranda:
+        surf = f.veranda_surface or 0
+        extras = [lbl for flag, lbl in ((f.veranda_heated, "chauffée"), (f.veranda_air_conditioned, "climatisée")) if flag]
+        pct = 0.01 + (0.005 if surf >= 15 else 0) + (0.005 if f.veranda_heated else 0)
+        out.append(("feat_veranda", "Véranda" + (f" {surf:g} m²" if surf else "") + (f" ({', '.join(extras)})" if extras else ""), pct))
+    if f.works:
+        items = [w for w in (f.works_items or []) if w in WORKS_ADJ]
+        if items:
+            pct = max(-0.10, sum(WORKS_ADJ[w][1] for w in items))
+            labels = [WORKS_ADJ[w][0] if w != "autre" or not f.works_other else f"autre : {f.works_other.strip()}" for w in items]
+            out.append(("feat_works", "Travaux à prévoir — " + ", ".join(labels), pct))
     out = [(k, lbl, p) for k, lbl, p in out if p != 0]
     total = sum(p for _, _, p in out)
     cap = FEATURE_MAX_UP if total > 0 else FEATURE_MAX_DOWN

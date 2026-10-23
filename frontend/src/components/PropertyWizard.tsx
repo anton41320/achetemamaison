@@ -7,6 +7,7 @@ import Animated, { FadeIn } from "react-native-reanimated";
 
 import { CONDITION_LABELS, Condition, EMPTY_FEATURES, Features, GeocodeResult, PropertyIn, PropertyType, api } from "@/src/api";
 import { FeaturesForm } from "@/src/components/FeaturesForm";
+import { WorksForm } from "@/src/components/WorksForm";
 import { Field, Segmented, Stepper } from "@/src/components/Form";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
@@ -265,6 +266,7 @@ export function PropertyWizard({ onSubmit, submitLabel, loading, errorMessage, s
             onChange={setCondition}
             options={(Object.keys(CONDITION_LABELS) as Condition[]).map((c) => ({ value: c, label: CONDITION_LABELS[c] }))}
           />
+          <WorksForm value={features} onChange={setFeatures} />
           {propertyType === "maison" ? (
             <Field
               label="Surface du terrain (optionnel)"

@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CONDITION_LABELS, Condition, EMPTY_FEATURES, Features, api } from "@/src/api";
 import { FeaturesForm } from "@/src/components/FeaturesForm";
+import { WorksForm } from "@/src/components/WorksForm";
 import { Field, Segmented, Stepper } from "@/src/components/Form";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { ScreenHeader } from "@/src/components/ScreenHeader";
@@ -97,6 +98,7 @@ export default function EditPropertyScreen() {
               onChange={setCondition}
               options={(Object.keys(CONDITION_LABELS) as Condition[]).map((c) => ({ value: c, label: CONDITION_LABELS[c] }))}
             />
+            <WorksForm value={features} onChange={setFeatures} testID="edit-works" />
             {p.property_type === "maison" ? (
               <Field label="Surface du terrain" testID="edit-land-input" suffix="m²" keyboardType="decimal-pad" value={landSurface} onChangeText={setLandSurface} />
             ) : null}
