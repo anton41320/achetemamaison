@@ -91,6 +91,7 @@ def _email_html(*, origin: str, token: str, prop: PropertyIn, est, brand: str) -
         f'Ce lien PDF reste valable {TTL_DAYS} jours. Vous recevez cet e-mail parce que cette adresse a été saisie sur notre site. '
         f'Sans création de compte, un seul rappel vous sera envoyé dans {REMINDER_AFTER_DAYS} jours, puis plus rien — '
         f'<a href="{origin}/api/public/free-estimate/{token}/stop" style="color:#7b879c">ne pas recevoir ce rappel</a>.</p>'
+        f'<p style="margin:12px 0 0;font-size:11px;color:#7b879c">Envoyé par {escape(brand)} · <a href="{origin}" style="color:#7b879c">{escape(origin.replace("https://", ""))}</a></p>'
         '</td></tr></table></td></tr></table>'
     )
     return subject, html

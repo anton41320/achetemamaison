@@ -1,7 +1,7 @@
 import type { SeoPageContent } from "@/src/web/seoContent";
 
 const BRAND = "Achète ma maison";
-const CONTACT = "contact@achetesmamaison.fr";
+const CONTACT = "contact@achetemamaison.fr";
 /** Informations éditeur à compléter par l'exploitant du site (marquées [À COMPLÉTER]). */
 const EDITOR = {
   raison: "[À COMPLÉTER : raison sociale ou nom de l’exploitant]",

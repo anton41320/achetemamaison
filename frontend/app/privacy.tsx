@@ -7,7 +7,7 @@ import { APP_NAME, BrandLogo } from "@/src/components/BrandLogo";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
 const UPDATED = "17 septembre 2026";
-const SUPPORT_EMAIL = "contact@achetesmamaison.fr";
+const SUPPORT_EMAIL = "contact@achetemamaison.fr";
 
 const SECTIONS: { title: string; body: string[] }[] = [
   {

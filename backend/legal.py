@@ -12,7 +12,7 @@ import auth
 router = APIRouter()
 
 APP_NAME = "Achète ma maison"
-SUPPORT_EMAIL = "contact@achetesmamaison.fr"
+SUPPORT_EMAIL = "contact@achetemamaison.fr"
 UPDATED = "17 septembre 2026"
 
 SECTIONS: list[tuple[str, list[str]]] = [

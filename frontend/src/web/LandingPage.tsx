@@ -61,7 +61,7 @@ export function LandingPage() {
       name: SITE_NAME,
       url: SITE_URL || undefined,
       logo: SITE_URL ? `${SITE_URL}/app-image.png` : undefined,
-      email: "contact@achetesmamaison.fr",
+      email: "contact@achetemamaison.fr",
       areaServed: "FR",
     },
     {
