@@ -147,3 +147,10 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 - Photos : les 10 étiquettes de pièce s'affichent sur plusieurs lignes (plus de défilement horizontal).
 - Questionnaire : **Véranda** (oui/non → surface m², chauffée, climatisée) dans Équipements ; **Travaux à prévoir ?** sous « État général » (oui/non → choix multiple Toiture / Assainissement / Électricité / Rafraîchissement / Autre + champ libre). Champs dans `Features` (backend `models.py`, `src/api.ts`), ajustements dans `estimator.py` (véranda +1 à +2 %, travaux -1 à -10 % plafonné), composant `src/components/WorksForm.tsx`, présent dans le wizard (invité + connecté) et l'écran Modifier.
 - Dossier environnement : le calcul démarre automatiquement en arrière-plan dès l'enregistrement du bien (`POST /api/properties` → `_start_environment_job`), donc dès la fin de l'inscription (rattachement du brouillon invité) ; l'écran Environnement affiche la progression puis le résultat. Testé : job lancé à la création, terminé en ~20 s.
+
+## Backlog validé (à lancer après validation Apple/Google) — Annuaires de proximité
+- Onglet « Mise en vente » : pastille **Diagnostiqueurs à proximité** (annuaire officiel des diagnostiqueurs certifiés, data.gouv — nom, distance, certifications DPE/amiante/plomb/élec/gaz/termites, téléphone, appel 1 tap).
+- Onglet « Vendu » : pastille **Notaires à proximité** (OpenStreetMap `office=notary` — nom, distance, adresse, téléphone).
+- Rayon par défaut 10 km, ajustable 5 / 10 / 25 km. **Gratuit pour tous** (sans Pack premium).
+- Prévoir un emplacement **« Partenaire mis en avant »** en tête de liste (vide, activable plus tard via la base `partners`).
+- Agences immobilières : non retenu pour l'instant.
