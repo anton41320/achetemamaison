@@ -1094,6 +1094,9 @@ async def create_property(payload: PropertyIn):
     res = await db.properties.insert_one({**doc.to_mongo(), **auth.own()})
     await db.estimations.insert_one({"property_id": res.inserted_id, **est.model_dump()})
     saved = await db.properties.find_one({"_id": res.inserted_id})
+    # Le dossier environnement est long à calculer : on le lance tout de suite en arrière-plan, il sera prêt (ou bien avancé)
+    # quand l'utilisateur ouvrira l'onglet. L'écran interroge GET /environment qui renvoie la progression du job.
+    await _start_environment_job(str(res.inserted_id), saved)
     return _prop_response(saved)
 
 
