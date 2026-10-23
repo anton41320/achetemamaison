@@ -3,7 +3,7 @@ import { CrosshairIcon } from "phosphor-react-native";
 import { useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 
-import { TargetZone, api, formatEuro, formatInt, formatK, formatPct } from "@/src/api";
+import { api, formatEuro, formatInt, formatK, formatPct } from "@/src/api";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
@@ -50,10 +50,6 @@ export function TargetPriceCard({ propertyId, suggestedValue, estimation }: Prop
   };
 
   const a = target.data?.analysis ?? null;
-  const zoneTone = (z: TargetZone) =>
-    z === "central" || z === "bas" ? colors.success : z === "haut" ? colors.warning : colors.error;
-  const zoneSoft = (z: TargetZone) =>
-    z === "central" || z === "bas" ? colors.successSoft : z === "haut" ? colors.warningSoft : colors.errorSoft;
 
   const showForm = editing || (!target.isLoading && !target.data?.target_price);
 
@@ -80,7 +76,7 @@ export function TargetPriceCard({ propertyId, suggestedValue, estimation }: Prop
       {showForm ? (
         <View style={{ gap: spacing.md }} testID="target-form">
           <Text style={styles.p}>
-            À quel prix souhaitez-vous vendre ? Ce prix sera affiché dans votre annonce et le PDF ; Achète ma maison le situe par rapport à l’estimation et aux signaux du marché.
+            À quel prix souhaitez-vous vendre ? Vous êtes libre de votre prix : il sera affiché dans votre annonce et vos documents.
           </Text>
           <View style={styles.inputRow}>
             <TextInput
@@ -108,22 +104,21 @@ export function TargetPriceCard({ propertyId, suggestedValue, estimation }: Prop
         </View>
       ) : a ? (
         <>
-          <View style={[styles.headline, { backgroundColor: zoneSoft(a.zone) }]}>
-            <Text style={[styles.zone, { color: zoneTone(a.zone) }]} testID="target-zone">{a.label}</Text>
+          <View style={styles.headline}>
+            <Text style={styles.zone} testID="target-zone">Prix de vente souhaité</Text>
             <Text style={styles.big} testID="target-value">{formatEuro(a.target_price)}</Text>
             <Text style={styles.p}>
               {formatPct(a.delta_pct, 1)} vs valeur centrale ({formatEuro(a.value)}) · {formatInt(a.target_price_m2)} €/m²
             </Text>
           </View>
 
-          <RangeBar low={a.low} high={a.high} value={a.value} position={a.position} tone={zoneTone(a.zone)} />
+          <RangeBar low={a.low} high={a.high} value={a.value} position={a.position} tone={colors.brandPrimary} />
 
-          <Text style={styles.p} testID="target-advice">{a.advice}</Text>
-          {a.tips.map((t, i) => (
-            <Text key={i} style={styles.tip} testID={`target-tip-${i}`}>• {t}</Text>
-          ))}
+          <Text style={styles.p} testID="target-advice">
+            Ce prix sera affiché dans votre annonce et vos documents. Après une négociation usuelle (~{Math.round(a.negotiation_pct * 100)} %), le prix net vendeur serait d’environ {formatEuro(a.net_after_negotiation)}.
+          </Text>
           <Pressable testID="target-clear-button" accessibilityRole="button" onPress={() => save.mutate(null)} style={styles.clearBtn}>
-            <Text style={styles.clearLabel}>Retirer le prix cible</Text>
+            <Text style={styles.clearLabel}>Retirer le prix</Text>
           </Pressable>
         </>
       ) : null}
@@ -136,7 +131,6 @@ function RangeBar({ low, high, value, position, tone }: { low: number; high: num
   const clamp = (p: number) => Math.min(0.97, Math.max(0.03, p));
   const central = clamp((value - low) / Math.max(high - low, 1));
   const target = clamp(position);
-  const outside = position < 0 || position > 1;
   return (
     <View style={{ gap: 6 }} testID="target-range-bar">
       <View style={styles.track}>
@@ -145,7 +139,7 @@ function RangeBar({ low, high, value, position, tone }: { low: number; high: num
       </View>
       <View style={styles.legendRow}>
         <Text style={styles.legend}>{formatK(low)}</Text>
-        <Text style={styles.legend}>Fourchette finale{outside ? " · prix hors fourchette" : ""}</Text>
+        <Text style={styles.legend}>Fourchette estimée</Text>
         <Text style={styles.legend}>{formatK(high)}</Text>
       </View>
       <View style={styles.legendRow}>
@@ -167,14 +161,13 @@ const useStyles = makeStyles((colors) => ({
   reminderLabel: { fontFamily: fonts.medium, fontSize: 12, color: colors.onBrandTertiary, textTransform: "uppercase", letterSpacing: 0.6 },
   reminderValue: { fontFamily: fonts.bold, fontSize: 24, color: colors.onBrandTertiary, fontVariant: ["tabular-nums"] },
   reminderRange: { fontFamily: fonts.regular, fontSize: 13, color: colors.onBrandTertiary },
-  tip: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted },
   inputRow: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.lg, minHeight: 52 },
   input: { flex: 1, fontFamily: fonts.bold, fontSize: 20, color: colors.onSurface, paddingVertical: 12, fontVariant: ["tabular-nums"] },
   suffix: { fontFamily: fonts.medium, fontSize: 16, color: colors.muted, marginLeft: spacing.sm },
   error: { fontFamily: fonts.medium, fontSize: 12, color: colors.error },
   formRow: { flexDirection: "row", gap: spacing.md },
-  headline: { borderRadius: radius.md, padding: spacing.lg, gap: 4 },
-  zone: { fontFamily: fonts.semibold, fontSize: 13, textTransform: "uppercase", letterSpacing: 0.6 },
+  headline: { borderRadius: radius.md, padding: spacing.lg, gap: 4, backgroundColor: colors.brandTertiary },
+  zone: { fontFamily: fonts.semibold, fontSize: 13, textTransform: "uppercase", letterSpacing: 0.6, color: colors.onBrandTertiary },
   big: { fontFamily: fonts.bold, fontSize: 28, color: colors.onSurfaceSecondary, fontVariant: ["tabular-nums"] },
   track: { height: 10, borderRadius: radius.pill, backgroundColor: colors.brandSecondary, marginTop: spacing.sm, marginHorizontal: 8 },
   marker: { position: "absolute", top: -5, width: 20, height: 20, marginLeft: -10, borderRadius: radius.pill, borderWidth: 3, borderColor: colors.surfaceSecondary },

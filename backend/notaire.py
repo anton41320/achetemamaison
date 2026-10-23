@@ -86,7 +86,7 @@ def build_cover(prop: PropertyDoc, final: Optional[dict], dossier: dict, attachm
         if final and len([c for c in final["components"] if c["effective_weight"] > 0]) > 1:
             rows.append(["Estimation finale pondérée", f"{eur(final['value'])}  ({eur(final['low'])} – {eur(final['high'])})"])
         if target:
-            rows.append(["Prix cible du vendeur", f"{eur(target['target_price'])} — {target['label']}"])
+            rows.append(["Prix de vente souhaité", eur(target["target_price"])])
         story.append(_table(rows, [80 * mm, 94 * mm], st["body"]))
         story.append(Paragraph("Estimation indicative fondée sur les ventes réelles enregistrées ; le rapport d'estimation détaillé est disponible séparément.", st["small"]))
 

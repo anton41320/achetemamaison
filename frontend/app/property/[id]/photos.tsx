@@ -372,7 +372,7 @@ export default function PhotosScreen() {
                   <Text style={styles.labelTitle} testID={`photo-label-${i}`}>
                     {p.label ? `Étiquette : ${p.label}` : "Étiquette : à définir (façade, salon…)"}
                   </Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.labelChips}>
+                  <View style={styles.labelChips}>
                     {PHOTO_LABELS.map((l) => {
                       const active = p.label === l;
                       return (
@@ -389,7 +389,7 @@ export default function PhotosScreen() {
                         </Pressable>
                       );
                     })}
-                  </ScrollView>
+                  </View>
                 </View>
                 {photos.data!.length > 1 ? (
                   <View style={styles.orderRow}>
@@ -520,7 +520,7 @@ const useStyles = makeStyles((colors) => ({
   coverText: { fontFamily: fonts.semibold, fontSize: 11, color: colors.onBrandPrimary },
   labelBlock: { paddingTop: spacing.md, gap: spacing.sm },
   labelTitle: { fontFamily: fonts.semibold, fontSize: 13, color: colors.onSurfaceSecondary, paddingHorizontal: spacing.lg },
-  labelChips: { flexDirection: "row", gap: spacing.sm, paddingHorizontal: spacing.lg },
+  labelChips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, paddingHorizontal: spacing.lg },
   labelChip: { minHeight: 36, paddingHorizontal: spacing.md, justifyContent: "center", borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
   labelChipActive: { backgroundColor: colors.brandPrimary, borderColor: colors.brandPrimary },
   labelChipText: { fontFamily: fonts.medium, fontSize: 13, color: colors.onSurface },
