@@ -21,7 +21,7 @@ import auth
 import emailer
 from listing import HEADLINE_SEPARATOR
 from models import PropertyDoc, utcnow
-from report import APP_NAME, BRAND, BRAND_SOFT, CONDITION_LABELS, INK, LINE, MUTED, eur
+from report import APP_NAME, BRAND, BRAND_SOFT, CONDITION_LABELS, INK, LINE, MUTED, TITLE_FONT, eur
 
 logger = logging.getLogger("pack")
 
@@ -181,7 +181,7 @@ def build_pack_pdf(prop: PropertyDoc, listing: dict, photos: list[tuple[bytes, b
     ss = getSampleStyleSheet()
     body = ParagraphStyle("body", parent=ss["BodyText"], fontName="Helvetica", fontSize=10.5, leading=15, textColor=INK)
     small = ParagraphStyle("small", parent=body, fontSize=8, leading=11, textColor=MUTED)
-    title = ParagraphStyle("title", parent=ss["Title"], fontName="Helvetica-Bold", fontSize=22, leading=27, textColor=BRAND, alignment=0)
+    title = ParagraphStyle("title", parent=ss["Title"], fontName=TITLE_FONT, fontSize=22, leading=27, textColor=BRAND, alignment=0)
     hook = ParagraphStyle("hook", parent=body, fontName="Helvetica-Oblique", fontSize=12, leading=17, textColor=BRAND)
     h2 = ParagraphStyle("h2", parent=ss["Heading2"], fontName="Helvetica-Bold", fontSize=12.5, textColor=INK, spaceBefore=8, spaceAfter=4)
 

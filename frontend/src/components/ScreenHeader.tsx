@@ -62,6 +62,6 @@ const useStyles = makeStyles((colors) => ({
     justifyContent: "center",
   },
   titles: { flex: 1 },
-  title: { fontFamily: fonts.bold, fontSize: 22, color: colors.onSurface },
+  title: { fontFamily: fonts.extrabold, fontSize: 22, color: colors.onSurface },
   subtitle: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, marginTop: 2 },
 }));

@@ -65,9 +65,8 @@ function Sidebar({ email }: { email: string }) {
   return (
     <View style={styles.sidebar} testID="web-sidebar">
       <Pressable accessibilityRole="link" onPress={() => router.navigate("/")} style={styles.brand} testID="web-brand">
-        <Image source={require("../../assets/images/icon.png")} style={styles.brandIcon} contentFit="cover" />
         <View>
-          <Text style={styles.brandName}>Achète ma maison</Text>
+          <Image source={require("../../assets/images/logo-wordmark.png")} style={styles.brandWordmark} contentFit="contain" accessibilityLabel="Achète ma maison" />
           <Text style={styles.brandTag}>De l’estimation à la vente</Text>
         </View>
       </Pressable>
@@ -105,8 +104,7 @@ const useStyles = makeStyles((colors) => ({
   root: { flex: 1, flexDirection: "row", backgroundColor: colors.surfaceSecondary },
   sidebar: { width: SIDEBAR_WIDTH, backgroundColor: colors.surface, borderRightWidth: 1, borderRightColor: colors.border, paddingVertical: spacing.lg, paddingHorizontal: spacing.md, gap: spacing.md },
   brand: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.sm, paddingBottom: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
-  brandIcon: { width: 40, height: 40, borderRadius: radius.md },
-  brandName: { fontFamily: fonts.bold, fontSize: 16, color: colors.onSurface },
+  brandWordmark: { width: 168, height: 44 },
   brandTag: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted },
   nav: { gap: 4 },
   section: { marginTop: spacing.lg, gap: 4 },

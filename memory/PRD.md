@@ -155,3 +155,10 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 - Prévoir un emplacement **« Partenaire mis en avant »** en tête de liste (vide, activable plus tard via la base `partners`).
 - Agences immobilières : non retenu pour l'instant.
 - Refus Google Play (compte de test sans accès premium) : code promo AMM-N3GB-JQ appliqué en production au compte demo@achetemamaison.fr → Pack premium actif sur tout le compte immédiatement (indépendant du prochain Publish). Instructions données à l'utilisateur pour renseigner les identifiants dans Play Console → Contenu de l'appli → Accès à l'appli.
+
+## 2026-10-26 — Application de la charte graphique (logo maison noire + plus bleu, Plus Jakarta Sans ExtraBold, #1656C9 / #7FA3E3 / #E8F0FD)
+- Assets régénérés par `scripts/gen_brand_assets.py` à partir des fichiers de la charte (/tmp/brand → sources à conserver : Logo/Icone fond clair & sombre) : icône app (fond blanc), adaptive icon Android (+ mono), splash (logo complet sur blanc), favicon, OG image 1200×630, `logo.png` (icône seule), `logo-wordmark.png` / `logo-wordmark-dark.png`, `backend/data/logo.png` (tuile blanche pour PDF + signature photos).
+- Thème : `brandSecondary` → #7FA3E3, `surfaceInverse` → #0F1F3D (plus de navy #0B3B8F), `fonts.extrabold` (titres : ScreenHeader, AuthShell, h1/h2 web, privacy). app.json : fonds splash/adaptive en blanc.
+- `BrandLogo` affiche désormais le vrai logo (icône seule ou logo complet) ; en-têtes web (PublicPage, WebShell) avec le logo complet. `BrandMarks.tsx` : éléments graphiques de la charte (`BrandDash`, `BrandPlus`), trait devant les titres de section de la landing.
+- PDF (rapport, pack annonce, dossier notaire) : titres en Plus Jakarta Sans ExtraBold (`TITLE_FONT`, repli Helvetica-Bold), nouveau logo.
+- ⚠️ La nouvelle icône d'app et le splash ne seront visibles qu'au prochain build mobile (après validation des stores).

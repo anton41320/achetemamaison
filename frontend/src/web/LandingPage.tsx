@@ -3,6 +3,7 @@ import { Link, useRouter } from "expo-router";
 import { ChartBarIcon, FolderOpenIcon, ImagesIcon, ShieldCheckIcon, SparkleIcon, StarIcon } from "phosphor-react-native";
 import { Pressable, Text, View } from "react-native";
 
+import { BrandDash } from "@/src/components/BrandMarks";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 import { FreeEstimate } from "@/src/web/FreeEstimate";
@@ -114,7 +115,7 @@ export function LandingPage() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.h2} accessibilityRole="header">Un parcours en 3 étapes</Text>
+        <View style={styles.h2Row}><BrandDash size={22} /><Text style={styles.h2} accessibilityRole="header">Un parcours en 3 étapes</Text></View>
         <View style={[styles.cards, isTablet && { flexDirection: "row" }]}>
           {STEPS.map((s) => (
             <View key={s.n} style={styles.stepCard} testID={`landing-step-${s.n}`}>
@@ -128,7 +129,7 @@ export function LandingPage() {
       </View>
 
       <View style={styles.section} testID="landing-data">
-        <Text style={styles.h2} accessibilityRole="header">Une estimation qui regarde tout ce qui compte</Text>
+        <View style={styles.h2Row}><BrandDash size={22} /><Text style={styles.h2} accessibilityRole="header">Une estimation qui regarde tout ce qui compte</Text></View>
         <Text style={styles.sectionLead}>
           Votre maison n’est pas qu’une surface : son prix dépend de ce qui s’est réellement vendu autour, de ce qu’elle est, et de tout ce qui l’entoure.
           Voici ce que notre moteur analyse pour chaque adresse.
@@ -157,7 +158,7 @@ export function LandingPage() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.h2} accessibilityRole="header">Pourquoi nous faire confiance</Text>
+        <View style={styles.h2Row}><BrandDash size={22} /><Text style={styles.h2} accessibilityRole="header">Pourquoi nous faire confiance</Text></View>
         <View style={[styles.cards, isTablet && { flexDirection: "row" }]}>
           {TRUST.map((t) => (
             <View key={t.title} style={styles.trustCard}>
@@ -170,7 +171,7 @@ export function LandingPage() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.h2} accessibilityRole="header">Ils ont vendu avec {SITE_NAME}</Text>
+        <View style={styles.h2Row}><BrandDash size={22} /><Text style={styles.h2} accessibilityRole="header">Ils ont vendu avec {SITE_NAME}</Text></View>
         <View style={[styles.cards, isTablet && { flexDirection: "row" }]}>
           {TESTIMONIALS.map((t) => (
             <View key={t.name} style={styles.quoteCard} testID="landing-testimonial">
@@ -212,13 +213,14 @@ const useStyles = makeStyles((colors) => ({
   dataNumText: { fontFamily: fonts.bold, fontSize: 13, color: colors.onBrandTertiary },
   dataTitle: { fontFamily: fonts.semibold, fontSize: 15, color: colors.onSurface },
   kicker: { fontFamily: fonts.semibold, fontSize: 13, letterSpacing: 1.2, textTransform: "uppercase", color: colors.brandPrimary, textAlign: "center" },
-  h1: { fontFamily: fonts.bold, fontSize: 36, lineHeight: 44, color: colors.onSurface, textAlign: "center" },
+  h1: { fontFamily: fonts.extrabold, fontSize: 36, lineHeight: 44, color: colors.onSurface, textAlign: "center" },
   lead: { fontFamily: fonts.regular, fontSize: 17, lineHeight: 26, color: colors.onSurfaceTertiary, textAlign: "center" },
   badges: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, justifyContent: "center" },
   badge: { backgroundColor: colors.brandTertiary, borderRadius: radius.pill, paddingHorizontal: spacing.md, minHeight: 32, justifyContent: "center" },
   badgeText: { fontFamily: fonts.semibold, fontSize: 13, color: colors.onBrandTertiary },
   section: { gap: spacing.md },
-  h2: { fontFamily: fonts.bold, fontSize: 26, lineHeight: 34, color: colors.onSurface },
+  h2Row: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  h2: { fontFamily: fonts.extrabold, fontSize: 26, lineHeight: 34, color: colors.onSurface, flexShrink: 1 },
   cards: { flexDirection: "column", gap: spacing.md },
   stepCard: { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.sm },
   stepBadge: { width: 32, height: 32, borderRadius: radius.pill, backgroundColor: colors.brandPrimary, alignItems: "center", justifyContent: "center" },

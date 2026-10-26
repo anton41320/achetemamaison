@@ -16,9 +16,27 @@ from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, S
 
 from models import PropertyDoc
 
+
+def _register_title_font() -> str:
+    """Police des titres de la charte (Plus Jakarta Sans ExtraBold) ; repli Helvetica-Bold si le fichier manque."""
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    path = Path(__file__).parent / "data" / "fonts" / "PlusJakartaSans-ExtraBold.ttf"
+    if not path.exists():
+        return "Helvetica-Bold"
+    try:
+        pdfmetrics.registerFont(TTFont("PlusJakarta-ExtraBold", str(path)))
+        return "PlusJakarta-ExtraBold"
+    except Exception:  # noqa: BLE001
+        return "Helvetica-Bold"
+
+
+TITLE_FONT = _register_title_font()
+
 APP_NAME = "Achète ma maison"
 LOGO_PATH = Path(__file__).parent / "data" / "logo.png"
 BRAND = colors.HexColor("#1656C9")
+BRAND_LIGHT = colors.HexColor("#7FA3E3")
 BRAND_SOFT = colors.HexColor("#E8F0FD")
 INK = colors.HexColor("#0F1F3D")
 MUTED = colors.HexColor("#6B7C99")
@@ -47,13 +65,13 @@ def build_report(prop: PropertyDoc, final: Optional[dict] = None, photos: Option
     doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=18 * mm, rightMargin=18 * mm, topMargin=16 * mm,
                             bottomMargin=16 * mm, title=f"{APP_NAME} — {prop.address_label}")
     ss = getSampleStyleSheet()
-    h1 = ParagraphStyle("h1", parent=ss["Title"], fontName="Helvetica-Bold", fontSize=20, textColor=BRAND,
+    h1 = ParagraphStyle("h1", parent=ss["Title"], fontName=TITLE_FONT, fontSize=20, textColor=BRAND,
                         alignment=TA_LEFT, spaceAfter=2)
     h2 = ParagraphStyle("h2", parent=ss["Heading2"], fontName="Helvetica-Bold", fontSize=12.5, textColor=INK,
                         spaceBefore=10, spaceAfter=4)
     body = ParagraphStyle("body", parent=ss["BodyText"], fontName="Helvetica", fontSize=9.5, leading=13, textColor=INK)
     small = ParagraphStyle("small", parent=body, fontSize=8, leading=11, textColor=MUTED)
-    big = ParagraphStyle("big", parent=body, fontName="Helvetica-Bold", fontSize=22, leading=26, textColor=BRAND)
+    big = ParagraphStyle("big", parent=body, fontName=TITLE_FONT, fontSize=18, leading=23, textColor=BRAND)
 
     story = []
     story.append(brand_header(f"{APP_NAME} · Rapport d'estimation", h1,

@@ -35,7 +35,7 @@ import { Appearance, StyleSheet, useColorScheme } from "react-native";
 
 export type ColorScheme = "light" | "dark";
 
-// Brand palette « Achète ma maison » : bleu du logo (#1656C9 → #0B3B8F) sur fonds clairs teintés de bleu.
+// Charte « Achète ma maison » : #1656C9 (bleu principal), #7FA3E3 (bleu clair du logo), #E8F0FD (fond clair) ; texte noir profond.
 const light = {
   surface: "#F4F7FC",
   onSurface: "#0F1F3D",
@@ -43,7 +43,7 @@ const light = {
   onSurfaceSecondary: "#0F1F3D",
   surfaceTertiary: "#E4ECF8",
   onSurfaceTertiary: "#34486B",
-  surfaceInverse: "#0B3B8F",
+  surfaceInverse: "#0F1F3D",
   onSurfaceInverse: "#FFFFFF",
   muted: "#6B7C99",
 
@@ -51,8 +51,8 @@ const light = {
   onBrand: "#FFFFFF",
   brandPrimary: "#1656C9",
   onBrandPrimary: "#FFFFFF",
-  brandSecondary: "#D4E2FA",
-  onBrandSecondary: "#0B3B8F",
+  brandSecondary: "#7FA3E3",
+  onBrandSecondary: "#0F1F3D",
   brandTertiary: "#E8F0FD",
   onBrandTertiary: "#1656C9",
 
@@ -75,7 +75,7 @@ const light = {
   // Hero / photo overlays (identical across schemes)
   onHero: "#FFFFFF",
   onHeroMuted: "rgba(255,255,255,0.78)",
-  scrimTop: "rgba(11,59,143,0.20)",
+  scrimTop: "rgba(15,31,61,0.20)",
   scrimBottom: "rgba(8,30,70,0.88)",
   glassFill: "rgba(255,255,255,0.22)",
   glassBorder: "rgba(255,255,255,0.45)",
@@ -87,6 +87,8 @@ export const fonts = {
   medium: "PlusJakartaSans-Medium",
   semibold: "PlusJakartaSans-SemiBold",
   bold: "PlusJakartaSans-Bold",
+  /** Police des titres (charte) */
+  extrabold: "PlusJakartaSans-ExtraBold",
 };
 
 export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, xxxl: 48 };

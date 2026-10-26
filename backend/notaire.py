@@ -14,7 +14,7 @@ from reportlab.lib.units import mm
 from reportlab.platypus import Image, KeepTogether, PageBreak, Paragraph, SimpleDocTemplate, Spacer
 
 from models import PropertyDoc
-from report import APP_NAME, BRAND, CONDITION_LABELS, INK, MUTED, _table, brand_header, eur
+from report import APP_NAME, BRAND, CONDITION_LABELS, INK, MUTED, TITLE_FONT, _table, brand_header, eur
 
 logger = logging.getLogger("notaire")
 
@@ -37,11 +37,11 @@ def _styles():
     ss = getSampleStyleSheet()
     body = ParagraphStyle("body", parent=ss["BodyText"], fontName="Helvetica", fontSize=9.5, leading=13, textColor=INK)
     return {
-        "h1": ParagraphStyle("h1", parent=ss["Title"], fontName="Helvetica-Bold", fontSize=20, textColor=BRAND, alignment=0, spaceAfter=2),
+        "h1": ParagraphStyle("h1", parent=ss["Title"], fontName=TITLE_FONT, fontSize=20, textColor=BRAND, alignment=0, spaceAfter=2),
         "h2": ParagraphStyle("h2", parent=ss["Heading2"], fontName="Helvetica-Bold", fontSize=12.5, textColor=INK, spaceBefore=10, spaceAfter=4),
         "body": body,
         "small": ParagraphStyle("small", parent=body, fontSize=8, leading=11, textColor=MUTED),
-        "big": ParagraphStyle("big", parent=body, fontName="Helvetica-Bold", fontSize=18, leading=22, textColor=BRAND),
+        "big": ParagraphStyle("big", parent=body, fontName=TITLE_FONT, fontSize=18, leading=22, textColor=BRAND),
     }
 
 

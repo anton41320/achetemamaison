@@ -55,8 +55,7 @@ export function PublicPage({ title, description, path, jsonLd, testID, children 
         <View style={styles.headerInner}>
           <Link href={user ? "/" : "/accueil"} asChild>
             <Pressable style={styles.brand} accessibilityRole="link" testID="public-brand">
-              <Image source={require("../../assets/images/icon.png")} style={styles.brandIcon} contentFit="cover" />
-              <Text style={styles.brandName}>{SITE_NAME}</Text>
+              <Image source={require("../../assets/images/logo-wordmark.png")} style={styles.brandWordmark} contentFit="contain" accessibilityLabel={SITE_NAME} />
             </Pressable>
           </Link>
           {isTablet ? (
@@ -106,8 +105,7 @@ const useStyles = makeStyles((colors) => ({
   header: { backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: spacing.sm, paddingHorizontal: spacing.lg, alignItems: "center" },
   headerInner: { width: "100%", maxWidth: CONTENT_MAX_WIDTH, flexDirection: "row", alignItems: "center", gap: spacing.md },
   brand: { flexDirection: "row", alignItems: "center", gap: spacing.sm, flexShrink: 1 },
-  brandIcon: { width: 36, height: 36, borderRadius: radius.sm },
-  brandName: { fontFamily: fonts.bold, fontSize: 17, color: colors.brandPrimary },
+  brandWordmark: { width: 138, height: 36 },
   navRow: { flex: 1, flexDirection: "row", justifyContent: "center", gap: spacing.xs },
   navItem: { paddingHorizontal: spacing.md, minHeight: 44, justifyContent: "center", borderRadius: radius.md },
   navItemHover: { backgroundColor: colors.surfaceSecondary },

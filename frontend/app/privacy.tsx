@@ -110,7 +110,7 @@ const useStyles = makeStyles((colors) => ({
   content: { padding: spacing.lg, gap: spacing.md, maxWidth: 760, width: "100%", alignSelf: "center" },
   headRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   back: { width: 44, height: 44, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceSecondary },
-  h1: { fontFamily: fonts.bold, fontSize: 26, lineHeight: 32, color: colors.onSurface, marginTop: spacing.sm },
+  h1: { fontFamily: fonts.extrabold, fontSize: 26, lineHeight: 32, color: colors.onSurface, marginTop: spacing.sm },
   meta: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
   section: { backgroundColor: colors.surfaceSecondary, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.lg, gap: spacing.sm },
   h2: { fontFamily: fonts.semibold, fontSize: 16, color: colors.onSurfaceSecondary },

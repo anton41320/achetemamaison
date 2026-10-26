@@ -20,7 +20,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#0B3B8F",
+        "backgroundColor": "#FFFFFF",
         "monochromeImage": "./assets/images/adaptive-icon-mono.png"
       },
       "package": "achetesmamaison.app",
@@ -47,7 +47,7 @@
           "image": "./assets/images/splash-image.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#0B3B8F"
+          "backgroundColor": "#FFFFFF"
         }
       ],
       "expo-font",

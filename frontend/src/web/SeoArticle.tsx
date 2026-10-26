@@ -70,7 +70,7 @@ export function SeoArticle({ slug }: { slug: keyof typeof ALL_PAGES }) {
 
 const useStyles = makeStyles((colors) => ({
   hero: { gap: spacing.xl, paddingTop: spacing.lg },
-  h1: { fontFamily: fonts.bold, fontSize: 32, lineHeight: 40, color: colors.onSurface },
+  h1: { fontFamily: fonts.extrabold, fontSize: 32, lineHeight: 40, color: colors.onSurface },
   intro: { fontFamily: fonts.regular, fontSize: 17, lineHeight: 26, color: colors.onSurfaceTertiary },
   section: { gap: spacing.sm },
   h2: { fontFamily: fonts.bold, fontSize: 22, lineHeight: 30, color: colors.onSurface, marginTop: spacing.sm },

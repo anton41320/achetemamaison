@@ -44,7 +44,7 @@ export default function WelcomeScreen() {
   return (
     <View style={[styles.screen, { paddingTop: insets.top, paddingBottom: insets.bottom + spacing.lg }]} testID="welcome-screen">
       <View style={styles.brand}>
-        <BrandLogo size={84} wordmark="column" testID="welcome-logo" />
+        <BrandLogo size={96} wordmark="column" testID="welcome-logo" />
       </View>
 
       <View style={styles.stepper} testID="welcome-stepper">

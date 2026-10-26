@@ -63,7 +63,7 @@ const useStyles = makeStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.surface },
   content: { padding: spacing.lg, gap: spacing.md },
   back: { width: 44, height: 44, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceSecondary, marginBottom: spacing.sm },
-  title: { fontFamily: fonts.bold, fontSize: 28, lineHeight: 34, color: colors.onSurface },
+  title: { fontFamily: fonts.extrabold, fontSize: 28, lineHeight: 34, color: colors.onSurface },
   subtitle: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, color: colors.onSurfaceTertiary },
   form: { marginTop: spacing.md, gap: spacing.sm },
   banner: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: colors.errorSoft, borderRadius: radius.md, padding: spacing.md },
