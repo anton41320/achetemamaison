@@ -3,7 +3,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-SRC = Path("/tmp/brand")
+SRC = Path("/app/brand-assets")
 IMG = Path("/app/frontend/assets/images")
 BACKEND = Path("/app/backend/data")
 WHITE = (255, 255, 255, 255)

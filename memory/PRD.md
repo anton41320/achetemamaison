@@ -162,3 +162,4 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 - `BrandLogo` affiche désormais le vrai logo (icône seule ou logo complet) ; en-têtes web (PublicPage, WebShell) avec le logo complet. `BrandMarks.tsx` : éléments graphiques de la charte (`BrandDash`, `BrandPlus`), trait devant les titres de section de la landing.
 - PDF (rapport, pack annonce, dossier notaire) : titres en Plus Jakarta Sans ExtraBold (`TITLE_FONT`, repli Helvetica-Bold), nouveau logo.
 - ⚠️ La nouvelle icône d'app et le splash ne seront visibles qu'au prochain build mobile (après validation des stores).
+- Sources de la charte conservées dans `/app/brand-assets/` (charte.pdf, logo/icône fond clair & sombre). `scripts/gen_store_assets.py` → `backend/store-assets.zip` servi sur `/api/public/store-assets.zip` (icône Play 512, icône App Store 1024, image de présentation Play 1024×500) pour mise à jour manuelle des fiches stores.

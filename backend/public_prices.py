@@ -190,6 +190,15 @@ async def web_bundle():
     return FileResponse(path, media_type="application/zip", filename="web-bundle.zip")
 
 
+@router.get("/store-assets.zip", include_in_schema=False)
+async def store_assets():
+    """Visuels des fiches stores (icônes 512/1024, image de présentation 1024×500), générés par scripts/gen_store_assets.py."""
+    path = Path(__file__).parent / "store-assets.zip"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Visuels non générés (scripts/gen_store_assets.py)")
+    return FileResponse(path, media_type="application/zip", filename="achetemamaison-visuels-stores.zip")
+
+
 @router.api_route("/sitemap.xml", methods=["GET", "HEAD"])
 async def sitemap(request: Request):
     """Plan du site : pages publiques + départements + communes avec assez de ventes. Référencé par /robots.txt."""
