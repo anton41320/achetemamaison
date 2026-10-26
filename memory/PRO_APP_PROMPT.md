@@ -3,7 +3,7 @@
 ## Comment procéder (recommandation)
 1. Pousser ce projet sur GitHub (bouton « Save to GitHub » dans Emergent) pour garder le moteur d'estimation (DVF, hédonique, LightGBM), le dossier environnement, les documents/OCR et les pages web.
 2. Créer un **nouveau projet Emergent** (type « Expo mobile + FastAPI ») et, dans le premier message, coller le prompt ci-dessous en remplaçant `<URL_GITHUB>` par l'adresse du dépôt.
-3. Laisser l'agent poser ses questions (clé Deepgram optionnelle, tarif de l'abonnement, nom de la marque PRO).
+3. Laisser l'agent poser ses dernières questions (nom de la marque PRO, identité visuelle).
 
 ---
 
@@ -13,7 +13,7 @@ Tu vas créer **« Achète ma maison PRO »**, une application mobile (iOS/Andro
 
 ### 1. Ce qui change par rapport à l'app grand public
 - **Public** : professionnels uniquement. Suppression du mode « vendeur particulier », du Pack 49 € à l'unité et du parcours en 3 étapes (Estimation / Mise en vente / Vendu).
-- **Adhésion** : **abonnement mensuel ou annuel** par agent via RevenueCat (identifiants produits `pro_monthly` et `pro_yearly`), avec **essai gratuit 14 jours**. Sur le web, Stripe Billing (abonnement). Pas d'achat à l'acte.
+- **Adhésion** : **abonnement 79 € TTC / mois par agent** via RevenueCat (identifiant produit `pro_monthly_79`), avec **essai gratuit 14 jours**, résiliable à tout moment. Variante annuelle `pro_yearly_790` (790 €/an, soit 2 mois offerts). Sur le web, Stripe Billing (abonnement). Pas d'achat à l'acte.
 - **Inscription** : e-mail + mot de passe, puis fiche professionnelle obligatoire (nom de l'agence, numéro de carte T ou attestation de collaborateur, téléphone, logo). Un **compte agence** peut inviter plusieurs agents (rôles : responsable / agent) ; les biens et clients sont partagés au sein de l'agence.
 - **Structure de l'app (onglets)** : Accueil (agenda des visites du jour) · Biens (mandats) · Clients (acquéreurs & vendeurs) · Enregistreur · Compte.
 - **Modèle de données** : `agencies`, `agents`, `properties` (mandats, avec estimation réutilisée), `contacts` (acquéreur/vendeur : budget, critères, statut), `visits` (bien + contact + date + enregistrement), `recordings`, `transcripts`, `visit_summaries`, `tasks`.
@@ -28,7 +28,7 @@ Tu vas créer **« Achète ma maison PRO »**, une application mobile (iOS/Andro
 **Côté serveur (FastAPI)**
 5. `POST /api/visits/{id}/segments` : authentification de l'agent (JWT), contrôle de taille/type, stockage de l'audio dans **Emergent Object Storage** (chiffré au repos, hébergement UE), enregistrement du segment en base.
 6. `POST /api/visits/{id}/finish` : empile une tâche de traitement en arrière-plan (file de jobs dans Mongo + worker asyncio, avec reprise si redémarrage) ; l'app interroge `GET /api/visits/{id}/status` (progression par étapes).
-7. **Transcription** : par défaut OpenAI Speech-to-Text via la clé Emergent (modèle de transcription le plus récent disponible dans le playbook), segment par segment, en français, avec horodatage ; concaténation en un transcript unique. **Option** : si l'agence fournit une clé **Deepgram** (modèle nova, `diarize=true`, `language=fr`), l'utiliser pour une vraie **séparation des voix** ; sinon, demander à Claude d'attribuer les répliques (Agent / Client) à partir du contexte.
+7. **Transcription** : OpenAI Speech-to-Text via la clé Emergent (modèle de transcription le plus récent disponible dans le playbook), segment par segment, en français, avec horodatage ; concaténation en un transcript unique. Pas de Deepgram : la **séparation des voix** (Agent / Client) est faite par Claude à l'étape suivante, à partir du contexte (l'agent présente, le client questionne), avec un indicateur de confiance par réplique et correction manuelle possible dans l'app.
 8. **Analyse** avec **Claude (dernière version Sonnet disponible)** via la clé Emergent, en **sortie JSON stricte** validée par Pydantic :
    ```json
    {
@@ -62,4 +62,4 @@ Tu vas créer **« Achète ma maison PRO »**, une application mobile (iOS/Andro
 4. Compte rendu, corrections, partage PDF, notifications.
 5. Onglets Biens/Clients/Agenda, réutilisation estimation + environnement + annonce IA pour les mandats.
 
-Avant de coder, pose-moi uniquement les questions indispensables : nom définitif, tarifs mensuel/annuel, clé Deepgram (oui/non), durée de conservation audio.
+Décisions déjà prises : 79 €/mois (essai 14 jours), pas de Deepgram, conservation audio 90 jours. Avant de coder, pose-moi uniquement les questions indispensables restantes (nom définitif, identité visuelle).
