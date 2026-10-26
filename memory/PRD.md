@@ -154,3 +154,4 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 - Rayon par défaut 10 km, ajustable 5 / 10 / 25 km. **Gratuit pour tous** (sans Pack premium).
 - Prévoir un emplacement **« Partenaire mis en avant »** en tête de liste (vide, activable plus tard via la base `partners`).
 - Agences immobilières : non retenu pour l'instant.
+- Refus Google Play (compte de test sans accès premium) : code promo AMM-N3GB-JQ appliqué en production au compte demo@achetemamaison.fr → Pack premium actif sur tout le compte immédiatement (indépendant du prochain Publish). Instructions données à l'utilisateur pour renseigner les identifiants dans Play Console → Contenu de l'appli → Accès à l'appli.
