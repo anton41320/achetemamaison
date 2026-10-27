@@ -86,6 +86,7 @@ export default function ListingScreen() {
       listingText(l),
       retouched.map((p, i) => ({ uri: api.photoExportUrl(p.id), fileName: `achetemamaison-${id!.slice(-6)}-photo-${i + 1}-retouchee.jpg` })),
       `export-${l.id}`,
+      `achetemamaison-${id!.slice(-6)}-annonce`,
     );
   };
 
@@ -243,10 +244,16 @@ export default function ListingScreen() {
               >
                 {exporter.busyKey === `export-${l.id}` ? <ActivityIndicator color={colors.onBrandPrimary} /> : <ShareNetworkIcon size={18} color={colors.onBrandPrimary} weight="bold" />}
                 <Text style={styles.exportLabel}>
-                  {retouched.length ? `Exporter l’annonce complète · texte + ${retouched.length} photo${retouched.length > 1 ? "s" : ""}` : "Exporter l’annonce (texte)"}
+                  {retouched.length
+                    ? `${Platform.OS === "web" ? "Télécharger" : "Exporter"} l’annonce complète · texte + ${retouched.length} photo${retouched.length > 1 ? "s" : ""}`
+                    : Platform.OS === "web" ? "Télécharger l’annonce (texte .txt)" : "Exporter l’annonce (texte)"}
                 </Text>
               </Pressable>
-              <Text style={styles.exportHint}>Leboncoin, SeLoger, WhatsApp… : le texte est copié et partagé, les photos retouchées (signées du logo) sont enregistrées dans votre galerie.</Text>
+              <Text style={styles.exportHint}>
+                {Platform.OS === "web"
+                  ? "Le texte est copié dans le presse-papiers et téléchargé (.txt) ; les photos retouchées (signées du logo) sont téléchargées sur votre ordinateur, prêtes pour Leboncoin, SeLoger…"
+                  : "Leboncoin, SeLoger, WhatsApp… : le texte est copié et partagé, les photos retouchées (signées du logo) sont enregistrées dans votre galerie."}
+              </Text>
               {exporter.status && exporter.busyKey === null && exportedId === l.id ? (
                 <View style={[styles.statusRow, exporter.status.kind === "saved" ? styles.statusOk : styles.statusWarn]} testID={`listing-export-status-${i}`}>
                   {exporter.status.kind === "saved" ? <CheckIcon size={16} color={colors.success} weight="bold" /> : <WarningIcon size={16} color={colors.warning} weight="fill" />}

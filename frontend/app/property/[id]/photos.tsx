@@ -261,7 +261,9 @@ export default function PhotosScreen() {
           >
             {exporter.busyKey === "all" ? <ActivityIndicator color={colors.onBrandTertiary} /> : pack.unlocked ? <DownloadSimpleIcon size={20} color={colors.onBrandTertiary} weight="bold" /> : <LockKeyIcon size={20} color={colors.onBrandTertiary} weight="fill" />}
             <Text style={styles.saveAllLabel}>
-              {pack.unlocked ? `Enregistrer les ${retouched.length} photos retouchées dans la galerie` : "Télécharger les photos retouchées · Pack premium"}
+              {pack.unlocked
+                ? Platform.OS === "web" ? `Télécharger les ${retouched.length} photos retouchées` : `Enregistrer les ${retouched.length} photos retouchées dans la galerie`
+                : "Télécharger les photos retouchées · Pack premium"}
             </Text>
           </Pressable>
         ) : null}
@@ -440,6 +442,7 @@ export default function PhotosScreen() {
                       {exporter.busyKey === `save-${p.id}` ? <ActivityIndicator color={colors.onBrandTertiary} /> : pack.unlocked ? <DownloadSimpleIcon size={16} color={colors.onBrandTertiary} weight="bold" /> : <LockKeyIcon size={16} color={colors.onBrandTertiary} weight="fill" />}
                       <Text style={styles.exportLabel}>{Platform.OS === "web" ? "Télécharger" : "Enregistrer dans la galerie"}</Text>
                     </Pressable>
+                    {Platform.OS !== "web" ? (
                     <Pressable
                       testID={`photo-share-${i}`}
                       accessibilityRole="button"
@@ -450,6 +453,7 @@ export default function PhotosScreen() {
                       {exporter.busyKey === `share-${p.id}` ? <ActivityIndicator color={colors.onBrandTertiary} /> : pack.unlocked ? <ShareNetworkIcon size={16} color={colors.onBrandTertiary} weight="bold" /> : <LockKeyIcon size={16} color={colors.onBrandTertiary} weight="fill" />}
                       <Text style={styles.exportLabel}>Partager</Text>
                     </Pressable>
+                    ) : null}
                   </View>
                 ) : null}
                 {p.status === "error" ? (
