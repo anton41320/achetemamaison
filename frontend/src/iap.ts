@@ -55,7 +55,12 @@ export async function purchasePack(propertyId: string, userId: string): Promise<
     await Purchases.purchasePackage(pkg);
   } catch (e: any) {
     if (e?.userCancelled) return { status: "cancelled" };
-    return { status: "error", message: e?.message ?? "Achat impossible pour le moment." };
+    // Erreurs de configuration boutique (produit pas encore approuvé, offre vide…) : message en français, pas le texte brut du SDK.
+    const raw = String(e?.message ?? "");
+    if (/configuration|offerings|App Store Connect|StoreKit|products registered/i.test(raw)) {
+      return { status: "error", message: "Le Pack premium n’est pas encore disponible sur la boutique. Réessayez plus tard ou utilisez un code." };
+    }
+    return { status: "error", message: raw || "Achat impossible pour le moment." };
   }
   // Confirmation côté serveur (webhook RevenueCat, ou vérification directe via /iap/claim).
   for (let i = 0; i < 8; i++) {
