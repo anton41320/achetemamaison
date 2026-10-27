@@ -10,7 +10,7 @@ import { FreeEstimate } from "@/src/web/FreeEstimate";
 import { PublicPage, SITE_NAME, SITE_URL } from "@/src/web/PublicPage";
 import { useBreakpoint } from "@/src/web/useBreakpoint";
 
-const HERO_IMG = require("../../assets/web/hero-house.jpg");
+const HERO_IMG = require("../../assets/web/hero-house.webp");
 const MAP_IMG = require("../../assets/web/map-data.jpg");
 
 /** Ce que le moteur prend en compte (sans nommer les sources de données). */
@@ -104,7 +104,7 @@ export function LandingPage() {
             source={HERO_IMG}
             style={[styles.heroImage, isDesktop && { flex: 1, maxWidth: 560 }]}
             contentFit="contain"
-            accessibilityLabel="Illustration : maison estimée"
+            accessibilityLabel="Une famille découvre l’estimation de sa maison sur son téléphone"
             transition={300}
             testID="landing-hero-image"
           />
@@ -202,7 +202,7 @@ const useStyles = makeStyles((colors) => ({
   hero: { gap: spacing.xl, paddingTop: spacing.lg, alignItems: "center" },
   heroTop: { width: "100%", gap: spacing.xl, alignItems: "center" },
   heroText: { width: "100%", gap: spacing.md, alignItems: "center" },
-  heroImage: { width: "100%", aspectRatio: 1.6, borderRadius: radius.lg },
+  heroImage: { width: "100%", aspectRatio: 1.6 },
   heroForm: { width: "100%" },
   sectionLead: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 24, color: colors.onSurfaceTertiary, maxWidth: 760 },
   dataWrap: { gap: spacing.xl },
