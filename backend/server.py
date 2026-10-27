@@ -675,6 +675,9 @@ async def retouch_photo(photo_id: str):
         edited, mime = await photo_ai.retouch(original)
         path = f"{storage.APP_NAME}/properties/{doc['property_id']}/{uuid.uuid4()}-retouche.jpg"
         await asyncio.to_thread(storage.put_object, path, edited, mime)
+    except photo_ai.UnfaithfulRetouch as exc:
+        await db.photos.update_one({"_id": doc["_id"]}, {"$set": {"status": "error", "error": str(exc)[:300]}})
+        raise HTTPException(status_code=422, detail=str(exc))
     except Exception as exc:  # noqa: BLE001
         logger.exception("Retouch failed")
         await db.photos.update_one({"_id": doc["_id"]}, {"$set": {"status": "error", "error": str(exc)[:300]}})

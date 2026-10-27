@@ -19,30 +19,45 @@ except Exception:  # noqa: BLE001
 MODEL = "gemini-3.1-flash-image-preview"
 MAX_SIDE = 1600
 
+CHECK_MODEL = "gemini-3-flash-preview"
+
 RETOUCH_PROMPT = (
-    "Transforme cette photo immobilière en une photographie professionnelle haut de gamme destinée à une annonce immobilière.\n\n"
-    "Objectif : mettre en valeur le bien pour séduire les acheteurs potentiels, tout en conservant un rendu réaliste et fidèle à la propriété.\n\n"
-    "Style photographique : photographie immobilière professionnelle, lumière naturelle douce, exposition équilibrée, couleurs neutres "
-    "et élégantes, blancs lumineux, détails nets, perspective corrigée, lignes verticales droites, grand-angle maîtrisé, profondeur et "
-    "sensation d'espace.\n\n"
-    "Retouches souhaitées :\n"
-    "- Optimiser la luminosité et le contraste sans surexposer.\n"
-    "- Valoriser les volumes, les matériaux et les détails architecturaux.\n"
-    "- Ranger la pièce en laissant les éléments attachés aux murs ; enlever les personnes et les photos de personnes ; éclaircir les zones d'ombre.\n"
-    "- Rééquilibrer la balance des blancs pour obtenir des couleurs naturelles.\n"
-    "- Corriger les perspectives et les déformations optiques.\n"
-    "- Réduire le bruit numérique et améliorer la netteté.\n"
-    "- Donner une impression de propreté, de fraîcheur et de bien-être.\n"
-    "- Pour une photo extérieure, valoriser le ciel, la lumière et les espaces verts de manière naturelle.\n"
-    "- Pour une photo intérieure, créer une ambiance chaleureuse, lumineuse et accueillante.\n"
-    "- Fenêtres et baies vitrées : laisser voir l'extérieur réel à travers les vitres (jardin, rue, ciel, végétation) de manière "
-    "naturelle et crédible, sans vitres blanches surexposées ni « trous » de lumière ; équilibrer l'exposition intérieur/extérieur comme "
-    "le ferait un photographe immobilier (fusion d'expositions), sans inventer un paysage qui n'existe pas.\n\n"
-    "Contraintes essentielles : conserver fidèlement l'architecture, les dimensions, les ouvertures, les équipements, les matériaux et "
-    "l'agencement existants. Ne pas ajouter de fenêtres, de pièces, de mobilier ou d'éléments inexistants. Ne pas masquer les défauts "
-    "réels ni modifier les caractéristiques du bien. Conserver le même angle de prise de vue et le même cadrage.\n\n"
-    "Résultat attendu : une photographie photoréaliste, élégante, lumineuse et crédible, digne d'une annonce immobilière professionnelle, "
-    "adaptée aux portails immobiliers et aux supports de communication d'une agence. Renvoie uniquement l'image retouchée."
+    "Tu es un retoucheur photo immobilier. Fais UNIQUEMENT un post-traitement photographique de cette photo, comme dans Lightroom : "
+    "tu ne génères rien, tu ne « ré-imagines » rien.\n\n"
+    "Autorisé (et attendu) :\n"
+    "- Exposition et contraste équilibrés, ombres débouchées sans surexposer, hautes lumières récupérées.\n"
+    "- Balance des blancs naturelle, couleurs fidèles légèrement avivées.\n"
+    "- Netteté, réduction du bruit, correction des déformations optiques, verticales redressées (légère correction de perspective "
+    "seulement, même cadrage, même angle).\n"
+    "- Fenêtres : équilibrer intérieur/extérieur pour laisser voir le vrai extérieur à travers les vitres (pas de vitres blanches).\n"
+    "- Retirer les personnes et les photos de personnes. En intérieur, retirer les petits objets qui traînent (vêtements, vaisselle, "
+    "câbles) — le mobilier et tout ce qui est fixé reste en place.\n\n"
+    "INTERDIT, sans exception :\n"
+    "- Ajouter, supprimer, déplacer, agrandir ou redessiner quoi que ce soit : bâtiments, annexes, murs, toitures, cheminées, "
+    "fenêtres, portes, volets, clôtures, portails, allées, cours, terrasses, sols, pelouses, arbres, branches, haies, massifs, "
+    "véhicules, mobilier.\n"
+    "- Changer la saison, la météo ou l'état de la végétation : un arbre sans feuilles reste sans feuilles, une pelouse jaunie "
+    "reste une pelouse jaunie (au mieux légèrement avivée), un ciel couvert reste couvert (il peut gagner un peu de texture et de "
+    "lumière, jamais devenir un autre ciel).\n"
+    "- Réparer, nettoyer ou rajeunir ce qui est abîmé (mousse, fissures, crépi, peinture, tuiles) : l'acheteur doit voir le vrai bien.\n"
+    "- Modifier les matériaux, les couleurs des façades et des menuiseries, les proportions ou le nombre d'ouvertures.\n\n"
+    "Test de fidélité : un voisin qui connaît la maison doit pouvoir superposer l'original et le résultat et ne voir que la lumière, "
+    "les couleurs et la netteté changer. Si tu hésites sur un élément, laisse-le tel quel.\n\n"
+    "Renvoie uniquement l'image retouchée, même dimensions et même cadrage."
+)
+
+STRICT_SUFFIX = (
+    "\n\nATTENTION — une première tentative a trop modifié la photo ({issues}). Recommence en te limitant strictement à "
+    "exposition, couleurs et netteté : aucune modification de contenu, même minime."
+)
+
+CHECK_PROMPT = (
+    "Image 1 = photo originale d'un bien immobilier, image 2 = version retouchée. La retouche ne devait modifier que la lumière, "
+    "les couleurs, la netteté et une légère correction de perspective. Compare les deux images et vérifie si des éléments ont été "
+    "ajoutés, supprimés, déplacés ou redessinés (arbres, branches, végétation, bâtiments, annexes, murs, toits, fenêtres, portes, "
+    "clôtures, allées, cours, sols, mobilier, véhicules), si la saison/météo/état de la végétation a changé, ou si des défauts "
+    "réels ont été effacés. Ignore les différences de luminosité, de couleur, de contraste, de netteté et les petits décalages de "
+    "cadrage. Réponds UNIQUEMENT en JSON : {\"faithful\": true|false, \"issues\": [\"…\"]} — issues en français, vide si fidèle."
 )
 
 
@@ -81,16 +96,54 @@ def watermark(data: bytes) -> tuple[bytes, str]:
     return out.getvalue(), "image/jpeg"
 
 
-async def retouch(image_bytes: bytes) -> tuple[bytes, str]:
+class UnfaithfulRetouch(RuntimeError):
+    """La retouche a modifié le contenu de la photo (éléments ajoutés/supprimés) : on garde l'original."""
+
+
+async def _generate(image_bytes: bytes, prompt: str) -> bytes:
     from emergentintegrations.llm.chat import ImageContent, LlmChat, UserMessage  # lazy: keeps LLM SDKs out of startup memory
 
-    api_key = os.environ["EMERGENT_LLM_KEY"]
-    chat = LlmChat(api_key=api_key, session_id=f"retouch-{uuid.uuid4()}",
-                   system_message="You are a professional real-estate photo editor.")
+    chat = LlmChat(api_key=os.environ["EMERGENT_LLM_KEY"], session_id=f"retouch-{uuid.uuid4()}",
+                   system_message="You are a professional real-estate photo editor. You only do photographic post-processing; "
+                                  "you never add, remove, move or redraw any element of the scene.")
     chat.with_model("gemini", MODEL).with_params(modalities=["image", "text"])
-    msg = UserMessage(text=RETOUCH_PROMPT, file_contents=[ImageContent(base64.b64encode(image_bytes).decode("utf-8"))])
+    msg = UserMessage(text=prompt, file_contents=[ImageContent(base64.b64encode(image_bytes).decode("utf-8"))])
     _text, images = await chat.send_message_multimodal_response(msg)
     if not images:
         raise RuntimeError("Le modèle n'a renvoyé aucune image")
-    raw = base64.b64decode(images[0]["data"])
+    return base64.b64decode(images[0]["data"])
+
+
+async def check_fidelity(original: bytes, edited: bytes) -> tuple[bool, list[str]]:
+    """Second regard (modèle vision texte) : la retouche a-t-elle ajouté / supprimé / redessiné des éléments ?"""
+    import json
+    import re
+
+    from emergentintegrations.llm.chat import ImageContent, LlmChat, UserMessage
+
+    chat = LlmChat(api_key=os.environ["EMERGENT_LLM_KEY"], session_id=f"retouch-check-{uuid.uuid4()}",
+                   system_message="Tu compares deux photos et réponds uniquement en JSON.").with_model("gemini", CHECK_MODEL)
+    msg = UserMessage(text=CHECK_PROMPT, file_contents=[
+        ImageContent(base64.b64encode(original).decode("utf-8")), ImageContent(base64.b64encode(edited).decode("utf-8"))])
+    text = await chat.send_message(msg)
+    m = re.search(r"\{.*\}", text, re.S)
+    if not m:
+        return True, []  # vérification indisponible : on ne bloque pas
+    try:
+        data = json.loads(m.group(0))
+    except ValueError:
+        return True, []
+    issues = [str(i) for i in (data.get("issues") or [])][:5]
+    return bool(data.get("faithful", True)), issues
+
+
+async def retouch(image_bytes: bytes) -> tuple[bytes, str]:
+    """Retouche + contrôle de fidélité ; une seconde tentative plus stricte si la première a modifié le contenu."""
+    raw = await _generate(image_bytes, RETOUCH_PROMPT)
+    ok, issues = await check_fidelity(image_bytes, raw)
+    if not ok:
+        raw = await _generate(image_bytes, RETOUCH_PROMPT + STRICT_SUFFIX.format(issues="; ".join(issues) or "contenu modifié"))
+        ok, issues = await check_fidelity(image_bytes, raw)
+        if not ok:
+            raise UnfaithfulRetouch("La retouche IA modifiait la photo (" + "; ".join(issues)[:160] + "). L’original est conservé.")
     return normalize(raw)
