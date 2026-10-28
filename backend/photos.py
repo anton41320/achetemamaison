@@ -63,8 +63,9 @@ RETOUCH_PROMPT = (
 )
 
 STRICT_SUFFIX = (
-    "\n\nATTENTION — une première tentative a trop modifié la photo ({issues}). Recommence en te limitant strictement à "
-    "exposition, couleurs et netteté : aucune modification de contenu, même minime."
+    "\n\nATTENTION — une première tentative a modifié des éléments qui devaient rester intacts ({issues}). Recommence : garde "
+    "l’amélioration de la lumière, des couleurs et de la netteté ET le rangement du petit désordre (frigo, plans de travail, tables "
+    "dégagés), mais ne touche à aucun élément fixe, meuble, équipement, matériau ou couleur de surface, et n’ajoute strictement rien."
 )
 
 CHECK_PROMPT = (
@@ -75,9 +76,11 @@ CHECK_PROMPT = (
     "véhicules), si des matériaux ou couleurs de murs/sols/meubles ont changé, si la vue par les fenêtres a été remplacée, "
     "si la saison/météo/état de la végétation a changé, ou si des défauts "
     "réels ont été effacés. Le retrait de personnes, d’animaux et du petit désordre (aimants/papiers sur le frigo, produits et objets "
-    "sur les plans de travail et tables, vêtements, vaisselle, câbles) est voulu et accepté : ne le signale pas. Ignore les "
+    "sur les plans de travail et tables, vêtements, vaisselle, câbles) est voulu et accepté : ne le signale pas, et une table ou un "
+    "plan de travail débarrassé qui montre simplement sa surface nue n’est PAS une modification. Ignore les "
     "différences de luminosité, de couleur globale, de contraste, de netteté et les petits décalages de "
-    "cadrage. Réponds UNIQUEMENT en JSON : {\"faithful\": true|false, \"issues\": [\"…\"]} — issues en français, vide si fidèle."
+    "cadrage. Ne signale que des changements dont tu es certain et qui sont visibles sans ambiguïté ; en cas de doute, considère "
+    "la retouche fidèle. Réponds UNIQUEMENT en JSON : {\"faithful\": true|false, \"issues\": [\"…\"]} — issues en français, vide si fidèle."
 )
 
 
