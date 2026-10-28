@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import base64
 import io
+import logging
 import os
 import uuid
 from pathlib import Path
@@ -16,8 +17,11 @@ try:  # HEIC / HEIF / AVIF (photos iPhone partagées, certains Android)
 except Exception:  # noqa: BLE001
     pass
 
-MODEL = "gemini-3.1-flash-image-preview"
+MODEL = "gpt-image-2"  # édition d'image OpenAI (qualité « ChatGPT »), via le proxy Emergent
+EDIT_QUALITY = "medium"
+FALLBACK_MODEL = "gemini-3.1-flash-image-preview"
 MAX_SIDE = 1600
+logger = logging.getLogger("photos")
 
 CHECK_MODEL = "gemini-3-flash-preview"
 
@@ -56,8 +60,10 @@ RETOUCH_PROMPT = (
     "hottes, prises et interrupteurs, poignées, radiateurs, climatiseurs, détecteurs — y compris sur un îlot ou un plan de travail.\n"
     "- Ne pas remplacer la vue extérieure et ne pas inventer de détails.\n"
     "- En extérieur : ne pas ajouter, supprimer ni déplacer bâtiments, annexes, murs, toitures, clôtures, portails, allées, cours, "
-    "terrasses, arbres, branches, haies ou pelouses ; ne pas changer la saison, la météo ni l’état de la végétation ; ne pas "
-    "réparer, nettoyer ou rajeunir ce qui est abîmé (mousse, fissures, crépi, tuiles).\n"
+    "terrasses, arbres, branches, haies ou pelouses ; ne pas changer la saison ni l’état de la végétation ; ne pas "
+    "réparer, nettoyer ou rajeunir ce qui est abîmé (mousse, fissures, crépi, tuiles). Le ciel peut être éclairci en un beau "
+    "ciel lumineux avec quelques petits nuages (lumière de belle journée), sans rien changer d’autre ; les véhicules garés "
+    "peuvent être retirés s’ils masquent la façade.\n"
     "- Éviter les effets HDR excessifs, les couleurs artificielles, les halos et les rendus irréalistes.\n\n"
     "Résultat attendu : une photographie immobilière professionnelle, lumineuse, équilibrée, naturelle et fidèle à la réalité, "
     "prête à être publiée sur une annonce immobilière. Un voisin qui connaît le bien doit pouvoir superposer l’original et le "
@@ -75,8 +81,8 @@ CHECK_PROMPT = (
     "les couleurs, la netteté et une légère correction de perspective. Compare les deux images et vérifie si des éléments ont été "
     "ajoutés, supprimés, déplacés ou redessinés (arbres, branches, végétation, bâtiments, annexes, murs, toits, fenêtres, portes, "
     "clôtures, allées, cours, sols, mobilier, objets de décoration, équipements fixes : robinets/mitigeurs, éviers, plaques de "
-    "cuisson, hottes, électroménager, luminaires, radiateurs, climatiseurs, prises, poutres, véhicules), si des matériaux ou couleurs de murs/sols/meubles ont changé, si la vue par les fenêtres a été remplacée, "
-    "si la saison/météo/état de la végétation a changé, ou si des défauts "
+    "cuisson, hottes, électroménager, luminaires, radiateurs, climatiseurs, prises, poutres, véhicules — le retrait d’un véhicule garé est accepté), si des matériaux ou couleurs de murs/sols/meubles ont changé, si la vue par les fenêtres a été remplacée, "
+    "si la saison ou l’état de la végétation a changé (un ciel éclairci est accepté), ou si des défauts "
     "réels ont été effacés. Le retrait de personnes, d’animaux et du petit désordre (aimants/papiers sur le frigo, produits et objets "
     "sur les plans de travail et tables, vêtements, vaisselle, câbles) est voulu et accepté : ne le signale pas, et une table ou un "
     "plan de travail débarrassé qui montre simplement sa surface nue n’est PAS une modification. Ignore les "
@@ -126,18 +132,58 @@ class UnfaithfulRetouch(RuntimeError):
     """La retouche a modifié le contenu de la photo (éléments ajoutés/supprimés) : on garde l'original."""
 
 
-async def _generate(image_bytes: bytes, prompt: str) -> bytes:
+async def _generate_gemini(image_bytes: bytes, prompt: str) -> bytes:
     from emergentintegrations.llm.chat import ImageContent, LlmChat, UserMessage  # lazy: keeps LLM SDKs out of startup memory
 
     chat = LlmChat(api_key=os.environ["EMERGENT_LLM_KEY"], session_id=f"retouch-{uuid.uuid4()}",
                    system_message="You are a professional real-estate photo editor. You only do photographic post-processing; "
                                   "you never add, remove, move or redraw any element of the scene.")
-    chat.with_model("gemini", MODEL).with_params(modalities=["image", "text"])
+    chat.with_model("gemini", FALLBACK_MODEL).with_params(modalities=["image", "text"])
     msg = UserMessage(text=prompt, file_contents=[ImageContent(base64.b64encode(image_bytes).decode("utf-8"))])
     _text, images = await chat.send_message_multimodal_response(msg)
     if not images:
         raise RuntimeError("Le modèle n'a renvoyé aucune image")
     return base64.b64decode(images[0]["data"])
+
+
+def _edit_size(image_bytes: bytes) -> str:
+    """GPT Image ne produit que trois formats : on prend celui qui respecte l'orientation de la photo."""
+    with Image.open(io.BytesIO(image_bytes)) as im:
+        w, h = im.size
+    ratio = w / h
+    if ratio > 1.15:
+        return "1536x1024"
+    if ratio < 0.87:
+        return "1024x1536"
+    return "1024x1024"
+
+
+async def _generate_openai(image_bytes: bytes, prompt: str) -> bytes:
+    """Édition d'image GPT Image (qualité « ChatGPT ») via le proxy Emergent (endpoint OpenAI /images/edits)."""
+    import httpx
+    from emergentintegrations.llm.utils import get_integration_proxy_url
+
+    async with httpx.AsyncClient(timeout=240) as client:
+        r = await client.post(
+            get_integration_proxy_url() + "/llm/images/edits",
+            headers={"Authorization": f"Bearer {os.environ['EMERGENT_LLM_KEY']}"},
+            data={"model": MODEL, "prompt": prompt, "quality": EDIT_QUALITY, "size": _edit_size(image_bytes), "n": "1"},
+            files={"image": ("photo.jpg", image_bytes, "image/jpeg")},
+        )
+    if r.status_code != 200:
+        raise RuntimeError(f"GPT Image {r.status_code}: {r.text[:200]}")
+    data = r.json().get("data") or []
+    if not data or not data[0].get("b64_json"):
+        raise RuntimeError("Le modèle n'a renvoyé aucune image")
+    return base64.b64decode(data[0]["b64_json"])
+
+
+async def _generate(image_bytes: bytes, prompt: str) -> bytes:
+    try:
+        return await _generate_openai(image_bytes, prompt)
+    except Exception as exc:  # noqa: BLE001 — repli Gemini si GPT Image indisponible
+        logger.warning("GPT Image indisponible (%s) : repli %s", str(exc)[:120], FALLBACK_MODEL)
+        return await _generate_gemini(image_bytes, prompt)
 
 
 async def check_fidelity(original: bytes, edited: bytes) -> tuple[bool, list[str]]:
