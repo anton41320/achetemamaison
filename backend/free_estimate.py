@@ -128,7 +128,7 @@ async def send_free_estimate(payload: FreeEstimateRequest, request: Request):
     except Exception as exc:  # adresse refusée par le service, quota… : on ne révèle rien de plus
         log.warning("free-estimate email failed for %s: %s", email, exc)
         await db.free_estimates.update_one({"token": token}, {"$set": {"email_error": str(exc)[:300]}})
-        raise HTTPException(status_code=502, detail="L’e-mail n’a pas pu être envoyé. Vérifiez l’adresse et réessayez.")
+        raise HTTPException(status_code=424, detail="L’e-mail n’a pas pu être envoyé. Vérifiez l’adresse et réessayez.")
     await db.free_estimates.update_one({"token": token}, {"$set": {"message_id": message_id, "sent_at": datetime.now(timezone.utc)}})
     return {"sent": True, "token": token, "pdf_url": f"{origin}/api/public/free-estimate/{token}.pdf"}
 

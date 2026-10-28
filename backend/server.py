@@ -258,7 +258,7 @@ async def geocode(q: str = Query(min_length=3, max_length=200), limit: int = Que
         r.raise_for_status()
     except Exception as exc:  # noqa: BLE001
         logger.warning("BAN error: %s", exc)
-        raise HTTPException(status_code=502, detail="Service d'adresses indisponible")
+        raise HTTPException(status_code=424, detail="Service d'adresses indisponible")
     out = []
     for f in r.json().get("features", []):
         p = f["properties"]
@@ -534,7 +534,7 @@ async def create_listing(pid: str, req: ListingRequest):
         result = await generate_listing(prop, req.style, req.extra_facts, req.include_price, env=(env_doc or {}).get("analysis"))
     except Exception as exc:  # noqa: BLE001
         logger.exception("Listing generation failed")
-        raise HTTPException(status_code=502, detail=f"Génération indisponible : {exc}")
+        raise HTTPException(status_code=424, detail=f"Génération indisponible : {exc}")
     listing = ListingDoc(property_id=pid, style=req.style, extra_facts=req.extra_facts, **result)
     res = await db.listings.insert_one({**listing.to_mongo(), "deleted_at": None, **auth.own()})
     saved = await db.listings.find_one({"_id": res.inserted_id})
@@ -681,7 +681,7 @@ async def retouch_photo(photo_id: str):
     except Exception as exc:  # noqa: BLE001
         logger.exception("Retouch failed")
         await db.photos.update_one({"_id": doc["_id"]}, {"$set": {"status": "error", "error": str(exc)[:300]}})
-        raise HTTPException(status_code=502, detail=f"Retouche indisponible : {str(exc)[:200]}")
+        raise HTTPException(status_code=424, detail=f"Retouche indisponible : {str(exc)[:200]}")
     await db.photos.update_one({"_id": doc["_id"]}, {"$set": {
         "status": "done", "retouched_path": path, "retouched_mime": mime, "model": photo_ai.MODEL,
         "retouched_at": utcnow(), "error": None}})
@@ -700,7 +700,7 @@ async def export_photo(photo_id: str, version: Literal["retouched", "original"] 
     try:
         data, _ = await asyncio.to_thread(storage.get_object, path)
     except storage.StorageError as exc:
-        raise HTTPException(status_code=502, detail=str(exc))
+        raise HTTPException(status_code=424, detail=str(exc))
     out, mime = await asyncio.to_thread(photo_ai.watermark, data)
     filename = f"achetemamaison-{doc['property_id'][-6:]}-{photo_id[-6:]}{'-retouchee' if path != doc['original_path'] else ''}.jpg"
     return Response(content=out, media_type=mime,
@@ -757,7 +757,7 @@ async def pack_checkout(pid: str, body: CheckoutIn):
         raise HTTPException(status_code=503, detail=str(exc))
     except Exception as exc:  # noqa: BLE001
         logger.exception("Stripe checkout failed")
-        raise HTTPException(status_code=502, detail=f"Paiement indisponible : {str(exc)[:160]}")
+        raise HTTPException(status_code=424, detail=f"Paiement indisponible : {str(exc)[:160]}")
 
 
 @public.post("/stripe/webhook")
@@ -781,7 +781,7 @@ async def pack_pdf(pid: str, style: str = Query(default="sobre"), include_price:
         try:
             result = await generate_listing(prop, style if style in ("sobre", "chaleureux", "premium", "familial") else "sobre", None, include_price)
         except Exception as exc:  # noqa: BLE001
-            raise HTTPException(status_code=502, detail=f"Génération de l'annonce indisponible : {str(exc)[:160]}")
+            raise HTTPException(status_code=424, detail=f"Génération de l'annonce indisponible : {str(exc)[:160]}")
         listing = ListingDoc(property_id=pid, style=style, extra_facts=None, **result)
         await db.listings.insert_one({**listing.to_mongo(), "deleted_at": None, **auth.own()})
         listing = listing.model_dump()
@@ -806,7 +806,7 @@ async def get_file(path: str):
     try:
         data, mime = await asyncio.to_thread(storage.get_object, path)
     except storage.StorageError as exc:
-        raise HTTPException(status_code=502, detail=str(exc))
+        raise HTTPException(status_code=424, detail=str(exc))
     return Response(content=data, media_type=mime, headers={"Cache-Control": "private, max-age=86400"})
 
 
@@ -884,7 +884,7 @@ async def property_risks(pid: str, refresh: bool = Query(default=False)):
     try:
         risks = await georisques.get_for_property(db, PropertyDoc.from_mongo(doc), force=refresh)
     except Exception as exc:  # noqa: BLE001
-        raise HTTPException(status_code=502, detail=f"Géorisques indisponible : {str(exc)[:120]}")
+        raise HTTPException(status_code=424, detail=f"Géorisques indisponible : {str(exc)[:120]}")
     return georisques.to_json(risks)
 
 
@@ -992,7 +992,7 @@ async def reocr_document(did: str):
         await db.documents.update_one({"_id": d["_id"]}, {"$set": {"ocr_status": "done", "ocr": ocr, "ocr_error": None, "expiry_date": expiry}})
     except Exception as exc:  # noqa: BLE001
         await db.documents.update_one({"_id": d["_id"]}, {"$set": {"ocr_status": "error", "ocr_error": str(exc)[:300]}})
-        raise HTTPException(status_code=502, detail=f"Lecture indisponible : {str(exc)[:200]}")
+        raise HTTPException(status_code=424, detail=f"Lecture indisponible : {str(exc)[:200]}")
     return _doc_out(await db.documents.find_one({"_id": d["_id"]}))
 
 

@@ -175,7 +175,7 @@ async def claim(body: ClaimIn, user: dict = Depends(auth.require_user)):
     async with httpx.AsyncClient(timeout=15) as client:
         r = await client.get(f"{RC_API}/subscribers/{uid}", headers={"Authorization": f"Bearer {SECRET_KEY}"})
     if r.status_code not in (200, 201):
-        raise HTTPException(status_code=502, detail="Vérification de l'achat indisponible")
+        raise HTTPException(status_code=424, detail="Vérification de l'achat indisponible")
     purchases = ((r.json().get("subscriber") or {}).get("non_subscriptions") or {}).get(PRODUCT_ID) or []
     for p in purchases:
         tx = p.get("store_transaction_id") or p.get("id")
