@@ -48,6 +48,8 @@ from target import analyze_target
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
+STARTED_AT = datetime.now(timezone.utc)  # exposé par /api/health pour diagnostiquer les redémarrages en production
+
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("estimo")
@@ -224,7 +226,8 @@ async def _dvf_refresh_loop() -> None:
 
 @public.get("/health")
 async def health():
-    return {"status": "ok", "app": "Achète ma maison", "departments": DVF_DEPARTMENTS}
+    return {"status": "ok", "app": "Achète ma maison", "departments": DVF_DEPARTMENTS,
+            "started_at": STARTED_AT.isoformat(), "uptime_s": int((datetime.now(timezone.utc) - STARTED_AT).total_seconds())}
 
 
 @app.get("/health", include_in_schema=False)
