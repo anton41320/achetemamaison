@@ -190,6 +190,32 @@ async def web_bundle():
     return FileResponse(path, media_type="application/zip", filename="web-bundle.zip")
 
 
+VISUALS_DIR = Path(__file__).parent.parent / "frontend" / "assets" / "images"
+VISUALS = [f"premium-{i}.jpg" for i in (1, 2, 3)] + [f"temoignage-{i}.jpg" for i in (1, 2, 3)]
+
+
+@router.get("/visuels/{name}", include_in_schema=False)
+async def visual(name: str):
+    """Visuels marketing générés par scripts/gen_premium_visuals.py et gen_testimonial_visuals.py (téléchargement)."""
+    if name not in VISUALS or not (VISUALS_DIR / name).exists():
+        raise HTTPException(status_code=404)
+    return FileResponse(VISUALS_DIR / name, media_type="image/jpeg", filename=name)
+
+
+@router.get("/visuels.zip", include_in_schema=False)
+async def visuals_zip():
+    import io
+    import zipfile
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for n in VISUALS:
+            if (VISUALS_DIR / n).exists():
+                z.write(VISUALS_DIR / n, n)
+    return Response(buf.getvalue(), media_type="application/zip",
+                    headers={"Content-Disposition": 'attachment; filename="visuels-achetemamaison.zip"'})
+
+
 @router.get("/store-assets.zip", include_in_schema=False)
 async def store_assets():
     """Visuels des fiches stores (icônes 512/1024, image de présentation 1024×500), générés par scripts/gen_store_assets.py."""
