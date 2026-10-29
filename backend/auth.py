@@ -22,6 +22,7 @@ from pwdlib import PasswordHash
 from pydantic import BaseModel, EmailStr, Field
 
 import emailer
+import telegram_notify
 
 logger = logging.getLogger("auth")
 
@@ -148,6 +149,7 @@ async def register(body: Credentials):
             if r.modified_count:
                 logger.info("Attributed %d %s to first account", r.modified_count, coll)
     user = await _db.users.find_one({"_id": res.inserted_id})
+    telegram_notify.new_user(email, await _db.users.estimated_document_count())
     return {"access_token": make_token(uid), "token_type": "bearer", "user": public_user(user)}
 
 

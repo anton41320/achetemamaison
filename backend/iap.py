@@ -19,10 +19,12 @@ import time
 from datetime import datetime, timezone
 
 import httpx
+from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 import auth
+import telegram_notify
 from pack import PACK_CURRENCY, PACK_PRICE_CENTS
 
 logger = logging.getLogger("iap")
@@ -63,8 +65,6 @@ class ClaimIn(BaseModel):
 
 
 async def _own_property(pid: str, user: dict) -> dict:
-    from bson import ObjectId
-
     try:
         oid = ObjectId(pid)
     except Exception:  # noqa: BLE001
@@ -99,6 +99,11 @@ async def grant(uid: str, property_id: str, transaction_id: str, environment: st
     except Exception:  # noqa: BLE001 — course avec un doublon de webhook
         return False
     logger.info("IAP grant property=%s tx=%s env=%s", property_id, transaction_id, environment)
+    user = await _db.users.find_one({"_id": ObjectId(uid)}, {"email": 1})
+    prop = await _db.properties.find_one({"_id": ObjectId(property_id)}, {"address_label": 1})
+    telegram_notify.premium_purchase(f"RevenueCat ({store or 'mobile'})", (user or {}).get("email"), (prop or {}).get("address_label"),
+                                     price_cents or PACK_PRICE_CENTS, currency or PACK_CURRENCY,
+                                     None if (environment or "").upper() == "PRODUCTION" else environment)
     return True
 
 

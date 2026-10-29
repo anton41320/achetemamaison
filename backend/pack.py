@@ -19,6 +19,7 @@ from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, S
 
 import auth
 import emailer
+import telegram_notify
 from listing import HEADLINE_SEPARATOR
 from models import PropertyDoc, utcnow
 from report import APP_NAME, BRAND, BRAND_SOFT, CONDITION_LABELS, INK, LINE, MUTED, TITLE_FONT, eur
@@ -59,6 +60,10 @@ async def _mark_paid(db, order: dict, session) -> None:
                                                "customer_email": details.get("email"), "customer_name": details.get("name"),
                                                "amount_total": session.get("amount_total"), "live_mode": bool(session.get("livemode"))}})
     if res.modified_count:
+        prop = await db.properties.find_one({"_id": ObjectId(order["property_id"])}, {"address_label": 1})
+        telegram_notify.premium_purchase("Stripe (web)", details.get("email"), (prop or {}).get("address_label"),
+                                         session.get("amount_total") or order.get("amount"), session.get("currency"),
+                                         None if session.get("livemode") else "TEST")
         await send_receipt(db, await db.orders.find_one({"_id": order["_id"]}))
 
 
