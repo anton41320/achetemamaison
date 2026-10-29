@@ -20,21 +20,23 @@ W, H = 1200, 900
 BRAND, GREEN, WHITE = "#1656C9", "#1E9E6A", "#FFFFFF"
 
 STYLE = (
-    "Photographie réaliste, style reportage lifestyle lumineux, appareil plein format 35 mm, lumière naturelle de fin d'après-midi, "
-    "couleurs naturelles, légère profondeur de champ. Cadrage horizontal 4:3, sujets dans la moitié gauche ou au centre, "
-    "le bas de l'image reste simple (sol, pelouse, allée) pour accueillir du texte. Les personnes sourient naturellement et regardent "
-    "l'objectif. Aucun texte, aucune lettre ni chiffre nulle part, sauf un seul panneau immobilier blanc planté dans le jardin ou "
-    "posé devant le bien avec uniquement le mot « VENDU » en grandes lettres bleues capitales. Aucun logo, aucun filigrane."
+    "Photo authentique prise au smartphone par un proche, façon album de famille : pas de look publicitaire, pas de retouche, "
+    "cadrage légèrement imparfait, lumière naturelle parfois un peu dure, grain léger, couleurs réalistes. Personnes françaises "
+    "ordinaires, visages naturels (rides, cernes, cheveux un peu décoiffés), vêtements du quotidien (jean, polaire, baskets). "
+    "Arrière-plan réel et un peu encombré : voiture garée, poubelle, tuyau d'arrosage, vélo, boîte aux lettres. Cadrage horizontal 4:3, "
+    "sujets dans la moitié gauche ou au centre, le bas de l'image reste simple (sol, allée, pelouse). Aucun texte ni lettre nulle part, "
+    "sauf une feuille A4 blanche avec le mot « VENDU » écrit à la main au feutre bleu. Aucun logo, aucun filigrane."
 )
 SCENES = {
-    "couple-maison": STYLE + " Scène : un couple français d'une quarantaine d'années (femme châtain cheveux mi-longs, homme barbe courte) "
-    "debout devant leur maison en pierre claire de la Loire avec volets bleu-gris et glycine, en train de se remettre les clés en riant. "
-    "Panneau VENDU planté dans la pelouse au premier plan droit.",
-    "senior-appartement": STYLE + " Scène : une femme élégante d'environ 65 ans, cheveux gris courts, lunettes, assise sur le banc "
-    "d'un balcon-terrasse d'appartement avec vue sur les toits d'une ville française (Tours), une tasse de thé à la main, "
-    "un dossier bleu fermé posé à côté d'elle. Petit panneau VENDU appuyé contre la balustrade.",
-    "famille-moderne": STYLE + " Scène : un jeune couple de trentenaires avec une petite fille de 5 ans sur les épaules du père, devant une "
-    "maison contemporaine à enduit blanc et bardage bois, garage, allée gravillonnée. Panneau VENDU planté dans la pelouse à droite.",
+    "couple-maison": STYLE + " Scène : un couple d'une quarantaine d'années devant leur pavillon des années 80 en crépi beige avec volets "
+    "roulants, portail gris, haie de thuyas. La femme tient la feuille A4 « VENDU » à deux mains, l'homme a les clés à la main et "
+    "un bras autour de ses épaules ; ils rient, un peu éblouis par le soleil.",
+    "senior-appartement": STYLE + " Scène : une femme d'environ 65 ans, cheveux gris, lunettes, gilet beige, debout sur le palier de son "
+    "appartement devant sa porte d'entrée ouverte, des cartons de déménagement fermés derrière elle. Elle tient la feuille A4 « VENDU » "
+    "contre elle et sourit, un peu émue. Photo prise dans la cage d'escalier avec lumière de fenêtre.",
+    "famille-moderne": STYLE + " Scène : un couple de trentenaires avec une petite fille de 5 ans, devant une maison de lotissement "
+    "récente en enduit blanc, garage, pelouse avec trampoline au fond, voiture familiale garée sur l'allée. La petite fille brandit la "
+    "feuille A4 « VENDU » au-dessus de sa tête, les parents rient derrière elle. Photo légèrement en contre-plongée, prise par un voisin.",
 }
 CARDS = [
     ("couple-maison", "« Vendu en 5 semaines, au prix estimé, sans agence. »", "Sophie & Marc · Blois (41)", "≈ 11 500 € de commission économisés"),
@@ -88,8 +90,28 @@ def pill(draw, xy, text, f, bg, fg, pad=(20, 11)):
     return x + tw + 2 * pad[0]
 
 
+def naturalize(im: Image.Image) -> Image.Image:
+    """Grain fin, vignette douce et léger voile chaud pour casser le rendu trop lisse."""
+    import random
+
+    from PIL import ImageEnhance
+
+    im = ImageEnhance.Contrast(im).enhance(0.96)
+    im = ImageEnhance.Color(im).enhance(0.92)
+    noise = Image.effect_noise(im.size, 14).convert("L")
+    grain = Image.merge("RGB", (noise, noise, noise))
+    im = Image.blend(im, grain, 0.06)
+    vign = Image.new("L", im.size, 0)
+    ImageDraw.Draw(vign).ellipse((-im.width * 0.25, -im.height * 0.35, im.width * 1.25, im.height * 1.35), fill=255)
+    vign = vign.filter(__import__("PIL.ImageFilter", fromlist=["GaussianBlur"]).GaussianBlur(220))
+    dark = Image.new("RGB", im.size, (20, 18, 24))
+    im = Image.composite(im, Image.blend(im, dark, 0.28), vign)
+    warm = Image.new("RGB", im.size, (255, 214, 170))
+    return Image.blend(im, warm, 0.035)
+
+
 def card(src: str, quote: str, who: str, result: str, out: str) -> None:
-    base = cover(Image.open(src).convert("RGB"), W, H)
+    base = naturalize(cover(Image.open(src).convert("RGB"), W, H))
     # voile sombre progressif en bas pour la lisibilité
     overlay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     od = ImageDraw.Draw(overlay)
