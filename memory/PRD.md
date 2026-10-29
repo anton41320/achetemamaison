@@ -188,5 +188,5 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 
 ## 2026-10-29 — Visuels de conversion Pack premium (fichiers uniquement, pas encore intégrés dans l'app)
 - `scripts/gen_premium_visuals.py` → `frontend/assets/images/premium-{1,2,3}.jpg` (avant/après photos, annonce IA, dossier notaire ; 1200×900, bandeau « 49 € une fois · 0 % de commission »).
-- `scripts/gen_testimonial_visuals.py` → `frontend/assets/images/temoignage-{1,2,3}.jpg` : personnes photoréalistes Gemini + citations FICTIVES (Sophie & Marc Blois, Martine Tours, Julien & Camille Orléans), mention « Photo d'illustration ». ⚠️ À remplacer par de vrais clients consentants avant diffusion publicitaire (pratique commerciale trompeuse sinon).
+- `scripts/gen_testimonial_visuals.py` → `frontend/assets/images/temoignage-{1,2,3,4}.jpg` : personnes photoréalistes Gemini + citations FICTIVES (Sophie & Marc Blois, Martine Tours, Julien & Camille Orléans), mention « Photo d'illustration ». ⚠️ À remplacer par de vrais clients consentants avant diffusion publicitaire (pratique commerciale trompeuse sinon).
 - Emplacement dans l'app : non décidé (user : « pas maintenant, juste les fichiers »).

@@ -1,5 +1,5 @@
 """Visuels témoignages « ils ont vendu avec nous » (3 cartes 1200×900). Photos photoréalistes Gemini (clé Emergent),
-citation + prénom + ville + mention « photo d'illustration » ajoutés par Pillow. Sortie : frontend/assets/images/temoignage-{1,2,3}.jpg
+citation + prénom + ville + mention « photo d'illustration » ajoutés par Pillow. Sortie : frontend/assets/images/temoignage-{1,2,3,4}.jpg
 Usage : python scripts/gen_testimonial_visuals.py [--no-gen]
 ⚠️ Personnes et témoignages fictifs : à remplacer par de vrais clients (avec accord écrit) avant toute diffusion publicitaire.
 """
@@ -34,6 +34,11 @@ SCENES = {
     "senior-appartement": STYLE + " Scène : une femme d'environ 65 ans, cheveux gris, lunettes, gilet beige, debout sur le palier de son "
     "appartement devant sa porte d'entrée ouverte, des cartons de déménagement fermés derrière elle. Elle tient la feuille A4 « VENDU » "
     "contre elle et sourit, un peu émue. Photo prise dans la cage d'escalier avec lumière de fenêtre.",
+    "notaire-cles": STYLE.replace("sauf une feuille A4 blanche avec le mot « VENDU » écrit à la main au feutre bleu", "aucun panneau") +
+    " Scène : dans le bureau d'un notaire de province (bibliothèque de codes rouges et verts, bureau en bois encombré de dossiers, "
+    "fenêtre à rideaux), un vendeur d'une cinquantaine d'années en chemise un peu froissée tend un trousseau de clés à un jeune couple "
+    "d'acheteurs assis en face, tout le monde sourit, le notaire en costume gris est flou au second plan en train de ranger des papiers. "
+    "Photo prise discrètement au smartphone par un proche depuis l'angle du bureau, lumière de fenêtre, légèrement surexposée.",
     "famille-moderne": STYLE + " Scène : un couple de trentenaires avec une petite fille de 5 ans, devant une maison de lotissement "
     "récente en enduit blanc, garage, pelouse avec trampoline au fond, voiture familiale garée sur l'allée. La petite fille brandit la "
     "feuille A4 « VENDU » au-dessus de sa tête, les parents rient derrière elle. Photo légèrement en contre-plongée, prise par un voisin.",
@@ -42,6 +47,7 @@ CARDS = [
     ("couple-maison", "« Vendu en 5 semaines, au prix estimé, sans agence. »", "Sophie & Marc · Blois (41)", "≈ 11 500 € de commission économisés"),
     ("senior-appartement", "« Le dossier pour le notaire était prêt avant la première visite. »", "Martine, 64 ans · Tours (37)", "Vente signée en 7 semaines"),
     ("famille-moderne", "« 9 visites dès la première semaine grâce à l'annonce et aux photos IA. »", "Julien & Camille · Orléans (45)", "Vendu 4 000 € au-dessus de l'estimation basse"),
+    ("notaire-cles", "« Signature chez le notaire ce matin. Tout était en ordre, rien à refaire. »", "Philippe, 52 ans · Vendôme (41)", "Vendu sans agence en 6 semaines"),
 ]
 
 
@@ -139,8 +145,10 @@ def card(src: str, quote: str, who: str, result: str, out: str) -> None:
 async def main():
     if "--no-gen" not in sys.argv:
         for n in SCENES:
+            if "--only" in sys.argv and n not in sys.argv: continue
             await gen(n)
     for i, (name, quote, who, result) in enumerate(CARDS, 1):
+        if "--only" in sys.argv and name not in sys.argv: continue
         card(f"{SRC}/{name}.png", quote, who, result, f"{OUT}/temoignage-{i}.jpg")
 
 
