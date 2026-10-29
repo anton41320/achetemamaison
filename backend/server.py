@@ -569,7 +569,7 @@ PHOTO_ORDER = [("position", 1), ("created_at", 1)]
 
 @api.get("/properties/{pid}/photos")
 async def list_photos(pid: str):
-    docs = await db.photos.find({"property_id": pid, "deleted_at": None}).sort(PHOTO_ORDER).to_list(100)
+    docs = await db.photos.find({"property_id": pid, "deleted_at": None, **auth.own()}).sort(PHOTO_ORDER).to_list(100)
     return [PhotoDoc.from_mongo(d).model_dump(mode="json") for d in docs]
 
 
@@ -712,7 +712,7 @@ async def export_photo(photo_id: str, version: Literal["retouched", "original"] 
 
 @api.delete("/photos/{photo_id}")
 async def delete_photo(photo_id: str):
-    res = await db.photos.update_one({"_id": _oid(photo_id), "deleted_at": None}, {"$set": {"deleted_at": utcnow()}})
+    res = await db.photos.update_one({"_id": _oid(photo_id), "deleted_at": None, **auth.own()}, {"$set": {"deleted_at": utcnow()}})
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="Photo introuvable")
     return {"deleted": True}

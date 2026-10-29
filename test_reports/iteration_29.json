@@ -1,0 +1,32 @@
+{
+  "summary": "Iteration 29 retest of the web photo upload fixes and the photo ownership filters. Backend: 6/6 pytest passed. A second user registered fresh gets [] from GET /properties/6aa02db9efd8f90925a5a758/photos. The same user gets 404 on DELETE /photos/6aa10ee21f38608802dce39f, and the photo is still listed for the owner afterwards. That user also gets 404 on upload, cover, reorder and autosort for the owner's bien, and 404/422 on PATCH label. Unauthenticated list returns 401. For the owner, upload returns 201, the photo is listed, DELETE returns 200 and the photo is then absent (a second DELETE returns 404). Frontend web at 390x844, logged in as delivered@resend.dev: Galerie with a 4000x3000 JPEG of 11 MB, with upload throttled to 150 kB/s through CDP. The queue went through every value from 0 % to 100 % in 1-2 % steps (73 distinct states), then showed '1/1 photo(s) envoyée(s)', with POST 201 and no error. A simulated 520 HTML response (page.route) shows 'Envoi interrompu (erreur 520). Vérifiez votre connexion et réessayez.' in the queue, and 'Erreur 520' does not appear. Cleanup: the test photo was deleted and only 6aa10ee21f38608802dce39f remains. The second user was deleted via DELETE /api/auth/account (0 test_iter29_* users left in the DB).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "property/[id]/photos (390x844)", "issues": ["The Galerie / Appareil photo buttons sit at the bottom of the first viewport and the upload queue renders below them. The user does not see the progress or a 5xx error without scrolling. Consider scrolling the queue into view, or showing a small inline progress next to the buttons."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_iter29_photo_ownership.py", "/app/test_reports/pytest/pytest_iter29.xml"],
+  "action_items": [
+    "Optional: in src/api.ts multipart(), wrap the JSON.parse in the 2xx branch with try/catch and reject. Today a non-JSON 2xx body would throw inside onload and leave the promise pending forever (the queue would get stuck on 'Envoi…').",
+    "Optional: for a 4xx with a non-JSON body (e.g. an HTML 413 from the ingress), the message falls back to the raw 'Erreur 413'. Consider a friendly message there too, e.g. 'Photo trop lourde'.",
+    "Optional UX: scroll photos-upload-queue into view when an upload starts on mobile."
+  ],
+  "critical_code_review_comments": [
+    "multipart() now uses XHR on every platform, with upload.onprogress, a 180 s timeout, onerror and a friendly 5xx message. JSON detail still takes priority over the default message. Correct.",
+    "All photo endpoints (list, reorder, cover, label, autosort, upload, retouch, export, delete) now filter with auth.own() or check the owning bien first. Verified with a second user."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter29_photo_ownership.py"],
+  "success_rate": {"backend": "100% (6/6)", "frontend": "100% (2/2 requested flows)"},
+  "seed_data_creation": "None kept. A temporary user test_iter29_<hex>@example.com is created and then deleted by the test fixture through DELETE /api/auth/account.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The reference photo on 6aa02db9efd8f90925a5a758 is 6aa10ee21f38608802dce39f (keep it). To observe intermediate upload percentages on web, throttle with a CDP session: Network.emulateNetworkConditions with uploadThroughput=150000, and record the photos-upload-queue innerText with a MutationObserver. Use page.expect_file_chooser() around the photos-pick-library click. Account deletion: DELETE /api/auth/account with body {password}.",
+  "rca_of_issue": ""
+}

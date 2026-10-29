@@ -17,17 +17,12 @@ async function appendFile(form: FormData, uri: string, name: string, type: strin
   }
 }
 
-/** POST a FormData. On iOS/Android we go through XMLHttpRequest: Expo ≥ 54 replaces the global `fetch` by its WinterCG
- *  implementation, which rejects React Native `{ uri }` file parts ("Unsupported FormDataPart implementation"), whereas
- *  React Native's XHR streams them natively and reports upload progress. The web keeps `fetch` + Blob. */
+/** POST a FormData through XMLHttpRequest on every platform: Expo ≥ 54 replaces the global `fetch` by its WinterCG
+ *  implementation, which rejects React Native `{ uri }` file parts ("Unsupported FormDataPart implementation"), whereas XHR
+ *  streams them natively — and, on the web too, reports real upload progress (fetch cannot). */
 async function multipart<T>(path: string, form: FormData, onProgress?: (pct: number) => void): Promise<T> {
   const url = `${BASE}${path}`;
   const headers: Record<string, string> = authToken ? { Authorization: `Bearer ${authToken}` } : {};
-  if (Platform.OS === "web") {
-    const res = await fetch(url, { method: "POST", body: form, headers });
-    if (!res.ok) throw new Error(await errorMessage(res));
-    return res.json();
-  }
   return new Promise<T>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", url);
@@ -42,7 +37,9 @@ async function multipart<T>(path: string, form: FormData, onProgress?: (pct: num
         onProgress?.(100);
         resolve(JSON.parse(xhr.responseText));
       } else {
-        let message = `Erreur ${xhr.status}`;
+        let message = xhr.status >= 500
+          ? `Envoi interrompu (erreur ${xhr.status}). Vérifiez votre connexion et réessayez.`
+          : `Erreur ${xhr.status}`;
         try {
           const body = JSON.parse(xhr.responseText);
           if (typeof body?.detail === "string") message = body.detail;

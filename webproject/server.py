@@ -10,7 +10,7 @@ import os
 import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from starlette.background import BackgroundTask
 
 load_dotenv()
@@ -43,7 +43,13 @@ async def proxy(path: str, request: Request):
     client_ip = request.headers.get("x-forwarded-for") or (request.client.host if request.client else "")
     if client_ip:
         headers["x-forwarded-for"] = client_ip
-    upstream_req = client.build_request(request.method, url, headers=headers, content=request.stream())
-    upstream = await client.send(upstream_req, stream=True)
+    # Corps lu en entier avant transfert : l'amont reçoit un Content-Length (pas de « chunked »), ce qui évite les coupures
+    # (erreurs 520) sur les envois de photos/documents depuis mobile. Taille bornée côté backend.
+    body = await request.body() if request.method in {"POST", "PUT", "PATCH", "DELETE"} else None
+    try:
+        upstream_req = client.build_request(request.method, url, headers=headers, content=body)
+        upstream = await client.send(upstream_req, stream=True)
+    except httpx.HTTPError as exc:
+        return JSONResponse(status_code=503, content={"detail": f"Serveur momentanément indisponible ({type(exc).__name__}). Réessayez dans un instant."})
     resp_headers = {k: v for k, v in upstream.headers.items() if k.lower() not in HOP_BY_HOP}
     return StreamingResponse(upstream.aiter_raw(), status_code=upstream.status_code, headers=resp_headers, background=BackgroundTask(upstream.aclose))

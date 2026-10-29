@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system/legacy";
+import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowDownIcon, ArrowUpIcon, ArrowsOutIcon, CameraIcon, CheckCircleIcon, DownloadSimpleIcon, FolderOpenIcon, ImagesIcon, LockKeyIcon, ShareNetworkIcon, SortAscendingIcon, SparkleIcon, StarIcon, TrashIcon, WarningIcon } from "phosphor-react-native";
@@ -46,6 +47,26 @@ async function ensureFileUri(uri: string, name: string): Promise<string> {
   return dest;
 }
 
+const UPLOAD_MAX_SIDE = 1920;
+
+/**
+ * Réduit la photo avant envoi (côté le plus long ≤ 1920 px, JPEG 85 %) : une photo de téléphone de 4 000 px / 6 Mo passe à
+ * ~500 Ko. Évite les envois interminables sur 4G et les coupures du proxy (erreurs 520/524) ; largement suffisant pour
+ * l'annonce, la retouche IA et les PDF. En cas d'échec de la conversion, on envoie l'original.
+ */
+async function downscaleForUpload(uri: string, width: number, height: number): Promise<{ uri: string; type: string; ext: string } | null> {
+  try {
+    const longest = Math.max(width || 0, height || 0);
+    const actions = longest > UPLOAD_MAX_SIDE || longest === 0
+      ? [{ resize: width >= height || width === 0 ? { width: Math.min(longest || UPLOAD_MAX_SIDE, UPLOAD_MAX_SIDE) } : { height: UPLOAD_MAX_SIDE } }]
+      : [];
+    const out = await ImageManipulator.manipulateAsync(uri, actions, { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG });
+    return { uri: out.uri, type: "image/jpeg", ext: "jpg" };
+  } catch {
+    return null;
+  }
+}
+
 export default function PhotosScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const styles = useStyles();
@@ -81,8 +102,12 @@ export default function PhotosScreen() {
     for (const it of items) {
       patchQueue(it.key, { status: "uploading" });
       try {
-        const uri = await ensureFileUri(it.asset.uri, it.name);
-        await uploadPhoto(id!, uri, it.name, it.type, (pct) => patchQueue(it.key, { pct }));
+        const src = await ensureFileUri(it.asset.uri, it.name);
+        const small = await downscaleForUpload(src, it.asset.width, it.asset.height);
+        const uri = small?.uri ?? src;
+        const type = small?.type ?? it.type;
+        const name = small ? it.name.replace(/\.[^.]*$/, "") + ".jpg" : it.name;
+        await uploadPhoto(id!, uri, name, type, (pct) => patchQueue(it.key, { pct }));
         patchQueue(it.key, { status: "done", pct: 100 });
         queryClient.invalidateQueries({ queryKey: ["photos", id] });
       } catch (e) {
@@ -209,12 +234,10 @@ export default function PhotosScreen() {
             <ImagesIcon size={22} color={colors.onBrandTertiary} weight="duotone" />
             <Text style={styles.pickLabel}>Galerie</Text>
           </Pressable>
-          {Platform.OS !== "web" ? (
-            <Pressable testID="photos-pick-camera" accessibilityRole="button" onPress={() => pick("camera")} style={styles.pickBtn} disabled={uploading}>
-              <CameraIcon size={22} color={colors.onBrandTertiary} weight="duotone" />
-              <Text style={styles.pickLabel}>Appareil photo</Text>
-            </Pressable>
-          ) : null}
+          <Pressable testID="photos-pick-camera" accessibilityRole="button" onPress={() => pick("camera")} style={styles.pickBtn} disabled={uploading}>
+            <CameraIcon size={22} color={colors.onBrandTertiary} weight="duotone" />
+            <Text style={styles.pickLabel}>Appareil photo</Text>
+          </Pressable>
           {Platform.OS === "android" ? (
             <Pressable testID="photos-pick-files" accessibilityRole="button" onPress={pickFiles} style={styles.pickBtn} disabled={uploading}>
               <FolderOpenIcon size={22} color={colors.onBrandTertiary} weight="duotone" />

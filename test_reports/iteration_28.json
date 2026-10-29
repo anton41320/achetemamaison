@@ -1,0 +1,40 @@
+{
+  "summary": "Fix for the web photo upload bug ('Galerie' button only + 'Erreur 520'). Backend 6/6 pytest passed. Frontend web (390x844 and 1920x1080) checks passed: (1) photos-pick-library AND photos-pick-camera are both visible on web at both sizes (173x56 each on mobile; no 'Fichiers' button on web, as expected). (2) Galerie + a 4000x3000 JPEG of 5.8 MB: the upload queue showed 'Envoi 1/1… big.jpg 0 %', then '1/1 photo(s) envoyée(s)' after about 3.5 s, with POST 201 and no error. A window.fetch hook proved the image is resized in the browser: the uploaded Blob was 1920x1440 and 1.10 MB. (3) On desktop, 'Appareil photo' opens a filechooser (input accept=',image/*', capture='camera', single file). A 640x480 image sent this way returned 201 and was added to the list. (4) Checked through the API: the photo list went from 1 to 4 photos. Stored originals are 1600x1200 because the server normalize() caps them at MAX_SIDE=1600, so the API dimensions alone do not prove the client-side resize; the fetch hook does. Cleanup: the 3 test photos were deleted (DELETE returned 200). Only the original photo 6aa10ee21f38608802dce39f remains. ISSUE FOUND: fix (3), the clearer 5xx message, only applies to the native XHR branch of multipart(). On web, a simulated 520 (HTML body) still shows the raw 'Erreur 520' in the queue. Web is exactly the tester's platform.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "DELETE /api/photos/{photo_id}", "issue": "The query filter has no **auth.own(), unlike PATCH, cover and retouch. Any logged-in user who knows a photo id can delete another user's photo (IDOR). server.py:713-718"},
+      {"endpoint": "GET /api/properties/{pid}/photos", "issue": "No ownership filter (auth.own()) on the list. server.py:570-573"}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Upload queue (web)", "issue": "On a 5xx during upload on WEB, the queue shows the raw 'Erreur 520'. In src/api.ts multipart(), the web branch (fetch) calls errorMessage(res), which returns `Erreur ${status}` when the body is not JSON. The friendly message 'Envoi interrompu (erreur 5xx). Vérifiez votre connexion et réessayez.' exists only in the native XHR branch. Reproduced with page.route returning 520 text/html. Reference: /app/frontend/src/api.ts:26-29 and :64-72", "testID": "photos-upload-queue", "priority": "MEDIUM"},
+      {"component": "Upload progress (web)", "issue": "On web the queue item stays at '0 %' until the upload ends, because fetch reports no upload progress and onProgress is never called. On a slow 4G mobile browser this looks frozen. Consider XMLHttpRequest on web too (it supports upload.onprogress) or an indeterminate indicator. Reference: /app/frontend/src/api.ts:26-29", "testID": "photos-upload-item-0", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "expo-image-manipulator", "issue": "ImageManipulator.manipulateAsync is deprecated since SDK 52 in favour of the contextual API ImageManipulator.manipulate(uri).resize(...).renderAsync() then saveAsync({compress, format}). It still works in ~57.0.21. Reference: /app/frontend/app/property/[id]/photos.tsx:63"}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_iter28_photo_upload.py", "/app/test_reports/pytest/pytest_iter28.xml"],
+  "action_items": [
+    "src/api.ts multipart() web branch: when !res.ok && res.status >= 500 and the body has no JSON detail, throw the same friendly message as the native branch, e.g. 'Envoi interrompu (erreur 520). Vérifiez votre connexion et réessayez.'",
+    "Optional: use XHR on web as well, so the upload queue shows real progress.",
+    "Add **auth.own() to the DELETE /api/photos/{id} filter, and an ownership check to GET /api/properties/{pid}/photos.",
+    "Optional: migrate manipulateAsync to the new ImageManipulator.manipulate(...).renderAsync() API."
+  ],
+  "critical_code_review_comments": [
+    "downscaleForUpload: when width/height are 0 (DocumentPicker path, Android only), it resizes to width=1920 even for small images, which upscales them. Low impact.",
+    "The camera input has accept=',image/*' (leading comma, from expo-image-picker). Harmless.",
+    "server.py (1396 lines) and api.ts (1002 lines) exceed 700 lines."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter28_photo_upload.py"],
+  "success_rate": {"backend": "100% (6/6)", "frontend": "100% for the requested flows (buttons, Galerie upload with client resize, desktop camera filechooser); 1 MEDIUM issue: web 5xx message not friendly"},
+  "seed_data_creation": "None kept. 3 test photos were uploaded to 6aa02db9efd8f90925a5a758 via the UI and deleted. Pytest photos were deleted in teardown.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Pre-existing photo on 6aa02db9efd8f90925a5a758: 6aa10ee21f38608802dce39f (keep it). The server caps stored originals at 1600 px (photos.py MAX_SIDE), so proving the client-side resize requires hooking window.fetch with add_init_script and reading FormData.get('file') through createImageBitmap. Playwright post_data_buffer is None for Blob bodies. Use page.expect_file_chooser() around the photos-pick-library / photos-pick-camera click.",
+  "rca_of_issue": "The 5xx message on web is unchanged because multipart() returns early for Platform.OS === 'web' through fetch + errorMessage(). The improved 5xx text was added only inside the XHR (native) onload handler."
+}
