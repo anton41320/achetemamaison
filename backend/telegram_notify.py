@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 logger = logging.getLogger("telegram")
+logging.getLogger("httpx").setLevel(logging.WARNING)  # l'URL Telegram contient le token : ne jamais la journaliser
 
 API = "https://api.telegram.org"
 

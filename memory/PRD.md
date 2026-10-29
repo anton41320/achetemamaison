@@ -180,3 +180,8 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 ## 2026-10-29 — Photos : puces d'étiquette compactes
 - Google Play : appli publiée en production (100 %) le 29/10.
 - `app/property/[id]/photos.tsx` : chips d'étiquette (Façade, Salon…) réduites (hauteur 28, police 11, gap 6) pour que « Retoucher avec l'IA » reste visible sous la photo sans défiler. Bundle web régénéré (`backend/web-bundle.zip`) → à recharger dans le projet web secondaire puis Publier.
+
+## 2026-10-29 — Alertes Telegram administrateur
+- `backend/telegram_notify.py` : envoi sortant (`sendMessage`, HTML) vers TELEGRAM_CHAT_ID avec TELEGRAM_BOT_TOKEN (bot @CardGomNotifBot) ; fire-and-forget, silencieux si non configuré, logs httpx coupés (token dans l'URL).
+- Hooks : `auth.register` (🆕 inscription + total comptes), `pack._mark_paid` (💰 achat Stripe web : email, adresse, montant, TEST/live), `iap.grant` (💰 achat RevenueCat : store, email, adresse, montant, env).
+- Les secrets ont un slot test et live : à republier (Publish) pour que la production notifie.
