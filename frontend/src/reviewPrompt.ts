@@ -46,5 +46,3 @@ export async function deviceKey(): Promise<string> {
 }
 
 export const reviewSource = (): "ios" | "android" | "web" => (Platform.OS === "ios" ? "ios" : Platform.OS === "android" ? "android" : "web");
-
-export const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=achetesmamaison.app";

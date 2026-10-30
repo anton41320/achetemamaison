@@ -6,7 +6,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api } from "@/src/api";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
-import { PLAY_STORE_URL, deviceKey, markReviewDone, markReviewPrompted, reviewSource, shouldPromptReview } from "@/src/reviewPrompt";
+import { deviceKey, markReviewDone, markReviewPrompted, reviewSource, shouldPromptReview } from "@/src/reviewPrompt";
+import { APP_STORE_URL, PLAY_STORE_URL } from "@/src/stores";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
 const LABELS = ["", "Décevant", "Moyen", "Bien", "Très bien", "Excellent"];
@@ -79,7 +80,10 @@ export function ReviewPromptModal({ ready }: { ready: boolean }) {
                   : "Votre retour nous aide à améliorer l'application. Nous le lisons avec attention."}
               </Text>
               {rating >= 4 && Platform.OS === "web" ? (
-                <PrimaryButton title="Noter sur Google Play" onPress={() => Linking.openURL(PLAY_STORE_URL)} testID="review-store-link" />
+                <>
+                  <PrimaryButton title="Noter sur l’App Store" onPress={() => Linking.openURL(APP_STORE_URL)} testID="review-store-link-ios" />
+                  <PrimaryButton title="Noter sur Google Play" variant="secondary" onPress={() => Linking.openURL(PLAY_STORE_URL)} testID="review-store-link" />
+                </>
               ) : null}
               <PrimaryButton title="Fermer" variant="ghost" onPress={later} testID="review-close" />
             </>

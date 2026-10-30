@@ -195,3 +195,9 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 - `backend/reviews.py` : `POST /api/reviews` (public, Bearer facultatif, 1 avis par compte ou par `device_key`), `GET /api/public/reviews` (approuvés + moyenne), `GET /api/reviews/{id}/moderate?a=approve|reject&k=HMAC` (liens de modération envoyés dans l'alerte Telegram « 📝 Nouvel avis »).
 - Frontend : `src/reviewPrompt.ts` (AsyncStorage : 1 demande après la 1re estimation, « Plus tard » → 2e demande 7 j plus tard max), `src/components/ReviewPromptModal.tsx` (étoiles, prénom, commentaire ; si ≥ 4★ : `expo-store-review` natif, lien Google Play sur web). Monté sur `app/property/[id]/index.tsx` (estimation présente) et `app/estimate-free.tsx` (résultat visiteur).
 - Les avis approuvés ne sont pas encore affichés sur le site (endpoint prêt) ; App Store URL à ajouter quand l'app iOS sera publiée.
+
+## 2026-10-30 — Stores validés (Apple + Google) · site : avis réels + badges
+- App Store : https://apps.apple.com/fr/app/achetesmamaison/id6810613519 · Google Play : id=achetesmamaison.app (`frontend/src/stores.ts`).
+- `src/components/StoreBadges.tsx` (badges noirs App Store / Google Play) dans le hero et le bloc CTA de `LandingPage.tsx` ; `ReviewPromptModal` web propose les deux stores si ≥ 4★.
+- `src/components/ReviewsSection.tsx` remplace les témoignages fictifs de l'accueil : note moyenne + avis approuvés via `GET /api/public/reviews` ; état vide « Les premiers avis arrivent » + badges. Base d'avis vidée (aucun faux avis).
+- Annuaire diagnostiqueurs/notaires : reporté par l'utilisateur (« plus tard »).

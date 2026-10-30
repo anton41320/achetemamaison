@@ -5,6 +5,8 @@ import { Pressable, Text, View } from "react-native";
 
 import { BrandDash } from "@/src/components/BrandMarks";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
+import { ReviewsSection } from "@/src/components/ReviewsSection";
+import { StoreBadges } from "@/src/components/StoreBadges";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 import { FreeEstimate } from "@/src/web/FreeEstimate";
 import { PublicPage, SITE_NAME, SITE_URL } from "@/src/web/PublicPage";
@@ -35,14 +37,7 @@ const TRUST = [
   { icon: StarIcon, title: "Sans commission", text: "Estimation gratuite. Pack premium 49 € par bien, paiement unique, contre 4 à 6 % de commission en agence." },
 ];
 
-// À remplacer par vos témoignages réels (prénom, commune, autorisation de publication).
-const TESTIMONIALS = [
-  { name: "Sophie", place: "Loir-et-Cher", text: "L’estimation correspondait à ce que deux agences m’avaient annoncé, mais avec le détail du calcul. J’ai vendu en six semaines au prix fixé." },
-  { name: "Marc", place: "Indre-et-Loire", text: "Les photos retouchées ont changé mon annonce du tout au tout, sans rien inventer. Le dossier de vente m’a évité des allers-retours avec le notaire." },
-  { name: "Nadia", place: "Loiret", text: "Simple et honnête : on comprend pourquoi la maison vaut ce prix. Le rapport PDF a rassuré les acheteurs pendant les visites." },
-];
-
-/** Page d'accueil vitrine (Web) : promesse, estimation gratuite, 3 étapes, confiance, témoignages, appel à l'action. */
+/** Page d'accueil vitrine (Web) : promesse, estimation gratuite, 3 étapes, confiance, avis clients, appel à l'action. */
 export function LandingPage() {
   const styles = useStyles();
   const { colors } = useTheme();
@@ -99,6 +94,7 @@ export function LandingPage() {
                 <View key={b} style={styles.badge}><Text style={styles.badgeText}>{b}</Text></View>
               ))}
             </View>
+            <StoreBadges compact style={[styles.storeBadges, isDesktop && { justifyContent: "flex-start" }]} />
           </View>
           <Image
             source={HERO_IMG}
@@ -170,18 +166,7 @@ export function LandingPage() {
         </View>
       </View>
 
-      <View style={styles.section}>
-        <View style={styles.h2Row}><BrandDash size={22} /><Text style={styles.h2} accessibilityRole="header">Ils ont vendu avec {SITE_NAME}</Text></View>
-        <View style={[styles.cards, isTablet && { flexDirection: "row" }]}>
-          {TESTIMONIALS.map((t) => (
-            <View key={t.name} style={styles.quoteCard} testID="landing-testimonial">
-              <View style={{ flexDirection: "row", gap: 2 }}>{[0, 1, 2, 3, 4].map((i) => <StarIcon key={i} size={16} color={colors.warning} weight="fill" />)}</View>
-              <Text style={styles.quote}>« {t.text} »</Text>
-              <Text style={styles.quoteAuthor}>{t.name} · {t.place}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
+      <ReviewsSection row={isTablet} />
 
       <View style={styles.ctaBlock} testID="landing-cta">
         <Text style={styles.ctaTitle}>Prêt à connaître la valeur de votre bien ?</Text>
@@ -190,6 +175,8 @@ export function LandingPage() {
           <PrimaryButton title="Estimer gratuitement" onPress={() => router.navigate("/estimation-maison")} testID="landing-cta-estimate" />
           <PrimaryButton title="Créer mon compte" variant="secondary" onPress={() => router.navigate("/sign-up")} testID="landing-cta-signup" />
         </View>
+        <Text style={styles.ctaText}>Ou emportez-la dans votre poche :</Text>
+        <StoreBadges style={{ justifyContent: "center" }} />
         <Link href="/prix-immobilier" asChild>
           <Pressable accessibilityRole="link"><Text style={styles.link}>Voir les prix immobiliers par commune →</Text></Pressable>
         </Link>
@@ -219,6 +206,7 @@ const useStyles = makeStyles((colors) => ({
   badge: { backgroundColor: colors.brandTertiary, borderRadius: radius.pill, paddingHorizontal: spacing.md, minHeight: 32, justifyContent: "center" },
   badgeText: { fontFamily: fonts.semibold, fontSize: 13, color: colors.onBrandTertiary },
   section: { gap: spacing.md },
+  storeBadges: { justifyContent: "center", marginTop: spacing.sm },
   h2Row: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   h2: { fontFamily: fonts.extrabold, fontSize: 26, lineHeight: 34, color: colors.onSurface, flexShrink: 1 },
   cards: { flexDirection: "column", gap: spacing.md },
