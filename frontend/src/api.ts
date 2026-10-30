@@ -488,7 +488,7 @@ export class ApiError extends Error {
 const RETRY_DELAYS_MS = [700, 1800];
 const READ_RETRY_STATUSES = new Set([500, 502, 503, 504, 520, 521, 522, 523, 524]);
 const WRITE_RETRY_STATUSES = new Set([503, 521, 522, 523]);
-const NO_RETRY_PATHS = ["/pack/checkout"];
+const NO_RETRY_PATHS = ["/pack/checkout", "/reviews"];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -818,6 +818,8 @@ export interface PublicCommuneDetail extends PublicCommune {
   neighbours: PublicCommune[];
 }
 
+export type PublicReview = { id: string; rating: number; comment: string; name: string; created_at: string };
+
 export const api = {
   /** Estimation publique (sans compte) : même moteur que l'app, résultat non sauvegardé. */
   estimatePreview: (body: PropertyIn) =>
@@ -893,6 +895,10 @@ export const api = {
     return `https://data.geopf.fr/wms-r/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=ORTHOIMAGERY.ORTHOPHOTOS,CADASTRALPARCELS.PARCELLAIRE_EXPRESS&STYLES=&CRS=EPSG:4326&BBOX=${lat - dLat},${lon - dLon},${lat + dLat},${lon + dLon}&WIDTH=${w}&HEIGHT=${h}&FORMAT=image/png`;
   },
   redeemPromo: (code: string) => request<{ unlocked: boolean; code: string }>(`/promo/redeem`, { method: "POST", body: JSON.stringify({ code }) }),
+  /** Avis utilisateur (étoiles + commentaire), modéré avant affichage public. Fonctionne sans compte (clé appareil). */
+  submitReview: (body: { rating: number; comment: string; name: string; source: "ios" | "android" | "web"; device_key: string }) =>
+    request<{ id: string; status: string }>("/reviews", { method: "POST", body: JSON.stringify(body) }),
+  publicReviews: () => request<{ items: PublicReview[]; average: number | null; count: number }>("/public/reviews"),
   packCheckout: (id: string, return_url: string) =>
     request<{ order_id: string; checkout_url: string }>(`/properties/${id}/pack/checkout`, { method: "POST", body: JSON.stringify({ return_url }) }),
   packPdfUrl: (id: string, style: ListingStyle) => withToken(`${BASE}/properties/${id}/pack.pdf?style=${style}`),

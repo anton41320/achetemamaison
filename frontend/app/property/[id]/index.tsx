@@ -18,6 +18,7 @@ import { HedonicCard } from "@/src/components/HedonicCard";
 import { MarketSignalCard } from "@/src/components/MarketSignalCard";
 import { MlCard } from "@/src/components/MlCard";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
+import { ReviewPromptModal } from "@/src/components/ReviewPromptModal";
 import { ShareReportButton } from "@/src/components/ShareReportButton";
 import { RisksCard } from "@/src/components/RisksCard";
 import { StepTabs } from "@/src/components/StepTabs";
@@ -356,6 +357,7 @@ export default function PropertyDetailScreen() {
           </View>
         ) : null}
       </ScrollView>
+      <ReviewPromptModal ready={!!est && !reestimate.isPending} />
     </View>
   );
 }

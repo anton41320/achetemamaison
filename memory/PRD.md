@@ -190,3 +190,8 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 - `scripts/gen_premium_visuals.py` → `frontend/assets/images/premium-{1,2,3}.jpg` (avant/après photos, annonce IA, dossier notaire ; 1200×900, bandeau « 49 € une fois · 0 % de commission »).
 - `scripts/gen_testimonial_visuals.py` → `frontend/assets/images/temoignage-{1,2,3,4}.jpg` : personnes photoréalistes Gemini + citations FICTIVES (Sophie & Marc Blois, Martine Tours, Julien & Camille Orléans), mention « Photo d'illustration ». ⚠️ À remplacer par de vrais clients consentants avant diffusion publicitaire (pratique commerciale trompeuse sinon).
 - Emplacement dans l'app : non décidé (user : « pas maintenant, juste les fichiers »).
+
+## 2026-10-30 — Demande d'avis (stores + formulaire interne)
+- `backend/reviews.py` : `POST /api/reviews` (public, Bearer facultatif, 1 avis par compte ou par `device_key`), `GET /api/public/reviews` (approuvés + moyenne), `GET /api/reviews/{id}/moderate?a=approve|reject&k=HMAC` (liens de modération envoyés dans l'alerte Telegram « 📝 Nouvel avis »).
+- Frontend : `src/reviewPrompt.ts` (AsyncStorage : 1 demande après la 1re estimation, « Plus tard » → 2e demande 7 j plus tard max), `src/components/ReviewPromptModal.tsx` (étoiles, prénom, commentaire ; si ≥ 4★ : `expo-store-review` natif, lien Google Play sur web). Monté sur `app/property/[id]/index.tsx` (estimation présente) et `app/estimate-free.tsx` (résultat visiteur).
+- Les avis approuvés ne sont pas encore affichés sur le site (endpoint prêt) ; App Store URL à ajouter quand l'app iOS sera publiée.

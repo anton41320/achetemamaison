@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { PropertyIn, api, formatEuro, formatInt } from "@/src/api";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
+import { ReviewPromptModal } from "@/src/components/ReviewPromptModal";
 import { PropertyWizard, WIZARD_STEPS } from "@/src/components/PropertyWizard";
 import { ScreenHeader } from "@/src/components/ScreenHeader";
 import { saveFreeDraft } from "@/src/freeDraft";
@@ -107,6 +108,7 @@ export default function FreeEstimateScreen() {
             Déjà inscrit ? <Text style={styles.link} onPress={() => router.push("/sign-in")} testID="free-signin-link">Se connecter</Text> — l’estimation sera rattachée à votre compte.
           </Text>
         </View>
+        <ReviewPromptModal ready />
       </View>
     );
   }

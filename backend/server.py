@@ -25,6 +25,7 @@ import completion
 import departements
 import dossier as dossier_mod
 import promo
+import reviews
 from environment import analyze as env_analyze, listing_facts as env_listing_facts, official as env_official, report as env_report, valuation as env_valuation
 import dvf_ingest
 import georisques
@@ -77,6 +78,7 @@ public = APIRouter(prefix="/api")       # routes publiques
 auth.init(db)
 iap.init(db)
 promo.init(db)
+reviews.init(db)
 
 
 def _prop_response(doc: dict) -> dict:
@@ -1338,6 +1340,7 @@ app.include_router(auth.router)
 app.include_router(iap.router, prefix="/api")
 app.include_router(promo.router, prefix="/api", dependencies=[Depends(auth.require_user)])
 app.include_router(iap.webhook_router, prefix="/api")
+app.include_router(reviews.router)
 app.include_router(api, dependencies=[Depends(auth.require_user)])
 
 # Version Web (export statique Expo dans backend/webdist) servie à la racine — enregistrée en dernier (catch-all).
