@@ -10,6 +10,7 @@ import { LISTING_STYLES, ListingStyle, api } from "@/src/api";
 import { useSession } from "@/src/auth";
 import { isExpoGo, nativeStoreAvailable, purchasePack, restorePack } from "@/src/iap";
 import { PackPreview } from "@/src/components/PackPreview";
+import { PackReviewsCard } from "@/src/components/PackReviewsCard";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { PromoCodeCard } from "@/src/components/PromoCodeCard";
 import { ScreenHeader } from "@/src/components/ScreenHeader";
@@ -190,6 +191,7 @@ export default function PackScreen() {
                 Restent gratuits : l’estimation détaillée, les ventes comparables, les risques Géorisques, le prix cible et l’aperçu de la checklist du dossier de vente.
               </Text>
             </View>
+            <PackReviewsCard />
             <PackPreview />
             {polling ? (
               <View style={styles.warn} testID="pack-polling">

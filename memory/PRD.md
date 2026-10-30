@@ -201,3 +201,5 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 - `src/components/StoreBadges.tsx` (badges noirs App Store / Google Play) dans le hero et le bloc CTA de `LandingPage.tsx` ; `ReviewPromptModal` web propose les deux stores si ≥ 4★.
 - `src/components/ReviewsSection.tsx` remplace les témoignages fictifs de l'accueil : note moyenne + avis approuvés via `GET /api/public/reviews` ; état vide « Les premiers avis arrivent » + badges. Base d'avis vidée (aucun faux avis).
 - Annuaire diagnostiqueurs/notaires : reporté par l'utilisateur (« plus tard »).
+- `src/components/PackReviewsCard.tsx` : sur l'écran d'achat du pack (état non débloqué), note moyenne + « N avis vérifiés » + citations défilantes ; masqué tant qu'aucun avis approuvé.
+- `src/components/PackReviewsCard.tsx` : sur l'écran d'achat du pack (état non débloqué), note moyenne + « N avis vérifiés » + citations défilantes ; masqué tant qu'aucun avis approuvé.
