@@ -203,3 +203,4 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 - Annuaire diagnostiqueurs/notaires : reporté par l'utilisateur (« plus tard »).
 - `src/components/PackReviewsCard.tsx` : sur l'écran d'achat du pack (état non débloqué), note moyenne + « N avis vérifiés » + citations défilantes ; masqué tant qu'aucun avis approuvé.
 - `src/components/PackReviewsCard.tsx` : sur l'écran d'achat du pack (état non débloqué), note moyenne + « N avis vérifiés » + citations défilantes ; masqué tant qu'aucun avis approuvé.
+- `scripts/gen_social_visuals.py` → `social-post.jpg` (1080×1350, 1er post Facebook) et `social-cover.jpg` (1640×624, bannière FB) ; servis via `/api/public/visuels/…` et dans `visuels.zip`.
