@@ -204,3 +204,7 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 - `src/components/PackReviewsCard.tsx` : sur l'écran d'achat du pack (état non débloqué), note moyenne + « N avis vérifiés » + citations défilantes ; masqué tant qu'aucun avis approuvé.
 - `src/components/PackReviewsCard.tsx` : sur l'écran d'achat du pack (état non débloqué), note moyenne + « N avis vérifiés » + citations défilantes ; masqué tant qu'aucun avis approuvé.
 - `scripts/gen_social_visuals.py` → `social-post.jpg` (1080×1350, 1er post Facebook) et `social-cover.jpg` (1640×624, bannière FB) ; servis via `/api/public/visuels/…` et dans `visuels.zip`.
+
+## 2026-10-31 — Retouche photo : contrôle de fidélité assoupli sur les détails fins · hero accueil agrandi
+- `photos.py` CHECK_PROMPT : ne plus signaler textes/logos/motifs des affiches, cadres, livres, écrans, emballages, tissus (détails régénérés par l'IA) ; ne signaler que ce qu'un acheteur remarquerait (fixes, mobilier, volumes, matériaux, ouvertures, vue, extérieur). Test manuel `backend/tests/manual_retouch_clutter.py` (salon encombré d'affiches) → OK.
+- `LandingPage.tsx` : image hero recadrée (`assets/web/hero-house.webp` 1100×718, marges blanches retirées), `flex 1.25 / maxWidth 760`, coins arrondis.

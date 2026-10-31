@@ -87,7 +87,12 @@ CHECK_PROMPT = (
     "sur les plans de travail et tables, vêtements, vaisselle, câbles) est voulu et accepté : ne le signale pas, et une table ou un "
     "plan de travail débarrassé qui montre simplement sa surface nue n’est PAS une modification. Ignore les "
     "différences de luminosité, de couleur globale, de contraste, de netteté et les petits décalages de "
-    "cadrage. Attention particulière aux équipements fixes sur les îlots et plans de travail (robinet, évier, plaque de cuisson) : "
+    "cadrage. Une retouche par IA régénère inévitablement les détails fins : ne signale JAMAIS les textes, lettres, logos, "
+    "visuels ou motifs sur les affiches, tableaux, posters, cadres, livres, écrans, emballages, coussins, tapis, tissus et petits "
+    "objets de décoration (même altérés, illisibles ou inversés en miroir), ni les variations de texture, de motif ou de décoration "
+    "d’un petit objet qui reste à sa place. Ne signale que les changements qu’un acheteur remarquerait en visitant le bien : "
+    "éléments fixes, mobilier, volumes, matériaux, ouvertures, vue, extérieur. "
+    "Attention particulière aux équipements fixes sur les îlots et plans de travail (robinet, évier, plaque de cuisson) : "
     "leur disparition est une erreur grave à signaler systématiquement. Ne signale pas les simples différences d’éclairage. "
     "Réponds UNIQUEMENT en JSON : {\"faithful\": true|false, \"issues\": [\"…\"]} — issues en français, vide si fidèle."
 )

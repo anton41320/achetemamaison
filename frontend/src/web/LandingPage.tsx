@@ -98,7 +98,7 @@ export function LandingPage() {
           </View>
           <Image
             source={HERO_IMG}
-            style={[styles.heroImage, isDesktop && { flex: 1, maxWidth: 560 }]}
+            style={[styles.heroImage, isDesktop && { flex: 1.25, maxWidth: 760 }]}
             contentFit="contain"
             accessibilityLabel="Une famille découvre l’estimation de sa maison sur son téléphone"
             transition={300}
@@ -189,7 +189,7 @@ const useStyles = makeStyles((colors) => ({
   hero: { gap: spacing.xl, paddingTop: spacing.lg, alignItems: "center" },
   heroTop: { width: "100%", gap: spacing.xl, alignItems: "center" },
   heroText: { width: "100%", gap: spacing.md, alignItems: "center" },
-  heroImage: { width: "100%", aspectRatio: 1.6 },
+  heroImage: { width: "100%", aspectRatio: 1100 / 718, borderRadius: radius.lg },
   heroForm: { width: "100%" },
   sectionLead: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 24, color: colors.onSurfaceTertiary, maxWidth: 760 },
   dataWrap: { gap: spacing.xl },
