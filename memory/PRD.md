@@ -215,3 +215,4 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 - Ajoutés à `PUBLIC_PREFIXES` (WebShell, pleine largeur) et `STATIC_PAGES` (sitemap).
 - `src/components/EstimateDemo.tsx` : démo animée ~20 s en boucle (adresse → 4 questions → analyse → résultat avec compteur de prix et explications), dessinée dans un téléphone, légende 4 étapes + barre de progression + Rejouer ; remplace l'image hero sur `/etape-estimation` (web et natif).
 - Accueil : `EstimateDemo` affichée à droite du formulaire d'estimation gratuite (desktop, flex 1.25/0.75) et sous le formulaire sur mobile.
+- Hero accueil : halo blanc de `assets/web/hero-house.webp` converti vers la couleur de fond du site `#F4F7FC` (numpy), plus de bord arrondi → la photo se fond dans la page.

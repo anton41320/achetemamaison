@@ -198,7 +198,7 @@ const useStyles = makeStyles((colors) => ({
   hero: { gap: spacing.xl, paddingTop: spacing.lg, alignItems: "center" },
   heroTop: { width: "100%", gap: spacing.xl, alignItems: "center" },
   heroText: { width: "100%", gap: spacing.md, alignItems: "center" },
-  heroImage: { width: "100%", aspectRatio: 1100 / 718, borderRadius: radius.lg },
+  heroImage: { width: "100%", aspectRatio: 1100 / 718 },
   heroForm: { width: "100%" },
   sectionLead: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 24, color: colors.onSurfaceTertiary, maxWidth: 760 },
   dataWrap: { gap: spacing.xl },
