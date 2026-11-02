@@ -3,6 +3,7 @@ import { Link, useRouter } from "expo-router";
 import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon } from "phosphor-react-native";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { EstimateDemo } from "@/src/components/EstimateDemo";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { ReviewsSection } from "@/src/components/ReviewsSection";
 import { StoreBadges } from "@/src/components/StoreBadges";
@@ -80,7 +81,11 @@ export function StepPage({ step }: { step: StepContent }) {
           <Text style={styles.intro}>{step.intro}</Text>
           <PrimaryButton title={step.cta.label} onPress={() => router.navigate(step.cta.href as any)} testID="step-cta-top" />
         </View>
-        <Image source={step.hero} style={[styles.heroImage, isDesktop && { flex: 1.1 }]} contentFit="cover" accessibilityLabel={step.h1} testID="step-hero-image" />
+        {step.n === 1 ? (
+          <View style={[{ width: "100%" }, isDesktop && { flex: 1.1 }]}><EstimateDemo /></View>
+        ) : (
+          <Image source={step.hero} style={[styles.heroImage, isDesktop && { flex: 1.1 }]} contentFit="cover" accessibilityLabel={step.h1} testID="step-hero-image" />
+        )}
       </View>
 
       {step.blocks.map((b, i) => <Block key={b.title} b={b} flip={i % 2 === 1} row={isTablet} />)}
