@@ -4,6 +4,7 @@ import { ChartBarIcon, FolderOpenIcon, ImagesIcon, ShieldCheckIcon, SparkleIcon,
 import { Pressable, Text, View } from "react-native";
 
 import { BrandDash } from "@/src/components/BrandMarks";
+import { EstimateDemo } from "@/src/components/EstimateDemo";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { ReviewsSection } from "@/src/components/ReviewsSection";
 import { StoreBadges } from "@/src/components/StoreBadges";
@@ -105,8 +106,13 @@ export function LandingPage() {
             testID="landing-hero-image"
           />
         </View>
-        <View style={[styles.heroForm, isDesktop && { maxWidth: 820 }]}>
-          <FreeEstimate />
+        <View style={[styles.heroForm, isDesktop && { flexDirection: "row", alignItems: "flex-start", gap: spacing.xl }]}>
+          <View style={isDesktop ? { flex: 1.25 } : { width: "100%" }}>
+            <FreeEstimate />
+          </View>
+          <View style={isDesktop ? { flex: 0.75 } : { width: "100%" }} testID="landing-demo">
+            <EstimateDemo />
+          </View>
         </View>
       </View>
 
