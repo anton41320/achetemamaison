@@ -239,7 +239,7 @@ async def analyze(db, *, address: Optional[str] = None, lon: Optional[float] = N
     osm_items = []
     for p in data.get("osm") or []:
         d = spatial.distance_m(origin, spatial.point_metric(p["lon"], p["lat"]))
-        osm_items.append({"name": p.get("name"), "category": p["category"], "type": p["osm_tag"], "distance_m": round(d), "ring": spatial.ring_label(d, radii),
+        osm_items.append({"name": p.get("name"), "category": p["category"], "type": p.get("label") or p["osm_tag"], "distance_m": round(d), "ring": spatial.ring_label(d, radii),
                           "direction": spatial.bearing_label(lon, lat, p["lon"], p["lat"]), "url": p["url"], "source": "osm"})
     osm_items.sort(key=lambda x: x["distance_m"])
     for it in osm_items:

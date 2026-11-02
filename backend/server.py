@@ -1221,6 +1221,8 @@ async def _build_environment(*, address: Optional[str], lat: Optional[float], lo
 
 
 ENV_JOB_STALE_S = 240  # a job without heartbeat for 4 min is considered dead (process restart)
+ENV_ANALYSIS_VERSION = 2  # incrémenter pour invalider les dossiers environnement en cache (recalcul automatique à la prochaine ouverture)
+
 
 
 def _env_job_public(job: dict) -> dict:
@@ -1238,7 +1240,7 @@ async def _run_environment_job(pid: str, doc: dict) -> None:
         out = await _build_environment(address=prop.address_label, lat=prop.lat, lon=prop.lon, code_insee=prop.code_commune, radii=None, prop=prop,
                                        with_report=True, progress=progress)
         now = utcnow()
-        await db.env_analyses.replace_one({"_id": pid}, {"_id": pid, "property_id": pid, "created_at": now, **out, "owner_id": doc.get("owner_id")}, upsert=True)
+        await db.env_analyses.replace_one({"_id": pid}, {"_id": pid, "property_id": pid, "created_at": now, "version": ENV_ANALYSIS_VERSION, **out, "owner_id": doc.get("owner_id")}, upsert=True)
         await progress("Mise à jour de l'estimation", 95)
         try:
             await _reestimate_doc(doc)
@@ -1290,7 +1292,7 @@ async def property_environment(pid: str, refresh: bool = Query(default=False)):
             return Response(content=json.dumps({"property_id": pid, **_env_job_public(job)}, default=str), status_code=202, media_type="application/json")
         job = None  # heartbeat perdu (redémarrage) : on relance
     cached = await db.env_analyses.find_one({"_id": pid})
-    fresh = cached and cached["created_at"].replace(tzinfo=timezone.utc) > now - timedelta(days=30)
+    fresh = cached and cached["created_at"].replace(tzinfo=timezone.utc) > now - timedelta(days=30) and cached.get("version") == ENV_ANALYSIS_VERSION
     if fresh and not refresh:
         return {"property_id": pid, "status": "done", "created_at": cached["created_at"], "cached": True, **{k: cached[k] for k in ("analysis", "report")},
                 "estimation_adjustments": [a for a in (doc.get("estimation") or {}).get("adjustments", []) if a["key"].startswith("env_")]}

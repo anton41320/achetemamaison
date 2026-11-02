@@ -216,3 +216,7 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 - `src/components/EstimateDemo.tsx` : démo animée ~20 s en boucle (adresse → 4 questions → analyse → résultat avec compteur de prix et explications), dessinée dans un téléphone, légende 4 étapes + barre de progression + Rejouer ; remplace l'image hero sur `/etape-estimation` (web et natif).
 - Accueil : `EstimateDemo` affichée à droite du formulaire d'estimation gratuite (desktop, flex 1.25/0.75) et sous le formulaire sur mobile.
 - Hero accueil : halo blanc de `assets/web/hero-house.webp` converti vers la couleur de fond du site `#F4F7FC` (numpy), plus de bord arrondi → la photo se fond dans la page.
+
+## 2026-11-03 — Environnement : libellés OSM en français, piscines privées exclues
+- `environment/osm.py` : `VALUE_FR`/`SPORT_FR` (ex. `leisure=swimming_pool` → « Piscine », `pitch`+`sport=tennis` → « Terrain de tennis ») ; `_is_private_amenity` exclut `access=private/no` et les piscines sans nom (piscines de jardin). `analyze.py` utilise `label`.
+- `server.py` : `ENV_ANALYSIS_VERSION = 2` stocké dans `env_analyses.version` ; un dossier en cache d'une version antérieure est recalculé automatiquement à l'ouverture (job 202 → 200).
