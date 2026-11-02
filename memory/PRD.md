@@ -208,3 +208,8 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 ## 2026-10-31 — Retouche photo : contrôle de fidélité assoupli sur les détails fins · hero accueil agrandi
 - `photos.py` CHECK_PROMPT : ne plus signaler textes/logos/motifs des affiches, cadres, livres, écrans, emballages, tissus (détails régénérés par l'IA) ; ne signaler que ce qu'un acheteur remarquerait (fixes, mobilier, volumes, matériaux, ouvertures, vue, extérieur). Test manuel `backend/tests/manual_retouch_clutter.py` (salon encombré d'affiches) → OK.
 - `LandingPage.tsx` : image hero recadrée (`assets/web/hero-house.webp` 1100×718, marges blanches retirées), `flex 1.25 / maxWidth 760`, coins arrondis.
+
+## 2026-11-02 — Pages « étapes » du site (argumentaire + visuels)
+- Routes publiques `/etape-estimation`, `/etape-mise-en-vente`, `/etape-vendu` (`app/etape-*.tsx` → `src/web/StepPage.tsx`, contenu dans `src/web/stepContent.ts`). Cartes « Un parcours en 3 étapes » de l'accueil cliquables (Link). Bouton Retour (router.back ou /accueil), pastilles 1-2-3, navigation étape précédente/suivante, CTA + badges stores ; étape 3 inclut la section avis réels.
+- Visuels `assets/web/step*.jpg` via `scripts/gen_step_visuals.py` (illustrations + photos authentiques Gemini sans texte ; mockup téléphone Pillow). Aucune citation attribuée (pas de faux témoignage).
+- Ajoutés à `PUBLIC_PREFIXES` (WebShell, pleine largeur) et `STATIC_PAGES` (sitemap).

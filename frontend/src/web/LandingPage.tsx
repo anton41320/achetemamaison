@@ -26,9 +26,9 @@ const DATA_POINTS = [
 ];
 
 const STEPS = [
-  { n: 1, title: "Estimation", icon: ChartBarIcon, text: "Fourchette fondée sur les ventes réelles autour de chez vous, expliquée ligne par ligne : état, époque, terrain, environnement, tendance du marché." },
-  { n: 2, title: "Mise en vente", icon: ImagesIcon, text: "Prix cible, photos retouchées par IA en qualité professionnelle, annonce rédigée avec une accroche structurée, conseils pour les visites." },
-  { n: 3, title: "Vendu", icon: FolderOpenIcon, text: "Dossier de vente complet : diagnostics et documents obligatoires adaptés à votre bien, lecture automatique, PDF prêt pour le notaire." },
+  { n: 1, title: "Estimation", icon: ChartBarIcon, href: "/etape-estimation", text: "Fourchette fondée sur les ventes réelles autour de chez vous, expliquée ligne par ligne : état, époque, terrain, environnement, tendance du marché." },
+  { n: 2, title: "Mise en vente", icon: ImagesIcon, href: "/etape-mise-en-vente", text: "Prix cible, photos retouchées par IA en qualité professionnelle, annonce rédigée avec une accroche structurée, conseils pour les visites." },
+  { n: 3, title: "Vendu", icon: FolderOpenIcon, href: "/etape-vendu", text: "Dossier de vente complet : diagnostics et documents obligatoires adaptés à votre bien, lecture automatique, PDF prêt pour le notaire." },
 ];
 
 const TRUST = [
@@ -114,12 +114,15 @@ export function LandingPage() {
         <View style={styles.h2Row}><BrandDash size={22} /><Text style={styles.h2} accessibilityRole="header">Un parcours en 3 étapes</Text></View>
         <View style={[styles.cards, isTablet && { flexDirection: "row" }]}>
           {STEPS.map((s) => (
-            <View key={s.n} style={styles.stepCard} testID={`landing-step-${s.n}`}>
-              <View style={styles.stepBadge}><Text style={styles.stepBadgeText}>{s.n}</Text></View>
-              <s.icon size={28} color={colors.brandPrimary} weight="duotone" />
-              <Text style={styles.cardTitle}>{s.title}</Text>
-              <Text style={styles.cardText}>{s.text}</Text>
-            </View>
+            <Link key={s.n} href={s.href as any} asChild>
+              <Pressable style={styles.stepCard} accessibilityRole="link" accessibilityLabel={`Étape ${s.n} : ${s.title}, en savoir plus`} testID={`landing-step-${s.n}`}>
+                <View style={styles.stepBadge}><Text style={styles.stepBadgeText}>{s.n}</Text></View>
+                <s.icon size={28} color={colors.brandPrimary} weight="duotone" />
+                <Text style={styles.cardTitle}>{s.title}</Text>
+                <Text style={styles.cardText}>{s.text}</Text>
+                <Text style={styles.stepMore}>En savoir plus →</Text>
+              </Pressable>
+            </Link>
           ))}
         </View>
       </View>
@@ -211,6 +214,7 @@ const useStyles = makeStyles((colors) => ({
   h2: { fontFamily: fonts.extrabold, fontSize: 26, lineHeight: 34, color: colors.onSurface, flexShrink: 1 },
   cards: { flexDirection: "column", gap: spacing.md },
   stepCard: { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.sm },
+  stepMore: { fontFamily: fonts.semibold, fontSize: 14, color: colors.brandPrimary, marginTop: spacing.xs },
   stepBadge: { width: 32, height: 32, borderRadius: radius.pill, backgroundColor: colors.brandPrimary, alignItems: "center", justifyContent: "center" },
   stepBadgeText: { fontFamily: fonts.bold, fontSize: 15, color: colors.onBrandPrimary },
   cardTitle: { fontFamily: fonts.bold, fontSize: 18, color: colors.onSurface },

@@ -157,5 +157,6 @@ def cover():
     print("->", f"{OUT}/social-cover.jpg")
 
 
-post()
-cover()
+if __name__ == "__main__":
+    post()
+    cover()
