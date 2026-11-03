@@ -191,7 +191,7 @@ async def web_bundle():
 
 
 VISUALS_DIR = Path(__file__).parent.parent / "frontend" / "assets" / "images"
-VISUALS = [f"premium-{i}.jpg" for i in (1, 2, 3)] + [f"temoignage-{i}.jpg" for i in (1, 2, 3, 4)] + ["social-post.jpg", "social-cover.jpg", "fondateur-1.jpg", "fondateur-2.jpg"]
+VISUALS = [f"premium-{i}.jpg" for i in (1, 2, 3)] + [f"temoignage-{i}.jpg" for i in (1, 2, 3, 4)] + ["social-post.jpg", "social-cover.jpg", "fondateur-1.jpg", "fondateur-2.jpg", "fondateur-3.jpg", "fondateur-4.jpg", "fondateur-5.jpg", "fondateur-6.jpg"]
 
 
 @router.get("/visuels/{name}", include_in_schema=False)
