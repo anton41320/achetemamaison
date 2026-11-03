@@ -1,12 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
+import { Image } from "expo-image";
 import { Link } from "expo-router";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { CaretRightIcon, MagnifyingGlassIcon } from "phosphor-react-native";
+import { useMemo, useState } from "react";
+import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
 
 import { PublicCommune, PublicDept, PublicPriceStat, api, formatEuro, formatInt } from "@/src/api";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 import { FreeEstimate } from "@/src/web/FreeEstimate";
 import { PublicPage } from "@/src/web/PublicPage";
 import { useBreakpoint } from "@/src/web/useBreakpoint";
+
+const MAP_IMG = require("../../assets/web/map-data.jpg");
+const norm = (v: string) => v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 const pm2 = (s: PublicPriceStat | null | undefined) => (s ? `${formatInt(s.median_pm2)} €/m²` : "—");
 
@@ -26,44 +32,88 @@ function Loading() {
   return <ActivityIndicator color={colors.brandPrimary} style={{ marginVertical: spacing.xl }} />;
 }
 
-/** Tableau responsive : lignes cliquables, colonnes « €/m² maison / appartement / ventes ». */
-function PriceTable<T extends { key: string; href: string; name: string; sub?: string; maison: PublicPriceStat | null; appartement: PublicPriceStat | null; count: number }>({ rows, testID }: { rows: T[]; testID: string }) {
+/** Tableau responsive : lignes cliquables, barres de prix proportionnelles, filtre par nom. */
+function PriceTable<T extends { key: string; href: string; name: string; sub?: string; maison: PublicPriceStat | null; appartement: PublicPriceStat | null; count: number }>({ rows, testID, searchable }: { rows: T[]; testID: string; searchable?: boolean }) {
   const styles = useStyles();
+  const { colors } = useTheme();
   const { isTablet } = useBreakpoint();
+  const [q, setQ] = useState("");
+  const filtered = useMemo(() => (q.trim() ? rows.filter((r) => norm(`${r.name} ${r.sub ?? ""}`).includes(norm(q.trim()))) : rows), [rows, q]);
+  const max = useMemo(() => Math.max(1, ...rows.map((r) => Math.max(r.maison?.median_pm2 ?? 0, r.appartement?.median_pm2 ?? 0))), [rows]);
+  const bar = (stat: PublicPriceStat | null, color: string) => (
+    <View style={styles.barWrap}>
+      <View style={styles.barTrack}><View style={[styles.barFill, { width: `${stat ? Math.max(4, Math.round((stat.median_pm2 / max) * 100)) : 0}%`, backgroundColor: color }]} /></View>
+      <Text style={styles.num}>{pm2(stat)}</Text>
+    </View>
+  );
   return (
-    <View style={styles.table} testID={testID}>
-      <View style={[styles.tr, styles.th]}>
-        <Text style={[styles.td, styles.tdName, styles.thText]}>Commune / département</Text>
-        <Text style={[styles.td, styles.thText]}>Maison</Text>
-        <Text style={[styles.td, styles.thText]}>Appartement</Text>
-        {isTablet ? <Text style={[styles.td, styles.thText]}>Ventes</Text> : null}
+    <View style={{ gap: spacing.sm }}>
+      {searchable ? (
+        <View style={styles.search}>
+          <MagnifyingGlassIcon size={18} color={colors.muted} />
+          <TextInput value={q} onChangeText={setQ} placeholder="Rechercher un département, une commune ou un code postal…" placeholderTextColor={colors.muted}
+            style={styles.searchInput} autoCorrect={false} testID={`${testID}-search`} />
+          {q ? <Pressable onPress={() => setQ("")} hitSlop={8} accessibilityLabel="Effacer"><Text style={styles.clear}>Effacer</Text></Pressable> : null}
+        </View>
+      ) : null}
+      <View style={styles.table} testID={testID}>
+        <View style={[styles.tr, styles.th]}>
+          <Text style={[styles.td, styles.tdName, styles.thText]}>Commune / département</Text>
+          <Text style={[styles.td, styles.thText, styles.thRight]}>Maison €/m²</Text>
+          <Text style={[styles.td, styles.thText, styles.thRight]}>Appartement €/m²</Text>
+          {isTablet ? <Text style={[styles.tdSmall, styles.thText, styles.thRight]}>Ventes</Text> : null}
+          <View style={styles.tdChevron} />
+        </View>
+        {filtered.length === 0 ? <Text style={styles.empty}>Aucun résultat pour « {q} ».</Text> : null}
+        {filtered.map((r, i) => (
+          <View key={r.key} style={i % 2 === 1 ? styles.trAlt : undefined}>
+            <Link href={r.href as any} asChild>
+              <Pressable accessibilityRole="link" style={styles.tr} testID={`price-row-${r.key}`}>
+                <View style={[styles.td, styles.tdName]}>
+                  <Text style={styles.name}>{r.name}</Text>
+                  {r.sub ? <Text style={styles.sub}>{r.sub}</Text> : null}
+                </View>
+                <View style={styles.td}>{bar(r.maison, colors.brandPrimary)}</View>
+                <View style={styles.td}>{bar(r.appartement, colors.brandSecondary)}</View>
+                {isTablet ? <Text style={[styles.tdSmall, styles.num, styles.sub]}>{formatInt(r.count)}</Text> : null}
+                <View style={styles.tdChevron}><CaretRightIcon size={16} color={colors.muted} /></View>
+              </Pressable>
+            </Link>
+          </View>
+        ))}
       </View>
-      {rows.map((r) => (
-        <Link key={r.key} href={r.href as any} asChild>
-          <Pressable accessibilityRole="link" style={({ hovered }: any) => [styles.tr, hovered && styles.trHover]} testID={`price-row-${r.key}`}>
-            <View style={[styles.td, styles.tdName]}>
-              <Text style={styles.name}>{r.name}</Text>
-              {r.sub ? <Text style={styles.sub}>{r.sub}</Text> : null}
-            </View>
-            <Text style={[styles.td, styles.num]}>{pm2(r.maison)}</Text>
-            <Text style={[styles.td, styles.num]}>{pm2(r.appartement)}</Text>
-            {isTablet ? <Text style={[styles.td, styles.num, styles.sub]}>{formatInt(r.count)}</Text> : null}
-          </Pressable>
-        </Link>
-      ))}
+      <View style={styles.legendRow}>
+        <View style={[styles.legendDot, { backgroundColor: colors.brandPrimary }]} /><Text style={styles.sub}>Maisons</Text>
+        <View style={[styles.legendDot, { backgroundColor: colors.brandSecondary, marginLeft: spacing.md }]} /><Text style={styles.sub}>Appartements</Text>
+        <Text style={[styles.sub, { marginLeft: "auto" }]}>Barres proportionnelles au prix médian le plus élevé du tableau</Text>
+      </View>
     </View>
   );
 }
 
 export function DeptsPage() {
   const styles = useStyles();
+  const { isDesktop } = useBreakpoint();
   const q = useQuery({ queryKey: ["public-depts"], queryFn: api.publicDepts, staleTime: 3600_000 });
   const rows = (q.data?.departements ?? []).map((d: PublicDept) => ({ key: d.code, href: `/prix-immobilier/${d.code}`, name: `${d.name} (${d.code})`, maison: d.maison, appartement: d.appartement, count: d.count }));
   return (
     <PublicPage title="Prix immobilier par département et par commune (ventes réelles DVF)" description="Prix médian au m² des maisons et appartements dans chaque département et commune de France, calculé sur les ventes réelles des 3 dernières années (DVF)." path="/prix-immobilier" testID="prices-depts">
-      <Text style={styles.h1} accessibilityRole="header">Prix immobilier en France : €/m² par département</Text>
-      <Text style={styles.intro}>Médianes calculées sur les ventes réelles publiées par l’État (DVF){q.data ? `, millésimes ${q.data.years[0]}–${q.data.years[1]}` : ""}. Cliquez sur un département pour voir le prix au m² de chaque commune.</Text>
-      {q.isLoading ? <Loading /> : <PriceTable rows={rows} testID="depts-table" />}
+      <View style={[styles.hero, isDesktop && { flexDirection: "row", alignItems: "center" }]}>
+        <View style={[{ gap: spacing.md }, isDesktop && { flex: 1 }]}>
+          <Text style={styles.kicker}>OBSERVATOIRE DES PRIX · DONNÉES PUBLIQUES DVF</Text>
+          <Text style={styles.h1} accessibilityRole="header">Prix immobilier en France : €/m² par département et par commune</Text>
+          <Text style={styles.intro}>Médianes calculées sur les ventes réelles enregistrées par les notaires et publiées par l’État (DVF){q.data ? `, millésimes ${q.data.years[0]}–${q.data.years[1]}` : ""} — pas sur les prix affichés dans les annonces. Cliquez sur un département pour voir chaque commune.</Text>
+          {q.data ? (
+            <View style={styles.kpis}>
+              <View style={styles.kpi}><Text style={styles.kpiValue}>{formatInt(rows.length)}</Text><Text style={styles.kpiLabel}>départements</Text></View>
+              <View style={styles.kpi}><Text style={styles.kpiValue}>{formatInt(rows.reduce((n, r) => n + r.count, 0))}</Text><Text style={styles.kpiLabel}>ventes analysées</Text></View>
+              <View style={styles.kpi}><Text style={styles.kpiValue}>{q.data.years[0]}–{q.data.years[1]}</Text><Text style={styles.kpiLabel}>millésimes</Text></View>
+            </View>
+          ) : null}
+        </View>
+        <Image source={MAP_IMG} style={[styles.heroImage, isDesktop && { flex: 0.9 }]} contentFit="cover" accessibilityLabel="Carte des ventes réelles autour d’une adresse" />
+      </View>
+      {q.isLoading ? <Loading /> : <PriceTable rows={rows} testID="depts-table" searchable />}
       <FreeEstimate />
     </PublicPage>
   );
@@ -86,7 +136,7 @@ export function DeptPage({ dept }: { dept: string }) {
             <Stat label="Appartements" stat={d.appartement} testID="dept-stat-appartement" />
           </View>
           <Text style={styles.intro}>Prix au m² par commune ({d.communes.length} communes avec des ventes, millésimes {d.years[0]}–{d.years[1]}), classées par nombre de ventes.</Text>
-          <PriceTable rows={rows} testID="communes-table" />
+          <PriceTable rows={rows} testID="communes-table" searchable />
         </>
       ) : <Text style={styles.intro}>Département introuvable.</Text>}
       <FreeEstimate />
@@ -158,7 +208,27 @@ export function CommunePage({ dept, insee }: { dept: string; insee: string }) {
 }
 
 const useStyles = makeStyles((colors) => ({
-  h1: { fontFamily: fonts.bold, fontSize: 30, lineHeight: 38, color: colors.onSurface },
+  h1: { fontFamily: fonts.extrabold, fontSize: 30, lineHeight: 38, color: colors.onSurface },
+  kicker: { fontFamily: fonts.bold, fontSize: 12, letterSpacing: 1, color: colors.brandPrimary },
+  hero: { gap: spacing.xl },
+  heroImage: { width: "100%", aspectRatio: 1.4, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary },
+  kpis: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  kpi: { flex: 1, minWidth: 140, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, gap: 2 },
+  kpiValue: { fontFamily: fonts.extrabold, fontSize: 22, color: colors.brandPrimary },
+  kpiLabel: { fontFamily: fonts.medium, fontSize: 12, color: colors.muted },
+  search: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill, paddingHorizontal: spacing.md, minHeight: 48 },
+  searchInput: { flex: 1, fontFamily: fonts.regular, fontSize: 15, color: colors.onSurface, minHeight: 44 },
+  clear: { fontFamily: fonts.semibold, fontSize: 13, color: colors.brandPrimary },
+  empty: { fontFamily: fonts.medium, fontSize: 14, color: colors.muted, padding: spacing.lg, textAlign: "center" },
+  barWrap: { gap: 4, alignItems: "flex-end" },
+  barTrack: { width: "100%", height: 6, borderRadius: 3, backgroundColor: colors.border, overflow: "hidden" },
+  barFill: { height: "100%", borderRadius: 3 },
+  tdSmall: { width: 72, paddingVertical: spacing.sm },
+  tdChevron: { width: 24, alignItems: "flex-end" },
+  thRight: { textAlign: "right" },
+  trAlt: { backgroundColor: colors.surfaceSecondary },
+  legendRow: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" },
+  legendDot: { width: 10, height: 10, borderRadius: 5 },
   h2: { fontFamily: fonts.bold, fontSize: 21, lineHeight: 28, color: colors.onSurface },
   intro: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 25, color: colors.onSurfaceTertiary },
   crumb: { fontFamily: fonts.semibold, fontSize: 14, color: colors.brandPrimary, minHeight: 36, lineHeight: 36 },
@@ -169,9 +239,8 @@ const useStyles = makeStyles((colors) => ({
   statValue: { fontFamily: fonts.bold, fontSize: 30, color: colors.onBrandTertiary },
   statSub: { fontFamily: fonts.regular, fontSize: 13, color: colors.onBrandTertiary },
   table: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, overflow: "hidden" },
-  tr: { flexDirection: "row", alignItems: "center", minHeight: 48, paddingHorizontal: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.surface },
-  trHover: { backgroundColor: colors.surfaceSecondary },
-  th: { backgroundColor: colors.surfaceSecondary },
+  tr: { flexDirection: "row", alignItems: "center", gap: spacing.md, minHeight: 56, paddingHorizontal: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
+  th: { backgroundColor: colors.surfaceSecondary, minHeight: 44 },
   thText: { fontFamily: fonts.semibold, fontSize: 12, textTransform: "uppercase", letterSpacing: 0.5, color: colors.muted },
   td: { flex: 1, paddingVertical: spacing.sm },
   tdName: { flex: 2 },

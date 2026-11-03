@@ -62,7 +62,7 @@ export function PublicPage({ title, description, path, jsonLd, testID, children 
             <View style={styles.navRow}>
               {NAV_LINKS.map((l) => (
                 <Link key={l.href} href={l.href} asChild>
-                  <Pressable accessibilityRole="link" style={({ hovered }: any) => [styles.navItem, hovered && styles.navItemHover]}>
+                  <Pressable accessibilityRole="link" style={styles.navItem}>
                     <Text style={styles.navText}>{l.label}</Text>
                   </Pressable>
                 </Link>
@@ -108,7 +108,6 @@ const useStyles = makeStyles((colors) => ({
   brandWordmark: { width: 138, height: 36 },
   navRow: { flex: 1, flexDirection: "row", justifyContent: "center", gap: spacing.xs },
   navItem: { paddingHorizontal: spacing.md, minHeight: 44, justifyContent: "center", borderRadius: radius.md },
-  navItemHover: { backgroundColor: colors.surfaceSecondary },
   navText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.onSurfaceSecondary },
   cta: { marginLeft: "auto", minHeight: 44, paddingHorizontal: spacing.lg, borderRadius: radius.pill, backgroundColor: colors.brandPrimary, justifyContent: "center" },
   ctaText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.onBrandPrimary },

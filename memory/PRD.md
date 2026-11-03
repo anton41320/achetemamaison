@@ -220,3 +220,7 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 ## 2026-11-03 — Environnement : libellés OSM en français, piscines privées exclues
 - `environment/osm.py` : `VALUE_FR`/`SPORT_FR` (ex. `leisure=swimming_pool` → « Piscine », `pitch`+`sport=tennis` → « Terrain de tennis ») ; `_is_private_amenity` exclut `access=private/no` et les piscines sans nom (piscines de jardin). `analyze.py` utilise `label`.
 - `server.py` : `ENV_ANALYSIS_VERSION = 2` stocké dans `env_analyses.version` ; un dossier en cache d'une version antérieure est recalculé automatiquement à l'ouverture (job 202 → 200).
+
+## 2026-11-03 — Page /prix-immobilier refaite
+- Bug : `Link asChild` + `Pressable style={fn}` perd le style sur web (lignes empilées). Corrigé dans `PricePages.tsx` (style statique, zébrage via View parent) et `PublicPage.tsx` (nav).
+- `PricePages.tsx` : hero (kicker, titre, intro, 3 KPI : départements / ventes analysées / millésimes, visuel map-data), champ de recherche (accents ignorés) sur départements et communes, barres de prix proportionnelles maison/appartement, colonne ventes, chevron, zébrage, légende.
