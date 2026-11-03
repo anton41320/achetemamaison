@@ -224,3 +224,4 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 ## 2026-11-03 — Page /prix-immobilier refaite
 - Bug : `Link asChild` + `Pressable style={fn}` perd le style sur web (lignes empilées). Corrigé dans `PricePages.tsx` (style statique, zébrage via View parent) et `PublicPage.tsx` (nav).
 - `PricePages.tsx` : hero (kicker, titre, intro, 3 KPI : départements / ventes analysées / millésimes, visuel map-data), champ de recherche (accents ignorés) sur départements et communes, barres de prix proportionnelles maison/appartement, colonne ventes, chevron, zébrage, légende.
+- `scripts/gen_founder_portrait.py` → `fondateur-1.jpg` (devant un pavillon, clés + téléphone) et `fondateur-2.jpg` (table de cuisine, dossier bleu) : portrait FICTIF ~50 ans, rendu smartphone. Servis via `/api/public/visuels/`.
