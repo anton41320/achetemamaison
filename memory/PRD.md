@@ -226,3 +226,7 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 - `PricePages.tsx` : hero (kicker, titre, intro, 3 KPI : départements / ventes analysées / millésimes, visuel map-data), champ de recherche (accents ignorés) sur départements et communes, barres de prix proportionnelles maison/appartement, colonne ventes, chevron, zébrage, légende.
 - `scripts/gen_founder_portrait.py` → `fondateur-1.jpg` (devant un pavillon, clés + téléphone) et `fondateur-2.jpg` (table de cuisine, dossier bleu) : portrait FICTIF ~50 ans, rendu smartphone. Servis via `/api/public/visuels/`.
 - `scripts/gen_founder_from_ref.py <photo>` : portrait inspiré d'une photo de référence de l'utilisateur (allure), visage volontairement différent → `fondateur-3/4` (trop ressemblants) et `fondateur-5/6` (non reconnaissables, polo). Servis via `/api/public/visuels/`.
+
+## Mentions légales (juin 2026)
+- Éditeur renseigné dans `frontend/src/web/legalContent.ts` (EDITOR) et `app/privacy.tsx` : Nymbrum Corporation, SAS 1 000 €, SIRET 132 452 947 00014, RCS Blois, TVA FR02132452947, siège 731 route de Touchebrault 41230 Soings-en-Sologne, directeurs de publication S. Ghelfi & A. Goemaere.
+- Bundle web régénéré (`scripts/build-web.sh`) → projet web secondaire à mettre à jour.

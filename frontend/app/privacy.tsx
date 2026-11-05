@@ -13,7 +13,7 @@ const SECTIONS: { title: string; body: string[] }[] = [
   {
     title: "1. Qui sommes-nous ?",
     body: [
-      `${APP_NAME} est une application destinée aux particuliers qui souhaitent estimer puis préparer la vente de leur logement. L’éditeur de l’application est responsable du traitement de vos données. Contact : ${SUPPORT_EMAIL}.`,
+      `${APP_NAME} est une application destinée aux particuliers qui souhaitent estimer puis préparer la vente de leur logement. Elle est éditée par Nymbrum Corporation, SAS au capital de 1 000 €, RCS Blois 132 452 947, dont le siège social est situé 731 route de Touchebrault, 41230 Soings-en-Sologne, responsable du traitement de vos données. Contact : ${SUPPORT_EMAIL}.`,
     ],
   },
   {

@@ -2,13 +2,12 @@ import type { SeoPageContent } from "@/src/web/seoContent";
 
 const BRAND = "Achète ma maison";
 const CONTACT = "contact@achetemamaison.fr";
-/** Informations éditeur à compléter par l'exploitant du site (marquées [À COMPLÉTER]). */
 const EDITOR = {
-  raison: "[À COMPLÉTER : raison sociale ou nom de l’exploitant]",
-  forme: "[À COMPLÉTER : forme juridique et capital, ou « entrepreneur individuel »]",
-  siret: "[À COMPLÉTER : n° SIREN/SIRET et, le cas échéant, n° de TVA intracommunautaire]",
-  adresse: "[À COMPLÉTER : adresse du siège]",
-  directeur: "[À COMPLÉTER : nom du directeur de la publication]",
+  raison: "Nymbrum Corporation",
+  forme: "SAS au capital de 1 000 €",
+  siret: "SIRET 132 452 947 00014 — RCS Blois 132 452 947 — TVA intracommunautaire FR02132452947",
+  adresse: "731 route de Touchebrault, 41230 Soings-en-Sologne, France",
+  directeur: "Sébastien Ghelfi et Anthony Goemaere",
 };
 
 export const LEGAL_PAGES: Record<string, SeoPageContent> = {
@@ -24,8 +23,8 @@ export const LEGAL_PAGES: Record<string, SeoPageContent> = {
       { h2: "Éditeur du site", paragraphs: [
         `${EDITOR.raison} — ${EDITOR.forme}.`,
         `${EDITOR.siret}.`,
-        `Siège : ${EDITOR.adresse}.`,
-        `Directeur de la publication : ${EDITOR.directeur}.`,
+        `Siège social : ${EDITOR.adresse}.`,
+        `Directeurs de la publication : ${EDITOR.directeur}.`,
         `Contact : ${CONTACT}.`,
       ] },
       { h2: "Hébergement", paragraphs: [
