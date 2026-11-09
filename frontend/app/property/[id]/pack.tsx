@@ -179,7 +179,9 @@ export default function PackScreen() {
             <View style={styles.priceCard} testID="pack-offer">
               <Text style={styles.priceKicker}>Paiement unique · ce bien</Text>
               <Text style={styles.price}>49 €</Text>
-              <Text style={styles.priceSub}>TTC · carte bancaire via Stripe · sans abonnement</Text>
+              <Text style={styles.priceSub}>
+                {Platform.OS === "web" ? "TTC · carte bancaire via Stripe · sans abonnement" : `TTC · achat intégré ${Platform.OS === "ios" ? "App Store" : "Google Play"} · sans abonnement`}
+              </Text>
               {d.mode === "test" ? (
                 <View style={styles.testBadge} testID="pack-test-mode">
                   <Text style={styles.testBadgeText}>Mode test Stripe — aucun débit réel</Text>
