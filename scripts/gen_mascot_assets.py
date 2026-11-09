@@ -18,7 +18,7 @@ POSES = {
 }
 
 
-def radial_alpha(size: int, inner: float = 0.58, outer: float = 0.98) -> Image.Image:
+def radial_alpha(size: int, inner: float = 0.74, outer: float = 1.0) -> Image.Image:
     y, x = np.mgrid[0:size, 0:size].astype(np.float32)
     c = (size - 1) / 2
     r = np.sqrt((x - c) ** 2 + (y - c) ** 2) / c
