@@ -7,6 +7,7 @@ publique (prix, surface, date, commune) et les ventes affichées sont agrégées
 from __future__ import annotations
 
 import asyncio
+import re
 import time
 from pathlib import Path
 from datetime import datetime, timezone
@@ -188,6 +189,18 @@ async def web_bundle():
     if not path.exists():
         raise HTTPException(status_code=404, detail="Bundle non généré (scripts/build-web.sh)")
     return FileResponse(path, media_type="application/zip", filename="web-bundle.zip")
+
+
+@router.get("/media/{name}", include_in_schema=False)
+async def media_file(name: str):
+    """Supports marketing générés (vidéos, visuels) déposés dans backend/media."""
+    if "/" in name or name.startswith(".") or not re.fullmatch(r"[A-Za-z0-9._-]+", name):
+        raise HTTPException(status_code=404)
+    path = Path(__file__).parent / "media" / name
+    if not path.is_file():
+        raise HTTPException(status_code=404)
+    return FileResponse(path, filename=name)
+
 
 
 VISUALS_DIR = Path(__file__).parent.parent / "frontend" / "assets" / "images"

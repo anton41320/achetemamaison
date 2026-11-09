@@ -236,3 +236,4 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 - Placements : web accueil (héros + bloc CTA), pages étapes 1/2/3 (`tip` dans stepContent.ts), résultat estimation web (FreeEstimate) ; app : welcome (si hauteur ≥ 720), accueil vide, résultat estimation gratuite, fiche bien (après FinalEstimateCard), écran Pack (non débloqué), Photos vide.
 - Image Open Graph `public/app-image.png` remplacée (1200×630, générée par `gen_social_visuals.og_image()`), balises og/twitter absolues dans `app/+html.tsx`.
 - Testé : iteration_30 (tous les placements OK ; correctifs layout colonne web + mascotte FreeEstimate appliqués).
+- Vidéo marketing « estimation rapide » (24 s, 1080×1920) générée par `scripts/gen_estimation_video.py` → `backend/media/estimation-rapide.mp4`, servie par `GET /api/public/media/{name}` (nouveau, public_prices.py). `imageio-ffmpeg` installé (requirements à figer si réutilisé).
