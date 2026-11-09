@@ -4,6 +4,7 @@ import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon } from "phosphor-react-n
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { EstimateDemo } from "@/src/components/EstimateDemo";
+import { MascotTip } from "@/src/components/MascotTip";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { ReviewsSection } from "@/src/components/ReviewsSection";
 import { StoreBadges } from "@/src/components/StoreBadges";
@@ -79,6 +80,7 @@ export function StepPage({ step }: { step: StepContent }) {
           </View>
           <Text style={styles.h1} accessibilityRole="header">{step.h1}</Text>
           <Text style={styles.intro}>{step.intro}</Text>
+          <MascotTip pose={step.tip.pose} text={step.tip.text} size={88} testID={`step-mascot-${step.n}`} />
           <PrimaryButton title={step.cta.label} onPress={() => router.navigate(step.cta.href as any)} testID="step-cta-top" />
         </View>
         {step.n === 1 ? (

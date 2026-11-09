@@ -1,0 +1,36 @@
+{
+  "summary": "Frontend-only test of the Noisette mascot (MascotTip) on the public EXPO_PUBLIC_BACKEND_URL domain, at 390x844 and 1280x900 (plus a /welcome check at 375x667). All 13 requested testIDs are present. Each one shows the webp image loaded (naturalWidth 560), the bubble with the name NOISETTE, and the tip text. There is no horizontal overflow, no failed request and no webp 404 on any screen; the only console warnings are the existing shadow*/pointerEvents deprecation warnings. PASS at 390 and 1280: landing-mascot-hero, landing-mascot-pack, step-mascot-1, step-mascot-2 and step-mascot-3. PASS: welcome-mascot (390 and 375); the welcome-estimate-button and welcome-signin-button buttons stay in the viewport and do not overlap each other. PASS (delivered@resend.dev): estimate-mascot on /property/6ae1be309ae9533e73fd2ee9 and photos-mascot in photos-empty. PASS (new TEST account): home-mascot in home-empty-state at 390, pack-mascot above pack-offer at 390 and 1280, and photos-mascot at 1280. PASS: free-result-mascot on /estimate-free at 390 and 1280. Two problems found. (1) In the column layout, used by home-mascot and photos-mascot, the bubble overlaps the bottom of the image and the pointer arrow is drawn over the middle of the text. (2) The web estimation form on /accueil (src/web/FreeEstimate.tsx) has no mascot on its result.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "MascotTip layout='column'", "testID": "home-mascot, photos-mascot", "priority": "HIGH", "issue": "On web, the bubbleWrapColumn style `flex: 0` gives the bubble wrapper a height of 0. Measured for home-mascot: image 206-356px, wrapper 360-360px. Because the wrapper also has justifyContent:center, the bubble is centred on a zero-height box. It overflows about 50px upwards over the squirrel and hides its lower half. The pointerUp diamond (top:-6, zIndex 1) is then drawn in the middle of the bubble text, over 'Noi|sette' on home and 'pi|èce' / 'ran|gée' on photos. Visible at 390 and 1280. Reference: /app/frontend/src/components/MascotTip.tsx:62. Suggested fix: replace `flex: 0` with `flexGrow: 0, flexShrink: 0, flexBasis: 'auto'`, or set `flex: undefined` and keep alignSelf stretch."}
+    ],
+    "integration_issues": [
+      {"flow": "Free estimate on web /accueil (also /estimation-maison and other pages that embed src/web/FreeEstimate.tsx)", "issue": "The free-result block in src/web/FreeEstimate.tsx has no MascotTip; free-result-mascot count = 0 after a full estimate on /accueil at 1280 (98 000 €). Only app/estimate-free.tsx shows the mascot. The review request expects free-result-mascot on the web result too.", "affected_testIDs": ["free-result-mascot", "free-result"]}
+    ],
+    "design_issues": [
+      {"screen": "/welcome at 375x667 (iPhone SE size)", "issues": ["The welcome-mascot block (101px) pushes the slide content down. The slide description and the 'Étape suivante' chip are hidden behind the bottom buttons, so only the title is visible. At 390x844 it fits. Consider a smaller mascot or hiding the bubble when the viewport height is under about 700px."]},
+      {"screen": "/estimate-free result at 1280 desktop", "issues": ["The free-result-mascot bubble stretches to 1248px wide as a single long line because the result column has no maxWidth. It still reads correctly, but a maxWidth would look better."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Fix the MascotTip column layout: bubbleWrapColumn `flex: 0` collapses to height 0 on web, so the bubble overlaps the image and the pointer is drawn over the text (MascotTip.tsx:62). Then re-check home-mascot and photos-mascot.",
+    "Add a MascotTip (testID free-result-mascot) to the result in src/web/FreeEstimate.tsx so the web /accueil and /estimation-maison estimation result shows Noisette too.",
+    "Optional: make /welcome fit a 667px-high viewport with the mascot.",
+    "Optional: cap the width of the free-result mascot on desktop."
+  ],
+  "critical_code_review_comments": [
+    "MascotTip uses expo-image with require()d webp files. All 4 poses load correctly on web (560px source), the files total about 220 KB, and accessibilityLabels are present.",
+    "The delivered@resend.dev account has the pack unlocked on every bien (pack/status unlocked=true), so pack-mascot can only be tested with a fresh account.",
+    "ReviewPromptModal opens over the property page right after it loads, covering the estimate-mascot area. This is existing behaviour and not part of the mascot change."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (not requested)", "frontend": "87% (13/13 testIDs render with the image loaded; 1 layout bug on the 2 column-layout instances; mascot missing on the web FreeEstimate result)"},
+  "seed_data_creation": "Created test_mascot_1794220722@example.com / Testeur2026! and property 6af1a2b8e5593d0a5c7f4e32 (via API) to test pack-mascot. Both were deleted afterwards (DELETE property 200, DELETE /api/auth/account 200). No data of delivered@resend.dev was modified.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "To check a MascotTip: the element with the testID contains an <img> with naturalWidth>0 and innerText starting with 'NOISETTE'. For the column layout, check that the second child (bubble wrapper) has height > 0 and that its top is at or below the img bottom. delivered@resend.dev has the pack unlocked, so to see pack-offer and pack-mascot, sign up a new user and POST /api/properties with {address_label:'5 Rue du Commerce 41000 Blois', lat:47.588, lon:1.335, code_commune:'41018', commune:'Blois', postcode:'41000', property_type:'appartement', surface:60, rooms:3, bedrooms:2, condition:'bon'} using the localStorage token 'estimo_session_token'. The free estimate wizard steps are: address-input, then address-result-0, then step-continue-button, then surface-input, then step-continue-button twice, then estimate-submit-button. In browser_automation, screenshot paths must be plain string literals (f-strings or concatenation break the tool).",
+  "rca_of_issue": "Column bubble overlap: React Native Web turns `flex: 0` into flex-basis 0, so in a column flex container the wrapper's height becomes 0. With justifyContent:center the bubble overflows half above and half below that 0px line, which puts it over the image, and the absolutely positioned pointer (top:-6) ends up in the middle of the text. Native platforms treat flex:0 as sizing to content, so the bug is mainly on web."
+}

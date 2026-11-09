@@ -24,6 +24,8 @@ export type StepContent = {
   hero: ImageSourcePropType;
   blocks: StepBlock[];
   cta: { label: string; href: string };
+  /** Conseil de la mascotte Noisette affiché sous l'introduction. */
+  tip: { pose: "pouce" | "telephone" | "noisettes" | "course"; text: string };
 };
 
 export const STEP_PAGES: StepContent[] = [
@@ -58,6 +60,7 @@ export const STEP_PAGES: StepContent[] = [
       },
     ],
     cta: { label: "Estimer mon bien gratuitement", href: "/estimation-maison" },
+    tip: { pose: "pouce", text: "Mon conseil : renseignez bien l’état général et l’année de construction, ce sont les critères qui affinent le plus votre estimation." },
   },
   {
     n: 2,
@@ -96,6 +99,7 @@ export const STEP_PAGES: StepContent[] = [
       },
     ],
     cta: { label: "Commencer par mon estimation", href: "/estimation-maison" },
+    tip: { pose: "course", text: "Prenez vos photos en pleine journée, volets ouverts et pièces rangées : la retouche IA fera le reste. Une annonce bien présentée, c’est deux fois plus de visites." },
   },
   {
     n: 3,
@@ -128,6 +132,7 @@ export const STEP_PAGES: StepContent[] = [
       },
     ],
     cta: { label: "Démarrer mon dossier de vente", href: "/estimation-maison" },
+    tip: { pose: "noisettes", text: "Rassemblez vos diagnostics dès maintenant : un dossier complet rassure l’acheteur, accélère le notaire… et vos noisettes restent chez vous." },
   },
 ];
 

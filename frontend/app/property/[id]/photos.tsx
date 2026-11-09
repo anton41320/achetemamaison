@@ -14,6 +14,7 @@ import { useBreakpoint } from "@/src/web/useBreakpoint";
 
 import { PHOTO_LABELS, Photo, PhotoLabel, api, fileUrl, uploadPhoto } from "@/src/api";
 import { ImageViewerModal } from "@/src/components/ImageViewerModal";
+import { MascotTip } from "@/src/components/MascotTip";
 import { PremiumGate, usePackUnlocked } from "@/src/components/PremiumGate";
 import { PhotoOrderCard } from "@/src/components/PhotoOrderCard";
 import { PhotoTutorialCard } from "@/src/components/PhotoTutorialCard";
@@ -354,7 +355,13 @@ export default function PhotosScreen() {
           <View style={styles.skeleton} />
         ) : !photos.data || photos.data.length === 0 ? (
           <View style={styles.empty} testID="photos-empty">
-            <ImagesIcon size={40} color={colors.muted} weight="thin" />
+            <MascotTip
+              pose="course"
+              layout="column"
+              size={130}
+              text="Photographiez chaque pièce en pleine journée, volets ouverts et rangée : je m’occupe de la retouche."
+              testID="photos-mascot"
+            />
             <Text style={styles.emptyTitle}>Aucune photo</Text>
             <Text style={styles.hint}>Ajoutez une photo de votre bien pour la retoucher avec l’IA.</Text>
           </View>

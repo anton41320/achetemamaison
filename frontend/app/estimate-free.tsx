@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { PropertyIn, api, formatEuro, formatInt } from "@/src/api";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
+import { MascotTip } from "@/src/components/MascotTip";
 import { ReviewPromptModal } from "@/src/components/ReviewPromptModal";
 import { PropertyWizard, WIZARD_STEPS } from "@/src/components/PropertyWizard";
 import { ScreenHeader } from "@/src/components/ScreenHeader";
@@ -76,6 +77,12 @@ export default function FreeEstimateScreen() {
               {est.confidence.n_comparables} ventes comparables ({est.confidence.radius_label}) · {body.property_type === "maison" ? "Maison" : "Appartement"} {body.surface} m² · {body.rooms} pièces
             </Text>
           </View>
+          <MascotTip
+            pose="pouce"
+            size={88}
+            text="Bravo, votre estimation est prête ! Créez un compte gratuit pour l’enregistrer et découvrir l’environnement de votre bien."
+            testID="free-result-mascot"
+          />
           {shown.length > 0 ? (
             <View style={styles.block} testID="free-adjustments">
               <Text style={styles.blockTitle}>Ajustements appliqués</Text>

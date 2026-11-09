@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TYPE_LABELS, api, formatEuro, formatInt, formatK, formatPct } from "@/src/api";
 import { CompletionBadge } from "@/src/components/CompletionBadge";
 import { FinalEstimateCard } from "@/src/components/FinalEstimateCard";
+import { MascotTip } from "@/src/components/MascotTip";
 import { HedonicCard } from "@/src/components/HedonicCard";
 import { MarketSignalCard } from "@/src/components/MarketSignalCard";
 import { MlCard } from "@/src/components/MlCard";
@@ -286,6 +287,15 @@ export default function PropertyDetailScreen() {
                 <FinalEstimateCard estimation={est} />
               </Animated.View>
             ) : null}
+
+            <Animated.View entering={FadeInDown.delay(355).duration(320)}>
+              <MascotTip
+                pose="pouce"
+                size={88}
+                text="Estimation terminée ! Prochaine étape : consultez l’environnement du bien, puis fixez votre prix cible pour préparer la mise en vente."
+                testID="estimate-mascot"
+              />
+            </Animated.View>
 
             {/* Market trend */}
             <Animated.View entering={FadeInDown.delay(360).duration(320)}>

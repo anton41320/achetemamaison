@@ -116,3 +116,8 @@
 - Backend : `POST /api/analyze` (adresse libre), `GET /api/properties/{id}/environment` (≈30 s la 1re fois, puis cache ; `?refresh=true`). Ré-estimation automatique avec ajustements `env_*` dans `estimation.adjustments`.
 - Frontend : écran `/property/{id}/environment` (testIDs environment-loading, environment-map, environment-impact, environment-impact-pct, env-section-*, env-toggle-*, environment-sources, environment-refresh), bouton `environment-button` sur la fiche bien.
 - Géorisques et Overpass peuvent être injoignables : l'analyse doit quand même aboutir (sections « indisponible »).
+
+## Iteration 25 — Mascotte « Noisette » (main agent, 2026-06)
+- Nouveau composant `src/components/MascotTip.tsx` (vignette ronde fondue + bulle de conseil « NOISETTE »). Assets `assets/mascot/noisette-{pouce,telephone,noisettes,course}.webp`.
+- Placements (testIDs) : web accueil `landing-mascot-hero` (au-dessus du formulaire), `landing-mascot-pack` (bloc CTA bleu) ; pages étapes `step-mascot-1/2/3` ; app : `welcome-mascot` (/welcome mobile), `home-mascot` (accueil sans bien), `free-result-mascot` (résultat estimation gratuite), `estimate-mascot` (fiche bien, après FinalEstimateCard), `pack-mascot` (écran Pack non débloqué), `photos-mascot` (écran Photos sans photo).
+- Comptes : delivered@resend.dev / Estimo2026! (biens existants, pack NON débloqué → pack-mascot visible) ; demo@achetemamaison.fr / Premium2026! (pack débloqué).

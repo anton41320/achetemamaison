@@ -5,6 +5,7 @@ import { Pressable, Text, View } from "react-native";
 
 import { BrandDash } from "@/src/components/BrandMarks";
 import { EstimateDemo } from "@/src/components/EstimateDemo";
+import { MascotTip } from "@/src/components/MascotTip";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { ReviewsSection } from "@/src/components/ReviewsSection";
 import { StoreBadges } from "@/src/components/StoreBadges";
@@ -108,6 +109,13 @@ export function LandingPage() {
         </View>
         <View style={[styles.heroForm, isDesktop && { flexDirection: "row", alignItems: "flex-start", gap: spacing.xl }]}>
           <View style={isDesktop ? { flex: 1.25 } : { width: "100%" }}>
+            <MascotTip
+              pose="telephone"
+              text="Bonjour, moi c’est Noisette ! Commencez par l’estimation : gratuite, en 2 minutes, sans inscription. Je vous guide ensuite jusqu’à la vente."
+              size={104}
+              style={{ marginBottom: spacing.md }}
+              testID="landing-mascot-hero"
+            />
             <FreeEstimate />
           </View>
           <View style={isDesktop ? { flex: 0.75 } : { width: "100%" }} testID="landing-demo">
@@ -178,6 +186,13 @@ export function LandingPage() {
       <ReviewsSection row={isTablet} />
 
       <View style={styles.ctaBlock} testID="landing-cta">
+        <MascotTip
+          pose="noisettes"
+          text="Pas d’agence, pas de commission : 49 € une fois pour tous les outils, et vos noisettes restent chez vous."
+          size={96}
+          style={{ width: "100%", maxWidth: 560 }}
+          testID="landing-mascot-pack"
+        />
         <Text style={styles.ctaTitle}>Prêt à connaître la valeur de votre bien ?</Text>
         <Text style={styles.ctaText}>Estimation gratuite en 2 minutes, puis créez votre compte pour sauvegarder le bien et préparer la vente — sur le site comme dans l’application mobile.</Text>
         <View style={[styles.ctaRow, isTablet && { flexDirection: "row" }]}>

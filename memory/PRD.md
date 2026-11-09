@@ -230,3 +230,9 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 ## Mentions légales (juin 2026)
 - Éditeur renseigné dans `frontend/src/web/legalContent.ts` (EDITOR) et `app/privacy.tsx` : Nymbrum Corporation, SAS 1 000 €, SIRET 132 452 947 00014, RCS Blois, TVA FR02132452947, siège 731 route de Touchebrault 41230 Soings-en-Sologne, directeurs de publication S. Ghelfi & A. Goemaere.
 - Bundle web régénéré (`scripts/build-web.sh`) → projet web secondaire à mettre à jour.
+
+## Mascotte « Noisette » (juin 2026)
+- Composant `frontend/src/components/MascotTip.tsx` (vignette ronde fondue + bulle « NOISETTE », layouts row/column). Assets générés par `scripts/gen_mascot_assets.py` → `frontend/assets/mascot/noisette-{pouce,telephone,noisettes,course}.webp` (fondu alpha circulaire).
+- Placements : web accueil (héros + bloc CTA), pages étapes 1/2/3 (`tip` dans stepContent.ts), résultat estimation web (FreeEstimate) ; app : welcome (si hauteur ≥ 720), accueil vide, résultat estimation gratuite, fiche bien (après FinalEstimateCard), écran Pack (non débloqué), Photos vide.
+- Image Open Graph `public/app-image.png` remplacée (1200×630, générée par `gen_social_visuals.og_image()`), balises og/twitter absolues dans `app/+html.tsx`.
+- Testé : iteration_30 (tous les placements OK ; correctifs layout colonne web + mascotte FreeEstimate appliqués).

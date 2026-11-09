@@ -1,12 +1,13 @@
 import { Redirect, useRouter } from "expo-router";
 import { ArrowRightIcon, ChartLineUpIcon, FolderOpenIcon, HandshakeIcon } from "phosphor-react-native";
 import { useRef, useState } from "react";
-import { Dimensions, FlatList, Pressable, Text, View } from "react-native";
+import { Dimensions, FlatList, Pressable, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useSession } from "@/src/auth";
 import { useBreakpoint } from "@/src/web/useBreakpoint";
 import { BrandLogo } from "@/src/components/BrandLogo";
+import { MascotTip } from "@/src/components/MascotTip";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 
@@ -31,6 +32,7 @@ export default function WelcomeScreen() {
   const listRef = useRef<FlatList>(null);
   // Largeur mesurée du conteneur (sur le Web « ordinateur », l'écran est affiché dans une carte centrée plus étroite que la fenêtre).
   const [width, setWidth] = useState(Dimensions.get("window").width);
+  const { height } = useWindowDimensions();
 
   const goTo = (i: number) => {
     listRef.current?.scrollToIndex({ index: i, animated: true });
@@ -44,8 +46,17 @@ export default function WelcomeScreen() {
   return (
     <View style={[styles.screen, { paddingTop: insets.top, paddingBottom: insets.bottom + spacing.lg }]} testID="welcome-screen">
       <View style={styles.brand}>
-        <BrandLogo size={96} wordmark="column" testID="welcome-logo" />
+        <BrandLogo size={80} wordmark="column" testID="welcome-logo" />
       </View>
+      {height >= 720 ? (
+        <MascotTip
+          pose="telephone"
+          size={72}
+          text="Moi c’est Noisette : je vous guide de l’estimation gratuite jusqu’à la vente, sans agence."
+          style={styles.mascot}
+          testID="welcome-mascot"
+        />
+      ) : null}
 
       <View style={styles.stepper} testID="welcome-stepper">
         {STEPS.map((s, i) => (
@@ -115,6 +126,7 @@ export default function WelcomeScreen() {
 const useStyles = makeStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.surface },
   brand: { alignItems: "center", marginTop: spacing.md },
+  mascot: { paddingHorizontal: spacing.lg, marginTop: spacing.md },
   stepper: { flexDirection: "row", paddingHorizontal: spacing.lg, marginTop: spacing.lg },
   stepItem: { flex: 1, alignItems: "center", gap: 6, minHeight: 56, position: "relative" },
   stepCircle: { width: 32, height: 32, borderRadius: radius.pill, backgroundColor: colors.surfaceTertiary, alignItems: "center", justifyContent: "center", zIndex: 1 },

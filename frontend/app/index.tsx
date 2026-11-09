@@ -1,5 +1,4 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Image } from "expo-image";
 import { useFocusEffect, useRouter } from "expo-router";
 import { PlusIcon, UserCircleIcon } from "phosphor-react-native";
 import { useCallback } from "react";
@@ -10,15 +9,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "@/src/api";
 import { AlertsBanner } from "@/src/components/AlertsBanner";
 import { BrandLogo } from "@/src/components/BrandLogo";
+import { MascotTip } from "@/src/components/MascotTip";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { PropertyCard } from "@/src/components/PropertyCard";
 import { ScreenHeader } from "@/src/components/ScreenHeader";
 import { stageOf, stepRoute } from "@/src/steps";
 import { useBreakpoint } from "@/src/web/useBreakpoint";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
-
-const EMPTY_IMAGE =
-  "https://images.unsplash.com/photo-1614595737476-42487331b8a1?crop=entropy&cs=srgb&fm=jpg&q=85&w=900";
 
 export default function HomeScreen() {
   const styles = useStyles();
@@ -86,7 +83,13 @@ export default function HomeScreen() {
         </View>
       ) : !data || data.length === 0 ? (
         <View style={styles.center} testID="home-empty-state">
-          <Image source={{ uri: EMPTY_IMAGE }} style={styles.emptyImage} contentFit="cover" transition={300} />
+          <MascotTip
+            pose="telephone"
+            layout="column"
+            size={150}
+            text="Bonjour, moi c’est Noisette ! Commencez par estimer votre bien : c’est gratuit et ça prend 2 minutes. Je vous guide ensuite jusqu’à la vente."
+            testID="home-mascot"
+          />
           <Text style={styles.emptyTitle}>Aucune estimation pour le moment</Text>
           <Text style={styles.emptyText}>
             Renseignez l’adresse et les caractéristiques de votre bien : Achète ma maison calcule une fourchette de valeur à
@@ -148,7 +151,6 @@ const useStyles = makeStyles((colors) => ({
   list: { padding: spacing.lg, gap: spacing.md },
   skeleton: { height: 120, borderRadius: radius.lg, backgroundColor: colors.skeleton, marginBottom: spacing.md },
   center: { flex: 1, padding: spacing.xl, gap: spacing.lg, justifyContent: "center" },
-  emptyImage: { width: "100%", height: 220, borderRadius: radius.lg, backgroundColor: colors.skeleton },
   emptyTitle: { fontFamily: fonts.bold, fontSize: 22, color: colors.onSurface },
   emptyText: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, color: colors.onSurfaceTertiary },
   fab: {
