@@ -157,6 +157,31 @@ def cover():
     print("->", f"{OUT}/social-cover.jpg")
 
 
+def og_image():
+    """Aperçu de lien (Open Graph / iMessage / WhatsApp) : 1200×630."""
+    W, H = 1200, 630
+    im = gradient(W, H)
+    d = ImageDraw.Draw(im)
+    logo = Image.open(f"{OUT}/logo-wordmark-dark.png").convert("RGBA")
+    logo = logo.resize((360, round(360 * logo.height / logo.width)))
+    im.paste(logo, (80, 90), logo)
+    d.text((80, 230), "Estimez votre bien", font=font("ExtraBold", 54), fill=WHITE)
+    d.text((80, 296), "gratuitement en 2 minutes.", font=font("ExtraBold", 54), fill="#CFE0FF")
+    d.text((80, 380), "Puis vendez sans agence, sans commission.", font=font("SemiBold", 26), fill="#EAF1FF")
+    x = 80
+    for t in ("Estimation gratuite", "Annonce & photos IA", "Dossier notaire"):
+        x0 = x
+        x = pill(d, (x, 440), "     " + t, font("Bold", 20), "#FFFFFF", BRAND, (18, 10)) + 12
+        check(d, x0 + 16, 449, 10)
+    d.text((80, 530), "achetemamaison.fr · App Store · Google Play", font=font("SemiBold", 22), fill="#CFE0FF")
+    ph = phone(270)
+    ph = ph.rotate(-8, resample=Image.BICUBIC, expand=True)
+    shadow_paste(im, ph, (840, 70), blur=40, offset=(0, 30), alpha=130)
+    im.save("/app/frontend/public/app-image.png", optimize=True)
+    print("-> /app/frontend/public/app-image.png")
+
+
 if __name__ == "__main__":
     post()
     cover()
+    og_image()

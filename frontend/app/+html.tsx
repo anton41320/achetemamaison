@@ -12,8 +12,12 @@ export default function Root({ children }: PropsWithChildren) {
         <meta property="og:site_name" content="Achète ma maison" />
         <meta property="og:title" content="Achète ma maison — Estimation immobilière gratuite" />
         <meta property="og:description" content="Combien vaut ma maison ? Estimation gratuite basée sur les ventes réelles, puis accompagnement jusqu’à la vente." />
-        <meta property="og:image" content="/app-image.png" />
+        <meta property="og:image" content="https://achetemamaison.fr/app-image.png?v=2" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content="Achète ma maison — Estimez votre bien gratuitement en 2 minutes" />
         <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:image" content="https://achetemamaison.fr/app-image.png?v=2" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta
           name="viewport"
