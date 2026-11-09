@@ -4,4 +4,4 @@ Disallow: /property/
 Disallow: /account
 Disallow: /data
 Disallow: /new
-Sitemap: https://estimate-home.emergent.host/api/public/sitemap.xml
+Sitemap: https://achetemamaison.fr/api/public/sitemap.xml

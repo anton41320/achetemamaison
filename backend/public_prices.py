@@ -7,6 +7,7 @@ publique (prix, surface, date, commune) et les ventes affichées sont agrégées
 from __future__ import annotations
 
 import asyncio
+import os
 import re
 import time
 from pathlib import Path
@@ -243,7 +244,7 @@ async def sitemap(request: Request):
     """Plan du site : pages publiques + départements + communes avec assez de ventes. Référencé par /robots.txt."""
     proto = request.headers.get("x-forwarded-proto", request.url.scheme)
     host = request.headers.get("x-forwarded-host", request.headers.get("host", request.url.netloc))
-    base = f"{proto}://{host}"
+    base = os.environ.get("PUBLIC_SITE_URL", "").rstrip("/") or f"{proto}://{host}"
     y0, y1 = _years()
 
     async def communes():

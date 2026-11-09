@@ -237,3 +237,4 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 - Image Open Graph `public/app-image.png` remplacée (1200×630, générée par `gen_social_visuals.og_image()`), balises og/twitter absolues dans `app/+html.tsx`.
 - Testé : iteration_30 (tous les placements OK ; correctifs layout colonne web + mascotte FreeEstimate appliqués).
 - Vidéo marketing « estimation rapide » (24 s, 1080×1920) générée par `scripts/gen_estimation_video.py` → `backend/media/estimation-rapide.mp4`, servie par `GET /api/public/media/{name}` (nouveau, public_prices.py). `imageio-ffmpeg` installé (requirements à figer si réutilisé).
+- SEO domaine : `EXPO_PUBLIC_SITE_URL` (frontend/.env) et `PUBLIC_SITE_URL` (backend/.env) = https://achetemamaison.fr → canonicals, og:url, robots.txt et sitemap pointent sur le domaine public ; `webapp.py` ajoute `X-Robots-Tag: noindex` quand l'hôte ≠ domaine public (estimate-home.emergent.host sert les mêmes pages en doublon).

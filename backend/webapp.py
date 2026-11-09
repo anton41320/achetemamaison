@@ -10,6 +10,7 @@ acceptent n'importe quel segment) → `+not-found.html` (ou `index.html`, l'appl
 from __future__ import annotations
 
 import os
+from urllib.parse import urlparse
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
@@ -64,6 +65,11 @@ def mount_web(app: FastAPI, dist: Path = WEBDIST) -> bool:
             return PlainTextResponse(f"google-site-verification: {verification}")
         file = resolve(full_path)
         headers = HTML_HEADERS if file.suffix == ".html" else {"Cache-Control": "public, max-age=31536000, immutable" if "/_expo/" in file.as_posix() else "public, max-age=3600"}
+        # Seul le domaine public (PUBLIC_SITE_URL) doit être indexé ; l'hôte technique sert les mêmes pages en doublon.
+        public_host = urlparse(os.environ.get("PUBLIC_SITE_URL", "")).hostname
+        req_host = (request.headers.get("x-forwarded-host") or request.headers.get("host") or "").split(":")[0]
+        if public_host and req_host and req_host != public_host:
+            headers = {**headers, "X-Robots-Tag": "noindex"}
         return FileResponse(file, headers=headers, status_code=404 if file == not_found else 200)
 
     return True
