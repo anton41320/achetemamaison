@@ -3,6 +3,7 @@ while pandas/LightGBM saturate the CPU. Progress is tracked in MongoDB (dvf_meta
 from __future__ import annotations
 
 import logging
+import os
 import multiprocessing
 from typing import Optional
 
@@ -99,11 +100,16 @@ def refresh_dvf(mongo_url: str, db_name: str, depts: list[str], years: list[int]
     logging.basicConfig(level=logging.INFO)
     _low_priority(0.0)
     changed = dvf_ingest.ingest_all(mongo_url, db_name, depts, years, force=True)
-    if changed:
+    # Le réentraînement (~600 Mo de pic mémoire) n'est lancé automatiquement que si DVF_AUTO_RETRAIN=1 :
+    # en production (conteneur 512 Mo) on garde les artefacts livrés avec le code ; le réentraînement se fait
+    # depuis l'écran Réglages ou l'environnement de développement, puis les artefacts sont redéployés.
+    if changed and os.environ.get("DVF_AUTO_RETRAIN", "0") == "1":
         import hedonic
         hedonic.train(mongo_url, db_name)
         import ml_model
         ml_model.train(mongo_url, db_name)
+    elif changed:
+        logging.getLogger(__name__).info("DVF refresh: %d fichier(s) modifié(s), réentraînement automatique désactivé (DVF_AUTO_RETRAIN=0)", changed)
     client = MongoClient(mongo_url)
     try:
         client[db_name].dvf_meta.replace_one({"_id": "refresh"}, {"_id": "refresh", "last_run": datetime.now(timezone.utc),

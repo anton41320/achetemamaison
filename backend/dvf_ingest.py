@@ -78,7 +78,8 @@ def download(dept: str, year: int, force: bool = False, known_size: int | None =
 def parse_file(path: Path, dept: str, year: int) -> list[dict]:
     df = pd.read_csv(
         path, compression="gzip", usecols=USECOLS, low_memory=False,
-        dtype={"code_postal": str, "code_commune": str, "code_departement": str, "id_parcelle": str},
+        dtype={"code_postal": str, "code_commune": str, "code_departement": str, "id_parcelle": str,
+               "nature_mutation": "category", "type_local": "category"},
     )
     df = df[df["nature_mutation"] == "Vente"]
     df["valeur_fonciere"] = pd.to_numeric(df["valeur_fonciere"], errors="coerce")
