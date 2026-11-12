@@ -59,6 +59,16 @@ def new_user(email: str, total_users: int | None = None) -> None:
     notify(f"🆕 <b>Nouvelle inscription</b>\n✉️ {escape(email)}{tail}")
 
 
+def free_estimate(commune: str, property_type: str, surface: float, rooms: int,
+                  value: float | None, low: float | None, high: float | None) -> None:
+    """Estimation gratuite réalisée (sans compte) — aucune donnée personnelle, seulement le bien et le résultat."""
+    def eur(v: float | None) -> str:
+        return f"{round(v / 1000) * 1000:,.0f} €".replace(",", " ") if v else "—"
+    kind = "Maison" if property_type == "maison" else "Appartement"
+    notify(f"📊 <b>Estimation gratuite</b>\n📍 {escape(commune)}\n🏠 {kind} · {surface:g} m² · {rooms} pièce{'s' if rooms > 1 else ''}"
+           f"\n💶 <b>{eur(value)}</b> (fourchette {eur(low)} – {eur(high)})")
+
+
 def premium_purchase(provider: str, email: str | None, address: str | None, amount_cents: int | None, currency: str | None,
                      environment: str | None = None) -> None:
     amount = f"{(amount_cents or 0) / 100:.2f} {(currency or 'eur').upper()}"

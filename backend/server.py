@@ -26,6 +26,7 @@ import departements
 import dossier as dossier_mod
 import promo
 import reviews
+import telegram_notify
 from environment import analyze as env_analyze, listing_facts as env_listing_facts, official as env_official, report as env_report, valuation as env_valuation
 import dvf_ingest
 import georisques
@@ -1316,7 +1317,10 @@ async def delete_property(pid: str):
 async def estimate_preview(payload: PropertyIn):
     """Estimation sans compte : mêmes modèles que l'app ; `final` = valeur pondérée (comparables, hédonique, marché, ML)."""
     est = await _run_estimation(payload)
-    return {**est.model_dump(mode="json"), "final": blend(est, await _get_weights())}
+    final = blend(est, await _get_weights())
+    telegram_notify.free_estimate(payload.commune, payload.property_type, payload.surface, payload.rooms,
+                                  final.get("value"), final.get("low"), final.get("high"))
+    return {**est.model_dump(mode="json"), "final": final}
 
 
 @public.get("/validation")
