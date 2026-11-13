@@ -251,3 +251,4 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 - À venir : assets desktop (Noisette qui pointe, forme « 2 min », éclats, icônes) pour refaire le héros ordinateur ; calque « plus » mobile si fourni.
 - Héros ordinateur (`src/components/HeroDesktop.tsx`) : maquette 2000×1024 pleine largeur ; calques `d-noisette`, `d-plus` (fond blanc détouré par flood-fill), `d-logo-shape` ; grand aplat bleu dessiné en SVG (rect arrondi). Mobile : `m-plus.webp` remplace le SVG. Ancien héros (hero-house) retiré de LandingPage.
 - Bannières LinkedIn : `scripts/gen_linkedin_banner.py` → `backend/media/linkedin-profil.png` (1584×396) et `linkedin-page.png` (1128×191).
+- Courrier A4 leboncoin avec en-tête : `scripts/gen_courrier_leboncoin.py` → `backend/media/courrier-leboncoin.{pdf,png}`.
