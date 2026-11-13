@@ -32,11 +32,18 @@ def canvas(size, bg, art, scale, dy=0):
 canvas((512, 512), WHITE, icon, 0.64).convert("RGB").save(OUT / "google-play-icone-512.png")
 canvas((1024, 1024), WHITE, icon, 0.64).convert("RGB").save(OUT / "app-store-icone-1024.png")
 
-fg = canvas((1024, 500), LIGHT, logo, 0.55, dy=-40)
+fg = Image.new("RGBA", (1024, 500), LIGHT)
+lg = fit(logo, 520, 150)
+fg.alpha_composite(lg, (70, 95))
+noisette = Image.open("/app/frontend/assets/mascot/noisette-pouce.webp").convert("RGBA")
+noisette = fit(noisette, 400, 400)
+fg.alpha_composite(noisette, (1024 - noisette.width - 40, 500 - noisette.height - 30))
 d = ImageDraw.Draw(fg)
-font = ImageFont.truetype("/app/frontend/assets/fonts/PlusJakartaSans-ExtraBold.ttf", 34)
-text = "De l’estimation à la vente, sans agence"
-d.text(((1024 - d.textlength(text, font=font)) / 2, 370), text, fill=INK, font=font)
+font = ImageFont.truetype("/app/frontend/assets/fonts/PlusJakartaSans-ExtraBold.ttf", 40)
+sub = ImageFont.truetype("/app/frontend/assets/fonts/PlusJakartaSans-Medium.ttf", 26)
+d.text((70, 285), "Vendez vous-même,", fill=INK, font=font)
+d.text((70, 335), "mais pas tout seul.", fill=INK, font=font)
+d.text((70, 405), "Estimation gratuite en 2 minutes · sans agence", fill=(0x5B, 0x6B, 0x82), font=sub)
 fg.convert("RGB").save(OUT / "google-play-image-de-presentation-1024x500.png")
 
 with zipfile.ZipFile("/app/backend/store-assets.zip", "w", zipfile.ZIP_DEFLATED) as z:
