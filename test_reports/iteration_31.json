@@ -1,0 +1,41 @@
+{
+  "summary": "Frontend only (Playwright, 390x844 + 375x667 + 768x1024 + 1280x900). The mobile hero on /accueil (landing-hero-mobile) shows Noisette (m-noisette.webp loaded, alt text present), the title, the blue band, both buttons, the 3 steps and the store badges. All 5 hero links go to the right page: estimate→/estimation-maison, signup→/sign-up, step-1/2/3→/estimation-maison, /etape-mise-en-vente, /etape-vendu. Everything below the hero is still there (mascot, free estimate form, demo, steps, data, reviews, CTA, footer). public-menu-button opens mobile-menu with all 5 links plus signin and signup; all 7 navigate and close the menu; mobile-menu-close and the backdrop close it. /welcome (mobile): welcome-hero, welcome-hero-signin→/sign-in, welcome-hero-menu opens mobile-menu, the page scrolls to the store badges at 375x667, nothing overlaps. Desktop: old hero (landing-hero-image), header nav Accueil · Estimation · Mise en vente · Documents · Conseils, no burger button, /welcome redirects to /accueil. Console: the 'two children with the same key' warning is gone; the only remaining warnings are 'props.pointerEvents is deprecated' (HeroMobile Svg) and the general 'shadow* deprecated'. Remaining issues: very small touch targets, poor contrast on the 'Créer mon compte' button, the typo 'Éstimer', and the step label truncated at 375px.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "HeroMobile estimate button", "issue": "Typo: 'Éstimer gratuitement' should be 'Estimer gratuitement' (no accent). Reference: /app/frontend/src/components/HeroMobile.tsx:94", "testID": "landing-hero-mobile-estimate", "priority": "MEDIUM"},
+      {"component": "HeroMobile step 2 label", "issue": "At 375px width 'Mise en vente' is cut off as 'Mise en ven…' (numberOfLines=1, px(220) width, px(34) font). Fine at 390px. Reference: HeroMobile.tsx:106-113", "testID": "landing-hero-mobile-step-2", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "HeroMobile (/accueil, /welcome)", "issues": [
+        "Touch targets too small: the estimate and signup buttons are about 137x23 px at 390 wide (height px(60)=23px, under 44). Text is about 11px (px(28)). welcome-hero-menu is 55x30 (hitSlop helps on native, but the visible area is still small). welcome-hero-signin is 41px high.",
+        "Contrast: the 'Créer mon compte' button has white text on rgb(127,163,227), about 2.4:1, which fails WCAG AA.",
+        "Lead text and step labels are about 13-14px. Since everything is scaled to width/1000, all text shrinks on small phones."
+      ]},
+      {"screen": "MobileMenu", "issues": ["The current page is not highlighted in the menu (minor)."]}
+    ],
+    "react_native_issues": [
+      {"component": "HeroMobile Svg pointerEvents prop", "issue": "Console warning 'props.pointerEvents is deprecated. Use style.pointerEvents' comes from the pointerEvents='none' prop. Reference: /app/frontend/src/components/HeroMobile.tsx:72"}
+    ]
+  },
+  "test_report_links": [".screenshots (Playwright run, no persistent file)"],
+  "action_items": [
+    "Fix the typo 'Éstimer gratuitement' → 'Estimer gratuitement' (HeroMobile.tsx:94).",
+    "Give the hero buttons a minimum height of 44 (e.g. Math.max(44, px(60))) and a minimum font size of about 14. Do the same for the signin and menu targets in the header.",
+    "Improve contrast on the 'Créer mon compte' button: darker text (brandPrimary) or a darker background.",
+    "Avoid truncating 'Mise en vente' on narrow screens: allow 2 lines, or use a minimum font size or wider column.",
+    "Move pointerEvents='none' into style for the Svg in HeroMobile.tsx:72."
+  ],
+  "critical_code_review_comments": [
+    "HeroMobile places everything with absolute positions scaled to width/1000. This matches the mockup, but text cannot reflow: with a large system font or a narrow screen, the text may overflow its fixed box (the lead is in a fixed area, the title has a fixed lineHeight).",
+    "MobileMenu testIDs contain spaces (mobile-menu-Mise en vente). They work, but a slug would be more robust.",
+    "In the 'Mon espace' signed-in branch of MobileMenu, the button has no testID (MobileMenu.tsx:43)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100% functional (all navigation and menu flows pass); design issues listed above"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Mobile hero = HeroMobile (testID prefix landing-hero-mobile on /accueil, welcome-hero on /welcome). Mobile menu = public-menu-button / welcome-hero-menu → mobile-menu, items mobile-menu-{Label}. Breakpoints: isTablet >=768 (nav row, no burger), isDesktop web wide → old hero landing-hero-image."
+}

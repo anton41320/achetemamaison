@@ -243,3 +243,9 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 - Prod (nov. 2026) : OOMKilled sur palier Starter (512 Mi). RCA deployer : baseline ~250 Mo (lightgbm/sklearn/litellm + modèles) + pics (ingestion DVF pandas, réentraînement ~600 Mo). Correctifs : réentraînement automatique après refresh DVF désormais opt-in (`DVF_AUTO_RETRAIN=1`, défaut 0 — artefacts livrés utilisés), dtypes category dans `dvf_ingest.parse_file`. Recommandation utilisateur : passer au palier « Launch ». RCA : /app/deployer-agent-docs/RCA_849242f3-*.MD
 - Telegram : alerte « Estimation gratuite » (commune, type, surface, pièces, valeur + fourchette, sans donnée perso) sur POST /api/estimate/preview (telegram_notify.free_estimate).
 - Lettre postale A5 (pige) : `scripts/gen_lettre_a5.py` → `backend/media/lettre-vendeur-a5.{png,pdf}` (QR vers /estimation-maison avec utm_source=courrier). `qrcode` installé.
+
+## Héros mobile maquette (nov. 2026)
+- `src/components/HeroMobile.tsx` : reproduction de la maquette mobile (espace 1000 px mis à l'échelle ; calques fournis par l'utilisateur dans `assets/hero/` : m-noisette, m-wave-mid, m-wave-bottom, m-menu ; forme « plus » dessinée en SVG en attendant le calque). Utilisé par `LandingPage` (mobile uniquement, héros desktop inchangé en attendant les assets desktop) et par `app/welcome.tsx` (avec en-tête logo · Se connecter · 3 barres).
+- `src/components/MobileMenu.tsx` : MAIN_NAV (Accueil /accueil, Estimation /estimation-maison, Mise en vente /etape-mise-en-vente, Documents /etape-vendu, Conseils /conseils-vente) + menu latéral ; PublicPage utilise MAIN_NAV et affiche les 3 barres sur mobile.
+- Testé : iteration_31 (OK ; correctifs : typo, boutons agrandis, libellés, pointerEvents).
+- À venir : assets desktop (Noisette qui pointe, forme « 2 min », éclats, icônes) pour refaire le héros ordinateur ; calque « plus » mobile si fourni.

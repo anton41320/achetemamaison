@@ -5,6 +5,7 @@ import { Pressable, Text, View } from "react-native";
 
 import { BrandDash } from "@/src/components/BrandMarks";
 import { EstimateDemo } from "@/src/components/EstimateDemo";
+import { HeroMobile } from "@/src/components/HeroMobile";
 import { MascotTip } from "@/src/components/MascotTip";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { ReviewsSection } from "@/src/components/ReviewsSection";
@@ -82,6 +83,11 @@ export function LandingPage() {
       testID="landing-page"
     >
       <View style={styles.hero}>
+        {!isDesktop ? (
+          <View style={{ marginHorizontal: -spacing.lg, marginTop: -2 * spacing.lg }}>
+            <HeroMobile testID="landing-hero-mobile" />
+          </View>
+        ) : (
         <View style={[styles.heroTop, isDesktop && { flexDirection: "row", alignItems: "center" }]}>
           <View style={[styles.heroText, isDesktop && { flex: 1, alignItems: "flex-start" }]}>
           <Text style={[styles.kicker, isDesktop && { textAlign: "left" }]}>De l’estimation à la vente, sans agence</Text>
@@ -107,6 +113,7 @@ export function LandingPage() {
             testID="landing-hero-image"
           />
         </View>
+        )}
         <View style={[styles.heroForm, isDesktop && { flexDirection: "row", alignItems: "flex-start", gap: spacing.xl }]}>
           <View style={isDesktop ? { flex: 1.25 } : { width: "100%" }}>
             <MascotTip

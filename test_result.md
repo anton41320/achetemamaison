@@ -121,3 +121,8 @@
 - Nouveau composant `src/components/MascotTip.tsx` (vignette ronde fondue + bulle de conseil « NOISETTE »). Assets `assets/mascot/noisette-{pouce,telephone,noisettes,course}.webp`.
 - Placements (testIDs) : web accueil `landing-mascot-hero` (au-dessus du formulaire), `landing-mascot-pack` (bloc CTA bleu) ; pages étapes `step-mascot-1/2/3` ; app : `welcome-mascot` (/welcome mobile), `home-mascot` (accueil sans bien), `free-result-mascot` (résultat estimation gratuite), `estimate-mascot` (fiche bien, après FinalEstimateCard), `pack-mascot` (écran Pack non débloqué), `photos-mascot` (écran Photos sans photo).
 - Comptes : delivered@resend.dev / Estimo2026! (biens existants, pack NON débloqué → pack-mascot visible) ; demo@achetemamaison.fr / Premium2026! (pack débloqué).
+
+## Iteration 26 — Héros mobile maquette + menu 3 barres (main agent)
+- `src/components/HeroMobile.tsx` (maquette 1000 px mise à l'échelle, calques `assets/hero/*.webp`), `src/components/MobileMenu.tsx` (MAIN_NAV : Accueil, Estimation, Mise en vente, Documents, Conseils).
+- Web mobile : `/accueil` → testID `landing-hero-mobile` (boutons `landing-hero-mobile-estimate`, `-signup`, `-step-1/2/3`) ; en-tête PublicPage : `public-menu-button` → `mobile-menu` (liens `mobile-menu-<href sans slash>` (ex. mobile-menu-etape-vendu), `mobile-menu-signin`, `mobile-menu-signup`, `mobile-menu-close`).
+- App `/welcome` (mobile) → `welcome-hero` avec en-tête (`welcome-hero-signin`, `welcome-hero-menu`). Desktop : /welcome redirige vers /accueil (inchangé) ; héros desktop inchangé (assets à venir).

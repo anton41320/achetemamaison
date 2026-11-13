@@ -1,11 +1,12 @@
 import { Image } from "expo-image";
 import { Link, useRouter } from "expo-router";
 import Head from "expo-router/head";
-import { PropsWithChildren } from "react";
+import { PropsWithChildren, useState } from "react";
 import { Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useSession } from "@/src/auth";
+import { MAIN_NAV, MobileMenu } from "@/src/components/MobileMenu";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 import { CONTENT_MAX_WIDTH, useBreakpoint } from "@/src/web/useBreakpoint";
 
@@ -14,11 +15,7 @@ export const SITE_NAME = "Achète ma maison";
 export const SITE_URL: string =
   process.env.EXPO_PUBLIC_SITE_URL ||
   (Platform.OS === "web" && typeof window !== "undefined" ? window.location.origin : "");
-export const NAV_LINKS = [
-  { href: "/estimation-maison", label: "Estimation gratuite" },
-  { href: "/prix-immobilier", label: "Prix immobilier" },
-  { href: "/vendre-sa-maison", label: "Vendre sa maison" },
-] as const;
+export const NAV_LINKS = MAIN_NAV;
 
 interface Props {
   title: string;
@@ -37,6 +34,7 @@ export function PublicPage({ title, description, path, jsonLd, testID, children 
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user } = useSession();
+  const [menu, setMenu] = useState(false);
   const canonical = `${SITE_URL}${path}`;
   const fullTitle = title.includes(SITE_NAME) ? title : `${title} | ${SITE_NAME}`;
 
@@ -77,6 +75,14 @@ export function PublicPage({ title, description, path, jsonLd, testID, children 
           >
             <Text style={styles.ctaText}>{user ? "Mon espace" : "Se connecter"}</Text>
           </Pressable>
+          {!isTablet ? (
+            <>
+              <Pressable onPress={() => setMenu(true)} accessibilityRole="button" accessibilityLabel="Menu" hitSlop={10} style={styles.burger} testID="public-menu-button">
+                <Image source={require("../../assets/hero/m-menu.webp")} style={{ width: 34, height: 20 }} contentFit="contain" />
+              </Pressable>
+              <MobileMenu visible={menu} onClose={() => setMenu(false)} signedIn={!!user} />
+            </>
+          ) : null}
         </View>
       </View>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -86,7 +92,7 @@ export function PublicPage({ title, description, path, jsonLd, testID, children 
             <Text style={styles.footerBrand}>{SITE_NAME}</Text>
             <Text style={styles.footerText}>Estimation immobilière gratuite fondée sur les ventes réelles (DVF), puis accompagnement jusqu’à la vente entre particuliers.</Text>
             <View style={styles.footerLinks}>
-              {[...NAV_LINKS, { href: "/combien-vaut-ma-maison", label: "Combien vaut ma maison ?" }, { href: "/estimation-immobiliere", label: "Estimation immobilière" }, { href: "/conseils-vente", label: "Conseils pour vendre" }, { href: "/faq", label: "FAQ" }, { href: "/mentions-legales", label: "Mentions légales" }, { href: "/cgu", label: "CGU / CGV" }, { href: "/privacy", label: "Confidentialité" }].map((l) => (
+              {[...NAV_LINKS, { href: "/prix-immobilier", label: "Prix immobilier" }, { href: "/vendre-sa-maison", label: "Vendre sa maison" }, { href: "/combien-vaut-ma-maison", label: "Combien vaut ma maison ?" }, { href: "/estimation-immobiliere", label: "Estimation immobilière" }, { href: "/faq", label: "FAQ" }, { href: "/mentions-legales", label: "Mentions légales" }, { href: "/cgu", label: "CGU / CGV" }, { href: "/privacy", label: "Confidentialité" }].map((l) => (
                 <Link key={l.href} href={l.href as any} asChild>
                   <Pressable accessibilityRole="link"><Text style={styles.footerLink}>{l.label}</Text></Pressable>
                 </Link>
@@ -109,6 +115,7 @@ const useStyles = makeStyles((colors) => ({
   navRow: { flex: 1, flexDirection: "row", justifyContent: "center", gap: spacing.xs },
   navItem: { paddingHorizontal: spacing.md, minHeight: 44, justifyContent: "center", borderRadius: radius.md },
   navText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.onSurfaceSecondary },
+  burger: { width: 44, height: 44, alignItems: "center", justifyContent: "center", marginLeft: spacing.xs },
   cta: { marginLeft: "auto", minHeight: 44, paddingHorizontal: spacing.lg, borderRadius: radius.pill, backgroundColor: colors.brandPrimary, justifyContent: "center" },
   ctaText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.onBrandPrimary },
   scroll: { alignItems: "stretch" },
