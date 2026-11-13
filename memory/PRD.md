@@ -252,6 +252,7 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 - Héros ordinateur (`src/components/HeroDesktop.tsx`) : maquette 2000×1024 pleine largeur ; calques `d-noisette`, `d-plus` (fond blanc détouré par flood-fill), `d-logo-shape` ; grand aplat bleu dessiné en SVG (rect arrondi). Mobile : `m-plus.webp` remplace le SVG. Ancien héros (hero-house) retiré de LandingPage.
 - Bannières LinkedIn : `scripts/gen_linkedin_banner.py` → `backend/media/linkedin-profil.png` (1584×396) et `linkedin-page.png` (1128×191).
 - Courrier A4 leboncoin avec en-tête : `scripts/gen_courrier_leboncoin.py` → `backend/media/courrier-leboncoin.{pdf,png}`.
+- Hero desktop : badges stores rendus après Noisette/forme « plus » (bug : Google Play recouvert). Bundle web régénéré (13/11).
 - Plaquette A4 (pièce jointe courrier leboncoin) : `scripts/gen_plaquette_a4.py` → `backend/media/plaquette-a4.{pdf,png}` (hero + 3 étapes + retouche IA avant/après + QR). Servie via `/api/public/media/plaquette-a4.pdf`.
 - Mail « Meta Content Review » (13/11/2026) identifié comme phishing (expéditeur kts.ac.th / reply-to deped.gov.ph) ; aucune action produit.
 

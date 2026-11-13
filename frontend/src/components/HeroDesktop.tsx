@@ -59,12 +59,12 @@ export function HeroDesktop({ testID = "hero-desktop" }: { testID?: string }) {
           <Pressable onPress={() => router.navigate("/sign-up")} accessibilityRole="button" testID={`${testID}-signup`} style={({ pressed }) => [styles.btnSoft, { left: px(662), top: y(727), width: px(259), height: px(46), borderRadius: px(10) }, pressed && { opacity: 0.9 }]}>
             <Text style={[styles.btnSoftText, { fontSize: px(20) }]}>Créer mon compte</Text>
           </Pressable>
-          <Text style={[styles.download, { left: px(653), top: y(913), fontSize: px(23) }]}>Ou téléchargez l’application :</Text>
-          <StoreBadges style={{ position: "absolute", left: px(1082), top: y(893), width: px(900), justifyContent: "flex-start" }} />
-
-          {/* Noisette + forme « plus » */}
+          {/* Noisette + forme « plus » (rendus avant les badges pour rester en dessous) */}
           <Image source={PLUS} style={{ position: "absolute", left: px(1134), top: y(162), width: px(790), height: px(796) }} contentFit="contain" />
           <Image source={NOISETTE} style={{ position: "absolute", left: px(1149), top: y(196), width: px(611), height: px(612) }} contentFit="contain" accessibilityLabel="Noisette, la mascotte, pointe vers le message" transition={200} />
+
+          <Text style={[styles.download, { left: px(653), top: y(913), fontSize: px(23) }]}>Ou téléchargez l’application :</Text>
+          <StoreBadges style={{ position: "absolute", left: px(1082), top: y(893), width: px(900), justifyContent: "flex-start", zIndex: 2 }} />
 
           {/* 3 étapes (colonne gauche) */}
           {steps.map(({ n, label, Icon, top, href }) => (
