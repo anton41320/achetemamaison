@@ -126,3 +126,6 @@
 - `src/components/HeroMobile.tsx` (maquette 1000 px mise à l'échelle, calques `assets/hero/*.webp`), `src/components/MobileMenu.tsx` (MAIN_NAV : Accueil, Estimation, Mise en vente, Documents, Conseils).
 - Web mobile : `/accueil` → testID `landing-hero-mobile` (boutons `landing-hero-mobile-estimate`, `-signup`, `-step-1/2/3`) ; en-tête PublicPage : `public-menu-button` → `mobile-menu` (liens `mobile-menu-<href sans slash>` (ex. mobile-menu-etape-vendu), `mobile-menu-signin`, `mobile-menu-signup`, `mobile-menu-close`).
 - App `/welcome` (mobile) → `welcome-hero` avec en-tête (`welcome-hero-signin`, `welcome-hero-menu`). Desktop : /welcome redirige vers /accueil (inchangé) ; héros desktop inchangé (assets à venir).
+
+## Iteration 27 — Héros ordinateur maquette (main agent)
+- `src/components/HeroDesktop.tsx` (espace 2000×1024, calques `assets/hero/d-*.webp` détourés depuis les fichiers utilisateur) : testIDs `landing-hero-desktop`, `-estimate`, `-signup`, `-step-1/2/3`. Pleine largeur (sort du conteneur 1120 px). Mobile : forme « plus » = calque `m-plus.webp`.

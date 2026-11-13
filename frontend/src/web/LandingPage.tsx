@@ -1,10 +1,11 @@
 import { Image } from "expo-image";
 import { Link, useRouter } from "expo-router";
 import { ChartBarIcon, FolderOpenIcon, ImagesIcon, ShieldCheckIcon, SparkleIcon, StarIcon } from "phosphor-react-native";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text, View, useWindowDimensions } from "react-native";
 
 import { BrandDash } from "@/src/components/BrandMarks";
 import { EstimateDemo } from "@/src/components/EstimateDemo";
+import { HeroDesktop } from "@/src/components/HeroDesktop";
 import { HeroMobile } from "@/src/components/HeroMobile";
 import { MascotTip } from "@/src/components/MascotTip";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
@@ -13,9 +14,8 @@ import { StoreBadges } from "@/src/components/StoreBadges";
 import { fonts, makeStyles, radius, spacing, useTheme } from "@/src/theme";
 import { FreeEstimate } from "@/src/web/FreeEstimate";
 import { PublicPage, SITE_NAME, SITE_URL } from "@/src/web/PublicPage";
-import { useBreakpoint } from "@/src/web/useBreakpoint";
+import { CONTENT_MAX_WIDTH, useBreakpoint } from "@/src/web/useBreakpoint";
 
-const HERO_IMG = require("../../assets/web/hero-house.webp");
 const MAP_IMG = require("../../assets/web/map-data.jpg");
 
 /** Ce que le moteur prend en compte (sans nommer les sources de données). */
@@ -45,6 +45,9 @@ export function LandingPage() {
   const styles = useStyles();
   const { colors } = useTheme();
   const { isDesktop, isTablet } = useBreakpoint();
+  const { width: windowWidth } = useWindowDimensions();
+  // Le héros ordinateur sort du conteneur centré (1120 px) pour occuper toute la largeur de la fenêtre.
+  const bleed = Math.max(spacing.lg, (windowWidth - CONTENT_MAX_WIDTH) / 2 + spacing.lg);
   const router = useRouter();
   const jsonLd = [
     {
@@ -88,31 +91,9 @@ export function LandingPage() {
             <HeroMobile testID="landing-hero-mobile" />
           </View>
         ) : (
-        <View style={[styles.heroTop, isDesktop && { flexDirection: "row", alignItems: "center" }]}>
-          <View style={[styles.heroText, isDesktop && { flex: 1, alignItems: "flex-start" }]}>
-          <Text style={[styles.kicker, isDesktop && { textAlign: "left" }]}>De l’estimation à la vente, sans agence</Text>
-          <Text style={[styles.h1, isDesktop && { textAlign: "left" }]} accessibilityRole="header">Combien vaut votre maison ? La réponse est dans les ventes réelles.</Text>
-          <Text style={[styles.lead, isDesktop && { textAlign: "left" }]}>
-            {SITE_NAME} estime votre bien gratuitement et précisément : le questionnaire complet de l’application (adresse, surface, état, année,
-            terrain, équipements) confronté aux transactions enregistrées autour de chez vous. Créez ensuite un compte gratuit pour enregistrer le bien
-            et accéder au dossier environnement ; le Pack premium (49 €, paiement unique) ouvre les étapes 2 et 3 : photos, annonce, dossier de vente.
-          </Text>
-            <View style={[styles.badges, isDesktop && { justifyContent: "flex-start" }]}>
-              {["Gratuit et sans inscription", "Questionnaire complet", "97 départements", "Fourchette ±5 %"].map((b) => (
-                <View key={b} style={styles.badge}><Text style={styles.badgeText}>{b}</Text></View>
-              ))}
-            </View>
-            <StoreBadges compact style={[styles.storeBadges, isDesktop && { justifyContent: "flex-start" }]} />
+          <View style={{ alignSelf: "stretch", marginHorizontal: -bleed, marginTop: -2 * spacing.lg }}>
+            <HeroDesktop testID="landing-hero-desktop" />
           </View>
-          <Image
-            source={HERO_IMG}
-            style={[styles.heroImage, isDesktop && { flex: 1.25, maxWidth: 760 }]}
-            contentFit="contain"
-            accessibilityLabel="Une famille découvre l’estimation de sa maison sur son téléphone"
-            transition={300}
-            testID="landing-hero-image"
-          />
-        </View>
         )}
         <View style={[styles.heroForm, isDesktop && { flexDirection: "row", alignItems: "flex-start", gap: spacing.xl }]}>
           <View style={isDesktop ? { flex: 1.25 } : { width: "100%" }}>
@@ -218,9 +199,6 @@ export function LandingPage() {
 
 const useStyles = makeStyles((colors) => ({
   hero: { gap: spacing.xl, paddingTop: spacing.lg, alignItems: "center" },
-  heroTop: { width: "100%", gap: spacing.xl, alignItems: "center" },
-  heroText: { width: "100%", gap: spacing.md, alignItems: "center" },
-  heroImage: { width: "100%", aspectRatio: 1100 / 718 },
   heroForm: { width: "100%" },
   sectionLead: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 24, color: colors.onSurfaceTertiary, maxWidth: 760 },
   dataWrap: { gap: spacing.xl },
@@ -230,14 +208,7 @@ const useStyles = makeStyles((colors) => ({
   dataNum: { width: 28, height: 28, borderRadius: radius.pill, backgroundColor: colors.brandTertiary, alignItems: "center", justifyContent: "center", marginTop: 2 },
   dataNumText: { fontFamily: fonts.bold, fontSize: 13, color: colors.onBrandTertiary },
   dataTitle: { fontFamily: fonts.semibold, fontSize: 15, color: colors.onSurface },
-  kicker: { fontFamily: fonts.semibold, fontSize: 13, letterSpacing: 1.2, textTransform: "uppercase", color: colors.brandPrimary, textAlign: "center" },
-  h1: { fontFamily: fonts.extrabold, fontSize: 36, lineHeight: 44, color: colors.onSurface, textAlign: "center" },
-  lead: { fontFamily: fonts.regular, fontSize: 17, lineHeight: 26, color: colors.onSurfaceTertiary, textAlign: "center" },
-  badges: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, justifyContent: "center" },
-  badge: { backgroundColor: colors.brandTertiary, borderRadius: radius.pill, paddingHorizontal: spacing.md, minHeight: 32, justifyContent: "center" },
-  badgeText: { fontFamily: fonts.semibold, fontSize: 13, color: colors.onBrandTertiary },
   section: { gap: spacing.md },
-  storeBadges: { justifyContent: "center", marginTop: spacing.sm },
   h2Row: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   h2: { fontFamily: fonts.extrabold, fontSize: 26, lineHeight: 34, color: colors.onSurface, flexShrink: 1 },
   cards: { flexDirection: "column", gap: spacing.md },

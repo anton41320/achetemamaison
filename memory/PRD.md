@@ -249,3 +249,4 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 - `src/components/MobileMenu.tsx` : MAIN_NAV (Accueil /accueil, Estimation /estimation-maison, Mise en vente /etape-mise-en-vente, Documents /etape-vendu, Conseils /conseils-vente) + menu latéral ; PublicPage utilise MAIN_NAV et affiche les 3 barres sur mobile.
 - Testé : iteration_31 (OK ; correctifs : typo, boutons agrandis, libellés, pointerEvents).
 - À venir : assets desktop (Noisette qui pointe, forme « 2 min », éclats, icônes) pour refaire le héros ordinateur ; calque « plus » mobile si fourni.
+- Héros ordinateur (`src/components/HeroDesktop.tsx`) : maquette 2000×1024 pleine largeur ; calques `d-noisette`, `d-plus` (fond blanc détouré par flood-fill), `d-logo-shape` ; grand aplat bleu dessiné en SVG (rect arrondi). Mobile : `m-plus.webp` remplace le SVG. Ancien héros (hero-house) retiré de LandingPage.

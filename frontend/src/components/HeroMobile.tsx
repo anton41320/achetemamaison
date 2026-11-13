@@ -3,7 +3,6 @@ import { useRouter } from "expo-router";
 import { ChartBarIcon, FolderOpenIcon, ImageIcon } from "phosphor-react-native";
 import { useState } from "react";
 import { Pressable, Text, View, useWindowDimensions } from "react-native";
-import Svg, { G, Rect } from "react-native-svg";
 
 import { MobileMenu } from "@/src/components/MobileMenu";
 import { StoreBadges } from "@/src/components/StoreBadges";
@@ -21,6 +20,7 @@ const NOISETTE = require("../../assets/hero/m-noisette.webp"); // 388×429 posé
 const WAVE_MID = require("../../assets/hero/m-wave-mid.webp"); // 1000×420 posé en y = 917
 const WAVE_BOTTOM = require("../../assets/hero/m-wave-bottom.webp"); // 1000×288 posé en y = 1712
 const MENU = require("../../assets/hero/m-menu.webp"); // 140×78 (3 barres)
+const PLUS = require("../../assets/hero/m-plus.webp"); // 540×541 posé en (287, 183)
 
 type Props = {
   /** Affiche l'en-tête de la maquette (logo · Se connecter · 3 barres). Sur le site, l'en-tête vient de PublicPage. */
@@ -68,13 +68,7 @@ export function HeroMobile({ withHeader = false, paddingTop = 0, signedIn = fals
         </View>
       ) : null}
 
-      {/* Forme « plus » bleu clair derrière Noisette */}
-      <Svg width={px(640)} height={px(640)} viewBox="0 0 640 640" style={{ position: "absolute", left: px(195), top: paddingTop + y(120), pointerEvents: "none" }}>
-        <G transform="rotate(-18 320 320)">
-          <Rect x={40} y={190} width={560} height={260} rx={130} fill={colors.brandSecondary} />
-          <Rect x={190} y={40} width={260} height={560} rx={130} fill={colors.brandSecondary} />
-        </G>
-      </Svg>
+      <Image source={PLUS} style={{ position: "absolute", left: px(287), top: paddingTop + y(183), width: px(540), height: px(541) }} contentFit="contain" />
       <Image source={NOISETTE} style={{ position: "absolute", left: px(319), top: paddingTop + y(276), width: px(388), height: px(429) }} contentFit="contain" accessibilityLabel="Noisette, la mascotte, montre une estimation sur son téléphone" transition={200} />
 
       <Text style={[styles.title, { top: paddingTop + y(775), fontSize: px(60), lineHeight: px(74) }]} accessibilityRole="header">
