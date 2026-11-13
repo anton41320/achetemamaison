@@ -1,13 +1,12 @@
 import { Image } from "expo-image";
 import { Link, useRouter } from "expo-router";
-import { ChartBarIcon, FolderOpenIcon, ImagesIcon, ShieldCheckIcon, SparkleIcon, StarIcon } from "phosphor-react-native";
+import { ShieldCheckIcon, SparkleIcon, StarIcon } from "phosphor-react-native";
 import { Pressable, Text, View, useWindowDimensions } from "react-native";
 
 import { BrandDash } from "@/src/components/BrandMarks";
 import { EstimateDemo } from "@/src/components/EstimateDemo";
 import { HeroDesktop } from "@/src/components/HeroDesktop";
 import { HeroMobile } from "@/src/components/HeroMobile";
-import { MascotTip } from "@/src/components/MascotTip";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { ReviewsSection } from "@/src/components/ReviewsSection";
 import { StoreBadges } from "@/src/components/StoreBadges";
@@ -17,6 +16,11 @@ import { PublicPage, SITE_NAME, SITE_URL } from "@/src/web/PublicPage";
 import { CONTENT_MAX_WIDTH, useBreakpoint } from "@/src/web/useBreakpoint";
 
 const MAP_IMG = require("../../assets/web/map-data.jpg");
+const STEP_MASCOTS = {
+  1: require("../../assets/mascot/etape1-telephone.webp"),
+  2: require("../../assets/mascot/etape2-course.webp"),
+  3: require("../../assets/mascot/etape3-notaire.webp"),
+} as const;
 
 /** Ce que le moteur prend en compte (sans nommer les sources de données). */
 const DATA_POINTS = [
@@ -29,9 +33,9 @@ const DATA_POINTS = [
 ];
 
 const STEPS = [
-  { n: 1, title: "Estimation", icon: ChartBarIcon, href: "/etape-estimation", text: "Fourchette fondée sur les ventes réelles autour de chez vous, expliquée ligne par ligne : état, époque, terrain, environnement, tendance du marché." },
-  { n: 2, title: "Mise en vente", icon: ImagesIcon, href: "/etape-mise-en-vente", text: "Prix cible, photos retouchées par IA en qualité professionnelle, annonce rédigée avec une accroche structurée, conseils pour les visites." },
-  { n: 3, title: "Vendu", icon: FolderOpenIcon, href: "/etape-vendu", text: "Dossier de vente complet : diagnostics et documents obligatoires adaptés à votre bien, lecture automatique, PDF prêt pour le notaire." },
+  { n: 1, title: "Estimation", mascot: STEP_MASCOTS[1], href: "/etape-estimation", text: "Fourchette fondée sur les ventes réelles autour de chez vous, expliquée ligne par ligne : état, époque, terrain, environnement, tendance du marché." },
+  { n: 2, title: "Mise en vente", mascot: STEP_MASCOTS[2], href: "/etape-mise-en-vente", text: "Prix cible, photos retouchées par IA en qualité professionnelle, annonce rédigée avec une accroche structurée, conseils pour les visites." },
+  { n: 3, title: "Vendu", mascot: STEP_MASCOTS[3], href: "/etape-vendu", text: "Dossier de vente complet : diagnostics et documents obligatoires adaptés à votre bien, lecture automatique, PDF prêt pour le notaire." },
 ];
 
 const TRUST = [
@@ -97,13 +101,6 @@ export function LandingPage() {
         )}
         <View style={[styles.heroForm, isDesktop && { flexDirection: "row", alignItems: "flex-start", gap: spacing.xl }]}>
           <View style={isDesktop ? { flex: 1.25 } : { width: "100%" }}>
-            <MascotTip
-              pose="telephone"
-              text="Bonjour, moi c’est Noisette ! Commencez par l’estimation : gratuite, en 2 minutes, sans inscription. Je vous guide ensuite jusqu’à la vente."
-              size={104}
-              style={{ marginBottom: spacing.md }}
-              testID="landing-mascot-hero"
-            />
             <FreeEstimate />
           </View>
           <View style={isDesktop ? { flex: 0.75 } : { width: "100%" }} testID="landing-demo">
@@ -118,8 +115,8 @@ export function LandingPage() {
           {STEPS.map((s) => (
             <Link key={s.n} href={s.href as any} asChild>
               <Pressable style={styles.stepCard} accessibilityRole="link" accessibilityLabel={`Étape ${s.n} : ${s.title}, en savoir plus`} testID={`landing-step-${s.n}`}>
+                <Image source={s.mascot} style={styles.stepMascot} contentFit="contain" accessibilityLabel={`Noisette, étape ${s.n}`} transition={200} />
                 <View style={styles.stepBadge}><Text style={styles.stepBadgeText}>{s.n}</Text></View>
-                <s.icon size={28} color={colors.brandPrimary} weight="duotone" />
                 <Text style={styles.cardTitle}>{s.title}</Text>
                 <Text style={styles.cardText}>{s.text}</Text>
                 <Text style={styles.stepMore}>En savoir plus →</Text>
@@ -174,13 +171,6 @@ export function LandingPage() {
       <ReviewsSection row={isTablet} />
 
       <View style={styles.ctaBlock} testID="landing-cta">
-        <MascotTip
-          pose="noisettes"
-          text="Pas d’agence, pas de commission : 49 € une fois pour tous les outils, et vos noisettes restent chez vous."
-          size={96}
-          style={{ width: "100%", maxWidth: 560 }}
-          testID="landing-mascot-pack"
-        />
         <Text style={styles.ctaTitle}>Prêt à connaître la valeur de votre bien ?</Text>
         <Text style={styles.ctaText}>Estimation gratuite en 2 minutes, puis créez votre compte pour sauvegarder le bien et préparer la vente — sur le site comme dans l’application mobile.</Text>
         <View style={[styles.ctaRow, isTablet && { flexDirection: "row" }]}>
@@ -214,6 +204,7 @@ const useStyles = makeStyles((colors) => ({
   cards: { flexDirection: "column", gap: spacing.md },
   stepCard: { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.sm },
   stepMore: { fontFamily: fonts.semibold, fontSize: 14, color: colors.brandPrimary, marginTop: spacing.xs },
+  stepMascot: { width: "100%", height: 160 },
   stepBadge: { width: 32, height: 32, borderRadius: radius.pill, backgroundColor: colors.brandPrimary, alignItems: "center", justifyContent: "center" },
   stepBadgeText: { fontFamily: fonts.bold, fontSize: 15, color: colors.onBrandPrimary },
   cardTitle: { fontFamily: fonts.bold, fontSize: 18, color: colors.onSurface },

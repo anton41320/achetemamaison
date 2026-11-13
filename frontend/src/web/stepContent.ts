@@ -5,7 +5,8 @@ export type StepBlock = {
   title: string;
   text: string;
   bullets?: string[];
-  image: ImageSourcePropType;
+  /** Visuel du bloc ; absent → bloc texte seul. */
+  image?: ImageSourcePropType;
   /** Légende factuelle sous le visuel (jamais une citation attribuée). */
   caption?: string;
   /** Visuel « avant / après » (deux images côte à côte). */
@@ -21,11 +22,10 @@ export type StepContent = {
   h1: string;
   tagline: string;
   intro: string;
-  hero: ImageSourcePropType;
+  /** Noisette dans la posture de l'étape (fond transparent). */
+  mascot: ImageSourcePropType;
   blocks: StepBlock[];
   cta: { label: string; href: string };
-  /** Conseil de la mascotte Noisette affiché sous l'introduction. */
-  tip: { pose: "pouce" | "telephone" | "noisettes" | "course"; text: string };
 };
 
 export const STEP_PAGES: StepContent[] = [
@@ -38,7 +38,7 @@ export const STEP_PAGES: StepContent[] = [
     h1: "L’estimation la plus fiable, la plus rapide",
     tagline: "ÉTAPE 1 · ESTIMATION",
     intro: "Deux minutes, une adresse, quelques caractéristiques : vous obtenez une fourchette de prix fondée sur ce qui s’est réellement vendu autour de chez vous — et vous comprenez pourquoi.",
-    hero: require("../../assets/web/step1-phone.jpg"),
+    mascot: require("../../assets/mascot/etape1-telephone.webp"),
     blocks: [
       {
         title: "Des ventes réelles, pas des annonces",
@@ -60,7 +60,6 @@ export const STEP_PAGES: StepContent[] = [
       },
     ],
     cta: { label: "Estimer mon bien gratuitement", href: "/estimation-maison" },
-    tip: { pose: "pouce", text: "Mon conseil : renseignez bien l’état général et l’année de construction, ce sont les critères qui affinent le plus votre estimation." },
   },
   {
     n: 2,
@@ -71,7 +70,7 @@ export const STEP_PAGES: StepContent[] = [
     h1: "Une mise en vente digne d’un professionnel",
     tagline: "ÉTAPE 2 · MISE EN VENTE",
     intro: "Le prix est fixé ; il faut maintenant donner envie. Photos propres et lumineuses, annonce claire, bon positionnement : tout ce qu’une agence fait pour vous, en quelques minutes, sans commission.",
-    hero: require("../../assets/images/demo-after.jpg"),
+    mascot: require("../../assets/mascot/etape2-course.webp"),
     blocks: [
       {
         title: "Vos photos, version professionnelle",
@@ -99,7 +98,6 @@ export const STEP_PAGES: StepContent[] = [
       },
     ],
     cta: { label: "Commencer par mon estimation", href: "/estimation-maison" },
-    tip: { pose: "course", text: "Prenez vos photos en pleine journée, volets ouverts et pièces rangées : la retouche IA fera le reste. Une annonce bien présentée, c’est deux fois plus de visites." },
   },
   {
     n: 3,
@@ -110,7 +108,7 @@ export const STEP_PAGES: StepContent[] = [
     h1: "Jusqu’à la signature, sans mauvaise surprise",
     tagline: "ÉTAPE 3 · VENDU",
     intro: "Un acheteur est prêt ? La vente se joue maintenant chez le notaire. Un dossier complet dès le compromis, c’est une signature plus rapide et moins de stress.",
-    hero: require("../../assets/web/step3-notaire.jpg"),
+    mascot: require("../../assets/mascot/etape3-notaire.webp"),
     blocks: [
       {
         title: "La liste exacte des documents pour votre bien",
@@ -121,7 +119,6 @@ export const STEP_PAGES: StepContent[] = [
       {
         title: "Vos documents lus et vérifiés automatiquement",
         text: "Photographiez ou importez chaque document : nous lisons la date, la validité, la surface, le classement énergétique et nous vous signalons ce qui manque ou ce qui a expiré — avant que le notaire ne le fasse.",
-        image: require("../../assets/web/step3-famille.jpg"),
         caption: "Le dossier se complète au fil des semaines, depuis le téléphone, sans rien oublier.",
       },
       {
@@ -132,7 +129,6 @@ export const STEP_PAGES: StepContent[] = [
       },
     ],
     cta: { label: "Démarrer mon dossier de vente", href: "/estimation-maison" },
-    tip: { pose: "noisettes", text: "Rassemblez vos diagnostics dès maintenant : un dossier complet rassure l’acheteur, accélère le notaire… et vos noisettes restent chez vous." },
   },
 ];
 

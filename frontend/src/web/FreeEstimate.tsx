@@ -6,7 +6,6 @@ import { Platform, Pressable, Text, TextInput, View } from "react-native";
 
 import { Estimation, PropertyIn, api, formatEuro, formatInt } from "@/src/api";
 import { useSession } from "@/src/auth";
-import { MascotTip } from "@/src/components/MascotTip";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { PropertyWizard, WIZARD_STEPS } from "@/src/components/PropertyWizard";
 import { saveFreeDraft } from "@/src/freeDraft";
@@ -97,13 +96,6 @@ export function FreeEstimate() {
             </Text>
           ) : null}
         </View>
-
-        <MascotTip
-          pose="pouce"
-          size={88}
-          text="Bravo, votre estimation est prête ! Créez un compte gratuit pour l’enregistrer et découvrir l’environnement de votre bien."
-          testID="free-result-mascot"
-        />
 
         {shown.length > 0 ? (
           <View style={styles.block} testID="free-adjustments">

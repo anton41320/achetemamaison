@@ -4,7 +4,6 @@ import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon } from "phosphor-react-n
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { EstimateDemo } from "@/src/components/EstimateDemo";
-import { MascotTip } from "@/src/components/MascotTip";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { ReviewsSection } from "@/src/components/ReviewsSection";
 import { StoreBadges } from "@/src/components/StoreBadges";
@@ -16,28 +15,32 @@ import { useBreakpoint } from "@/src/web/useBreakpoint";
 function Block({ b, flip, row }: { b: StepBlock; flip: boolean; row: boolean }) {
   const styles = useStyles();
   const { colors } = useTheme();
+  const hasMedia = !!b.image;
   return (
-    <View style={[styles.block, row && { flexDirection: flip ? "row-reverse" : "row", alignItems: "center" }]} testID="step-block">
-      <View style={[styles.blockMedia, row && { flex: 1 }]}>
-        {b.after ? (
-          <View style={styles.beforeAfter}>
-            <View style={{ flex: 1, gap: 6 }}>
-              <Image source={b.image} style={styles.baImage} contentFit="cover" accessibilityLabel="Photo avant retouche" />
-              <Text style={styles.baLabel}>AVANT</Text>
+    <View style={[styles.block, row && hasMedia && { flexDirection: flip ? "row-reverse" : "row", alignItems: "center" }]} testID="step-block">
+      {hasMedia ? (
+        <View style={[styles.blockMedia, row && { flex: 1 }]}>
+          {b.after ? (
+            <View style={styles.beforeAfter}>
+              <View style={{ flex: 1, gap: 6 }}>
+                <Image source={b.image} style={styles.baImage} contentFit="cover" accessibilityLabel="Photo avant retouche" />
+                <Text style={styles.baLabel}>AVANT</Text>
+              </View>
+              <View style={{ flex: 1, gap: 6 }}>
+                <Image source={b.after} style={styles.baImage} contentFit="cover" accessibilityLabel="Photo après retouche IA" />
+                <Text style={[styles.baLabel, { color: colors.brandPrimary }]}>APRÈS · RETOUCHE IA</Text>
+              </View>
             </View>
-            <View style={{ flex: 1, gap: 6 }}>
-              <Image source={b.after} style={styles.baImage} contentFit="cover" accessibilityLabel="Photo après retouche IA" />
-              <Text style={[styles.baLabel, { color: colors.brandPrimary }]}>APRÈS · RETOUCHE IA</Text>
-            </View>
-          </View>
-        ) : (
-          <Image source={b.image} style={styles.blockImage} contentFit="cover" accessibilityLabel={b.title} />
-        )}
-        {b.caption ? <Text style={styles.caption}>{b.caption}</Text> : null}
-      </View>
-      <View style={[styles.blockText, row && { flex: 1 }]}>
+          ) : (
+            <Image source={b.image} style={styles.blockImage} contentFit="cover" accessibilityLabel={b.title} />
+          )}
+          {b.caption ? <Text style={styles.caption}>{b.caption}</Text> : null}
+        </View>
+      ) : null}
+      <View style={[styles.blockText, row && hasMedia && { flex: 1 }]}>
         <Text style={styles.h2} accessibilityRole="header">{b.title}</Text>
         <Text style={styles.p}>{b.text}</Text>
+        {!hasMedia && b.caption ? <Text style={styles.caption}>{b.caption}</Text> : null}
         {b.bullets?.map((x) => (
           <View key={x} style={styles.bullet}>
             <CheckCircleIcon size={20} color={colors.success} weight="fill" />
@@ -80,15 +83,14 @@ export function StepPage({ step }: { step: StepContent }) {
           </View>
           <Text style={styles.h1} accessibilityRole="header">{step.h1}</Text>
           <Text style={styles.intro}>{step.intro}</Text>
-          <MascotTip pose={step.tip.pose} text={step.tip.text} size={88} testID={`step-mascot-${step.n}`} />
           <PrimaryButton title={step.cta.label} onPress={() => router.navigate(step.cta.href as any)} testID="step-cta-top" />
         </View>
-        {step.n === 1 ? (
-          <View style={[{ width: "100%" }, isDesktop && { flex: 1.1 }]}><EstimateDemo /></View>
-        ) : (
-          <Image source={step.hero} style={[styles.heroImage, isDesktop && { flex: 1.1 }]} contentFit="cover" accessibilityLabel={step.h1} testID="step-hero-image" />
-        )}
+        <View style={[styles.mascotWrap, isDesktop && { flex: 0.9 }]}>
+          <Image source={step.mascot} style={styles.mascot} contentFit="contain" accessibilityLabel={`Noisette, étape ${step.n} : ${step.h1}`} testID="step-hero-image" transition={200} />
+        </View>
       </View>
+
+      {step.n === 1 ? <View style={styles.demoWrap}><EstimateDemo /></View> : null}
 
       {step.blocks.map((b, i) => <Block key={b.title} b={b} flip={i % 2 === 1} row={isTablet} />)}
 
@@ -142,7 +144,9 @@ const useStyles = makeStyles((colors) => ({
   tagline: { fontFamily: fonts.bold, fontSize: 12, letterSpacing: 1, color: colors.brandPrimary, marginLeft: spacing.sm },
   h1: { fontFamily: fonts.extrabold, fontSize: 34, lineHeight: 42, color: colors.onSurface },
   intro: { fontFamily: fonts.regular, fontSize: 17, lineHeight: 26, color: colors.onSurfaceTertiary },
-  heroImage: { width: "100%", aspectRatio: 3 / 2, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary },
+  mascotWrap: { width: "100%", alignItems: "center", justifyContent: "center", backgroundColor: colors.brandTertiary, borderRadius: radius.lg, padding: spacing.lg },
+  mascot: { width: "100%", maxWidth: 420, aspectRatio: 1 },
+  demoWrap: { width: "100%" },
   block: { gap: spacing.lg, paddingVertical: spacing.md },
   blockMedia: { gap: spacing.sm },
   blockImage: { width: "100%", aspectRatio: 3 / 2, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary },

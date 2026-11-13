@@ -9,7 +9,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "@/src/api";
 import { AlertsBanner } from "@/src/components/AlertsBanner";
 import { BrandLogo } from "@/src/components/BrandLogo";
-import { MascotTip } from "@/src/components/MascotTip";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { PropertyCard } from "@/src/components/PropertyCard";
 import { ScreenHeader } from "@/src/components/ScreenHeader";
@@ -83,13 +82,6 @@ export default function HomeScreen() {
         </View>
       ) : !data || data.length === 0 ? (
         <View style={styles.center} testID="home-empty-state">
-          <MascotTip
-            pose="telephone"
-            layout="column"
-            size={150}
-            text="Bonjour, moi c’est Noisette ! Commencez par estimer votre bien : c’est gratuit et ça prend 2 minutes. Je vous guide ensuite jusqu’à la vente."
-            testID="home-mascot"
-          />
           <Text style={styles.emptyTitle}>Aucune estimation pour le moment</Text>
           <Text style={styles.emptyText}>
             Renseignez l’adresse et les caractéristiques de votre bien : Achète ma maison calcule une fourchette de valeur à

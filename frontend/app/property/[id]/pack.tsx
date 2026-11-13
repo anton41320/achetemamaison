@@ -10,7 +10,6 @@ import { LISTING_STYLES, ListingStyle, api } from "@/src/api";
 import { useSession } from "@/src/auth";
 import { isExpoGo, nativeStoreAvailable, purchasePack, restorePack } from "@/src/iap";
 import { PackPreview } from "@/src/components/PackPreview";
-import { MascotTip } from "@/src/components/MascotTip";
 import { PackReviewsCard } from "@/src/components/PackReviewsCard";
 import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { PromoCodeCard } from "@/src/components/PromoCodeCard";
@@ -170,12 +169,6 @@ export default function PackScreen() {
           </>
         ) : (
           <>
-            <MascotTip
-              pose="noisettes"
-              size={92}
-              text="49 € une seule fois, contre plusieurs milliers d’euros de commission en agence : vos noisettes restent chez vous."
-              testID="pack-mascot"
-            />
             <View style={styles.priceCard} testID="pack-offer">
               <Text style={styles.priceKicker}>Paiement unique · ce bien</Text>
               <Text style={styles.price}>49 €</Text>
