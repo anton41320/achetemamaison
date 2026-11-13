@@ -14,13 +14,13 @@ TOP = (22, 86, 201)
 BOTTOM = (11, 59, 143)
 
 CAPTIONS = {
-    "01-welcome": ("Estimez, préparez, vendez", "L’app qui accompagne le vendeur de l’estimation jusqu’au notaire"),
-    "02-home": ("Tous vos biens en un coup d’œil", "Fourchette de prix, niveau de confiance et prochaine étape"),
-    "03-property": ("Une estimation fondée sur les ventes réelles", "Données DVF officielles, confiance expliquée critère par critère"),
+    "01-welcome": ("Vendez vous-même, mais pas tout seul", "Estimation gratuite en 2 minutes, puis Noisette vous guide jusqu’à la vente"),
+    "02-home": ("Tous vos biens en un coup d’œil", "Fourchette de prix, étape en cours et prochaine action"),
+    "03-property": ("Une estimation fondée sur les ventes réelles", "Données DVF officielles, chaque critère chiffré et commenté"),
     "04-comparables": ("Comprenez chaque euro", "Ventes comparables : distance, surface, prix au m²"),
-    "05-dossier": ("Un dossier de vente prêt pour le notaire", "Checklist des diagnostics, rappels d’expiration, export PDF"),
-    "06-pack": ("Outils IA : annonce, photos, documents", "Pack premium 49 € par bien, sans abonnement"),
-    "07-photos": ("Photos retouchées par l’IA", "Lumière et perspective améliorées, rien n’est inventé"),
+    "05-dossier": ("Un dossier de vente prêt pour le notaire", "Checklist des diagnostics, lecture IA des documents, export PDF"),
+    "06-pack": ("Outils IA : annonce, photos, PDF", "Pack premium 49 € par bien, sans abonnement"),
+    "07-photos": ("Photos retouchées par l’IA", "Lumière et netteté améliorées, le bien n’est jamais modifié"),
 }
 
 
@@ -97,6 +97,12 @@ if __name__ == "__main__":
     elif kind == "iphone65":
         raw_dir, out_dir, size = ROOT / "raw", ROOT / "iphone-6.5", (1284, 2778)
         params = dict(scale=0.836, title_px=82, sub_px=43, radius=94)
+    elif kind == "play-tablet7":  # Google Play tablettes 7" : 9:16, 1200×2133
+        raw_dir, out_dir, size = ROOT / "raw-ipad", ROOT / "play-tablet-7", (1200, 2133)
+        params = dict(scale=0.5, title_px=66, sub_px=36, radius=48)
+    elif kind == "play-tablet10":  # Google Play tablettes 10" : 9:16, 1800×3200
+        raw_dir, out_dir, size = ROOT / "raw-ipad", ROOT / "play-tablet-10", (1800, 3200)
+        params = dict(scale=0.75, title_px=96, sub_px=52, radius=64)
     else:
         raw_dir, out_dir, size = ROOT / "raw-ipad", ROOT / "ipad-13", (2064, 2752)
         params = dict(scale=0.84, title_px=96, sub_px=50, radius=72)

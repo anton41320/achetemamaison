@@ -253,6 +253,7 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 - Bannières LinkedIn : `scripts/gen_linkedin_banner.py` → `backend/media/linkedin-profil.png` (1584×396) et `linkedin-page.png` (1128×191).
 - Courrier A4 leboncoin avec en-tête : `scripts/gen_courrier_leboncoin.py` → `backend/media/courrier-leboncoin.{pdf,png}`.
 - Hero desktop : badges stores rendus après Noisette/forme « plus » (bug : Google Play recouvert). Bundle web régénéré (13/11).
+- Kit stores charte Noisette (13/11) : `scripts/capture_store_shots.py` (captures réelles téléphone + TABLET=1 tablette, compte démo) → `store-assets/raw{,-ipad}` ; `store-assets/compose.py` (kinds play, iphone, iphone65, ipad, play-tablet7, play-tablet10) ; textes `store-assets/GOOGLE_PLAY_TEXTES.md` ; zips `kit-google-play-2026-11.zip` et `kit-app-store-2026-11.zip` servis sur `/api/store-assets/`. Slogan retenu : « Vendez vous-même, mais pas tout seul. » Play Console : DEX/ProGuard reporté, portrait conservé.
 - Plaquette A4 (pièce jointe courrier leboncoin) : `scripts/gen_plaquette_a4.py` → `backend/media/plaquette-a4.{pdf,png}` (hero + 3 étapes + retouche IA avant/après + QR). Servie via `/api/public/media/plaquette-a4.pdf`.
 - Mail « Meta Content Review » (13/11/2026) identifié comme phishing (expéditeur kts.ac.th / reply-to deped.gov.ph) ; aucune action produit.
 
