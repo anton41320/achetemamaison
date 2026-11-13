@@ -71,32 +71,25 @@ export function HeroMobile({ withHeader = false, paddingTop = 0, signedIn = fals
       <Image source={PLUS} style={{ position: "absolute", left: px(287), top: paddingTop + y(183), width: px(540), height: px(541) }} contentFit="contain" />
       <Image source={NOISETTE} style={{ position: "absolute", left: px(319), top: paddingTop + y(276), width: px(388), height: px(429) }} contentFit="contain" accessibilityLabel="Noisette, la mascotte, montre une estimation sur son téléphone" transition={200} />
 
-      <Text style={[styles.title, { top: paddingTop + y(775), fontSize: px(60), lineHeight: px(74) }]} accessibilityRole="header">
+      <Text style={[styles.title, { top: paddingTop + y(775), fontSize: px(60), lineHeight: px(74) }]} accessibilityRole="header" allowFontScaling={false}>
         Prêt à connaître{"\n"}la valeur de votre bien ?
       </Text>
 
       <Image source={WAVE_MID} style={{ position: "absolute", left: 0, top: paddingTop + y(917), width, height: px(420) }} contentFit="fill" />
-      <Text style={[styles.lead, { top: paddingTop + y(1030), left: px(80), width: px(840), fontSize: px(35), lineHeight: px(44) }]}>
-        Estimation <Text style={{ fontFamily: fonts.bold }}>gratuite</Text> en 2 minutes, puis créez votre compte pour sauvegarder le bien et préparer la vente sur le site comme dans l’application mobile.
-      </Text>
-      <Pressable
-        onPress={() => router.navigate("/estimation-maison")}
-        accessibilityRole="button"
-        testID={`${testID}-estimate`}
-        hitSlop={8}
-        style={({ pressed }) => [styles.btnWhite, { left: px(135), top: paddingTop + y(1178), width: px(352), height: px(90), borderRadius: px(20) }, pressed && { opacity: 0.9 }]}
-      >
-        <Text style={[styles.btnWhiteText, { fontSize: px(32) }]}>Estimer gratuitement</Text>
-      </Pressable>
-      <Pressable
-        onPress={() => router.navigate("/sign-up")}
-        accessibilityRole="button"
-        testID={`${testID}-signup`}
-        hitSlop={8}
-        style={({ pressed }) => [styles.btnSoft, { left: px(505), top: paddingTop + y(1178), width: px(357), height: px(90), borderRadius: px(20) }, pressed && { opacity: 0.9 }]}
-      >
-        <Text style={[styles.btnSoftText, { fontSize: px(32) }]}>Créer mon compte</Text>
-      </Pressable>
+      {/* Texte + boutons en flux : si le texte prend une ligne de plus (Android), les boutons descendent au lieu de le recouvrir */}
+      <View style={{ position: "absolute", left: px(60), width: px(880), top: paddingTop + y(1010), alignItems: "center", gap: px(36) }}>
+        <Text style={[styles.lead, { fontSize: px(34), lineHeight: px(43) }]} allowFontScaling={false}>
+          Estimation <Text style={{ fontFamily: fonts.bold }}>gratuite</Text> en 2 minutes, puis créez votre compte pour sauvegarder le bien et préparer la vente sur le site comme dans l’application mobile.
+        </Text>
+        <View style={{ flexDirection: "row", gap: px(18) }}>
+          <Pressable onPress={() => router.navigate("/estimation-maison")} accessibilityRole="button" testID={`${testID}-estimate`} hitSlop={8} style={({ pressed }) => [styles.btnWhite, { width: px(352), height: px(90), borderRadius: px(20) }, pressed && { opacity: 0.9 }]}>
+            <Text style={[styles.btnWhiteText, { fontSize: px(32) }]} allowFontScaling={false}>Estimer gratuitement</Text>
+          </Pressable>
+          <Pressable onPress={() => router.navigate("/sign-up")} accessibilityRole="button" testID={`${testID}-signup`} hitSlop={8} style={({ pressed }) => [styles.btnSoft, { width: px(357), height: px(90), borderRadius: px(20) }, pressed && { opacity: 0.9 }]}>
+            <Text style={[styles.btnSoftText, { fontSize: px(32) }]} allowFontScaling={false}>Créer mon compte</Text>
+          </Pressable>
+        </View>
+      </View>
 
       {steps.map(({ n, label, Icon, cx, href }) => (
         <Pressable key={n} onPress={() => router.navigate(href)} accessibilityRole="link" testID={`${testID}-step-${n}`} style={{ position: "absolute", left: px(cx - 125), top: paddingTop + y(1435), width: px(250), alignItems: "center" }}>
@@ -123,10 +116,10 @@ const useStyles = makeStyles((colors) => ({
   signin: { position: "absolute", backgroundColor: colors.brandPrimary, alignItems: "center", justifyContent: "center" },
   signinText: { fontFamily: fonts.semibold, color: colors.onBrandPrimary },
   title: { position: "absolute", left: 0, right: 0, textAlign: "center", fontFamily: fonts.extrabold, color: colors.brandPrimary },
-  lead: { position: "absolute", textAlign: "center", fontFamily: fonts.medium, color: colors.onBrandPrimary },
-  btnWhite: { position: "absolute", backgroundColor: colors.surfaceSecondary, alignItems: "center", justifyContent: "center" },
+  lead: { textAlign: "center", fontFamily: fonts.medium, color: colors.onBrandPrimary },
+  btnWhite: { backgroundColor: colors.surfaceSecondary, alignItems: "center", justifyContent: "center" },
   btnWhiteText: { fontFamily: fonts.bold, color: colors.onSurface },
-  btnSoft: { position: "absolute", backgroundColor: colors.brandSecondary, alignItems: "center", justifyContent: "center" },
+  btnSoft: { backgroundColor: colors.brandSecondary, alignItems: "center", justifyContent: "center" },
   btnSoftText: { fontFamily: fonts.bold, color: colors.onBrandPrimary },
   stepCircle: { backgroundColor: colors.brandPrimary, alignItems: "center", justifyContent: "center" },
   stepNum: { fontFamily: fonts.bold, color: colors.onBrandPrimary },
