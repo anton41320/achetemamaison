@@ -5,7 +5,6 @@ import { Text, View } from "react-native";
 import { api } from "@/src/api";
 import { BrandDash } from "@/src/components/BrandMarks";
 import { StoreBadges } from "@/src/components/StoreBadges";
-import { SITE_NAME } from "@/src/web/PublicPage";
 import { fonts, makeStyles, spacing, radius, useTheme } from "@/src/theme";
 
 function Stars({ n, size = 16 }: { n: number; size?: number }) {
@@ -29,7 +28,7 @@ export function ReviewsSection({ row }: { row: boolean }) {
 
   return (
     <View style={styles.section} testID="landing-reviews">
-      <View style={styles.h2Row}><BrandDash size={22} /><Text style={styles.h2} accessibilityRole="header">Ils ont vendu avec {SITE_NAME}</Text></View>
+      <View style={styles.h2Row}><BrandDash size={22} /><Text style={styles.h2} accessibilityRole="header">Ils nous ont fait confiance</Text></View>
       {count > 0 && avg !== null ? (
         <View style={styles.summary} testID="landing-reviews-summary">
           <Text style={styles.avg}>{avg.toLocaleString("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</Text>
