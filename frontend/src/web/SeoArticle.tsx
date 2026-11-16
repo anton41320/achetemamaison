@@ -1,3 +1,4 @@
+import { Image } from "expo-image";
 import { Link } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 
@@ -9,6 +10,8 @@ import { SEO_PAGES, SeoPageContent } from "@/src/web/seoContent";
 import { useBreakpoint } from "@/src/web/useBreakpoint";
 
 export const ALL_PAGES: Record<string, SeoPageContent> = { ...SEO_PAGES, ...LEGAL_PAGES };
+const MASCOT_ESTIMATION = require("../../assets/mascot/etape2-course.webp"); // Noisette court : pose de l'étape 1
+const MASCOT_PAGES = new Set(["estimation-maison", "estimation-immobiliere"]);
 
 /** Page publique éditoriale (SEO) : H1 + estimation gratuite, sections, FAQ (schema.org FAQPage). */
 export function SeoArticle({ slug }: { slug: keyof typeof ALL_PAGES }) {
@@ -16,6 +19,7 @@ export function SeoArticle({ slug }: { slug: keyof typeof ALL_PAGES }) {
   const styles = useStyles();
   const { isDesktop } = useBreakpoint();
   const showEstimate = c.showEstimate !== false;
+  const showMascot = MASCOT_PAGES.has(slug as string);
   const jsonLd = c.faq.length
     ? {
       "@context": "https://schema.org",
@@ -27,6 +31,9 @@ export function SeoArticle({ slug }: { slug: keyof typeof ALL_PAGES }) {
     <PublicPage title={c.title} description={c.description} path={c.path} jsonLd={jsonLd} testID={`seo-${slug}`}>
       <View style={[styles.hero, showEstimate && isDesktop && { flexDirection: "row", alignItems: "flex-start" }]}>
         <View style={[{ gap: spacing.md }, isDesktop && { flex: 1 }]}>
+          {showMascot ? (
+            <Image source={MASCOT_ESTIMATION} style={[styles.mascot, !isDesktop && styles.mascotMobile]} contentFit="contain" accessibilityLabel="Noisette court vers votre estimation" testID="seo-mascot" transition={200} />
+          ) : null}
           <Text style={styles.h1} accessibilityRole="header">{c.h1}</Text>
           <Text style={styles.intro}>{c.intro}</Text>
         </View>
@@ -70,6 +77,8 @@ export function SeoArticle({ slug }: { slug: keyof typeof ALL_PAGES }) {
 
 const useStyles = makeStyles((colors) => ({
   hero: { gap: spacing.xl, paddingTop: spacing.lg },
+  mascot: { width: 260, height: 208 },
+  mascotMobile: { width: 200, height: 160, alignSelf: "center" },
   h1: { fontFamily: fonts.extrabold, fontSize: 32, lineHeight: 40, color: colors.onSurface },
   intro: { fontFamily: fonts.regular, fontSize: 17, lineHeight: 26, color: colors.onSurfaceTertiary },
   section: { gap: spacing.sm },

@@ -253,6 +253,7 @@ App mobile (Expo + FastAPI + MongoDB) accompagnant un vendeur de l'estimation à
 - Bannières LinkedIn : `scripts/gen_linkedin_banner.py` → `backend/media/linkedin-profil.png` (1584×396) et `linkedin-page.png` (1128×191).
 - Courrier A4 leboncoin avec en-tête : `scripts/gen_courrier_leboncoin.py` → `backend/media/courrier-leboncoin.{pdf,png}`.
 - Hero desktop : badges stores rendus après Noisette/forme « plus » (bug : Google Play recouvert). Bundle web régénéré (13/11).
+- SeoArticle : Noisette qui court en tête des pages `/estimation-maison` et `/estimation-immobiliere` (cibles du lien « Estimation » du menu et du héros) (16/11).
 - ReviewsSection titre → « Ils nous ont fait confiance » (16/11).
 - StepPage mobile (16/11) : Noisette (220 px) affiché AU-DESSUS du titre sur mobile, à droite sur desktop (`row-reverse`).
 - app.json `version` → 1.0.15 (16/11) pour le build iOS/Android à soumettre (fiche App Store 1.0.15 créée par l'utilisateur ; captures Apple 1206×2622 ajoutées : `store-assets/iphone-6.3`, kind `iphone63`).
