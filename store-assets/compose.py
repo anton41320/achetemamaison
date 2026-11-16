@@ -97,6 +97,9 @@ if __name__ == "__main__":
     elif kind == "iphone65":
         raw_dir, out_dir, size = ROOT / "raw", ROOT / "iphone-6.5", (1284, 2778)
         params = dict(scale=0.836, title_px=82, sub_px=43, radius=94)
+    elif kind == "iphone63":  # Apple « iPhone avec Dynamic Island (écran moyen) » — slot obligatoire
+        raw_dir, out_dir, size = ROOT / "raw", ROOT / "iphone-6.3", (1206, 2622)
+        params = dict(scale=0.79, title_px=78, sub_px=41, radius=90)
     elif kind == "play-tablet7":  # Google Play tablettes 7" : 9:16, 1200×2133
         raw_dir, out_dir, size = ROOT / "raw-ipad", ROOT / "play-tablet-7", (1200, 2133)
         params = dict(scale=0.5, title_px=66, sub_px=36, radius=48)
