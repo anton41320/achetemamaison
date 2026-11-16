@@ -17,8 +17,8 @@ import { CONTENT_MAX_WIDTH, useBreakpoint } from "@/src/web/useBreakpoint";
 
 const MAP_IMG = require("../../assets/web/map-data.jpg");
 const STEP_MASCOTS = {
-  1: require("../../assets/mascot/etape1-telephone.webp"),
-  2: require("../../assets/mascot/etape2-course.webp"),
+  1: require("../../assets/mascot/etape2-course.webp"),
+  2: require("../../assets/mascot/etape1-telephone.webp"),
   3: require("../../assets/mascot/etape3-notaire.webp"),
 } as const;
 

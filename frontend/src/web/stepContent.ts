@@ -38,7 +38,7 @@ export const STEP_PAGES: StepContent[] = [
     h1: "L’estimation la plus fiable, la plus rapide",
     tagline: "ÉTAPE 1 · ESTIMATION",
     intro: "Deux minutes, une adresse, quelques caractéristiques : vous obtenez une fourchette de prix fondée sur ce qui s’est réellement vendu autour de chez vous — et vous comprenez pourquoi.",
-    mascot: require("../../assets/mascot/etape1-telephone.webp"),
+    mascot: require("../../assets/mascot/etape2-course.webp"),
     blocks: [
       {
         title: "Des ventes réelles, pas des annonces",
@@ -70,7 +70,7 @@ export const STEP_PAGES: StepContent[] = [
     h1: "Une mise en vente digne d’un professionnel",
     tagline: "ÉTAPE 2 · MISE EN VENTE",
     intro: "Le prix est fixé ; il faut maintenant donner envie. Photos propres et lumineuses, annonce claire, bon positionnement : tout ce qu’une agence fait pour vous, en quelques minutes, sans commission.",
-    mascot: require("../../assets/mascot/etape2-course.webp"),
+    mascot: require("../../assets/mascot/etape1-telephone.webp"),
     blocks: [
       {
         title: "Vos photos, version professionnelle",

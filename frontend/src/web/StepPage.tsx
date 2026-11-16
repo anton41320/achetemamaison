@@ -144,7 +144,7 @@ const useStyles = makeStyles((colors) => ({
   tagline: { fontFamily: fonts.bold, fontSize: 12, letterSpacing: 1, color: colors.brandPrimary, marginLeft: spacing.sm },
   h1: { fontFamily: fonts.extrabold, fontSize: 34, lineHeight: 42, color: colors.onSurface },
   intro: { fontFamily: fonts.regular, fontSize: 17, lineHeight: 26, color: colors.onSurfaceTertiary },
-  mascotWrap: { width: "100%", alignItems: "center", justifyContent: "center", backgroundColor: colors.brandTertiary, borderRadius: radius.lg, padding: spacing.lg },
+  mascotWrap: { width: "100%", alignItems: "center", justifyContent: "center" },
   mascot: { width: "100%", maxWidth: 420, aspectRatio: 1 },
   demoWrap: { width: "100%" },
   block: { gap: spacing.lg, paddingVertical: spacing.md },
