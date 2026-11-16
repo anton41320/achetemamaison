@@ -2,7 +2,7 @@
   "expo": {
     "name": "Achète ma maison",
     "slug": "frontend",
-    "version": "1.0.0",
+    "version": "1.0.15",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "estimo",
