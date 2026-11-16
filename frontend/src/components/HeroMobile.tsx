@@ -69,7 +69,7 @@ export function HeroMobile({ withHeader = false, paddingTop = 0, signedIn = fals
       ) : null}
 
       <Image source={PLUS} style={{ position: "absolute", left: px(287), top: paddingTop + y(183), width: px(540), height: px(541) }} contentFit="contain" />
-      <Image source={NOISETTE} style={{ position: "absolute", left: px(319), top: paddingTop + y(276), width: px(388), height: px(429) }} contentFit="contain" accessibilityLabel="Noisette, la mascotte, montre une estimation sur son téléphone" transition={200} />
+      <Image source={NOISETTE} style={{ position: "absolute", left: px(319), top: paddingTop + y(276), width: px(388), height: px(429) }} contentFit="contain" accessibilityLabel="Noisette, la mascotte, vous accueille" transition={200} />
 
       <Text style={[styles.title, { top: paddingTop + y(775), fontSize: px(60), lineHeight: px(74) }]} accessibilityRole="header" allowFontScaling={false}>
         Prêt à connaître{"\n"}la valeur de votre bien ?
