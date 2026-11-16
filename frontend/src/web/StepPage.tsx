@@ -69,7 +69,10 @@ export function StepPage({ step }: { step: StepContent }) {
         <Text style={styles.backText}>Retour</Text>
       </Pressable>
 
-      <View style={[styles.hero, isDesktop && { flexDirection: "row", alignItems: "center" }]}>
+      <View style={[styles.hero, isDesktop && { flexDirection: "row-reverse", alignItems: "center" }]}>
+        <View style={[styles.mascotWrap, isDesktop && { flex: 0.9 }]}>
+          <Image source={step.mascot} style={[styles.mascot, !isDesktop && styles.mascotMobile]} contentFit="contain" accessibilityLabel={`Noisette, étape ${step.n} : ${step.h1}`} testID="step-hero-image" transition={200} />
+        </View>
         <View style={[{ gap: spacing.md }, isDesktop && { flex: 1 }]}>
           <View style={styles.stepRow}>
             {STEP_PAGES.map((s) => (
@@ -84,9 +87,6 @@ export function StepPage({ step }: { step: StepContent }) {
           <Text style={styles.h1} accessibilityRole="header">{step.h1}</Text>
           <Text style={styles.intro}>{step.intro}</Text>
           <PrimaryButton title={step.cta.label} onPress={() => router.navigate(step.cta.href as any)} testID="step-cta-top" />
-        </View>
-        <View style={[styles.mascotWrap, isDesktop && { flex: 0.9 }]}>
-          <Image source={step.mascot} style={styles.mascot} contentFit="contain" accessibilityLabel={`Noisette, étape ${step.n} : ${step.h1}`} testID="step-hero-image" transition={200} />
         </View>
       </View>
 
@@ -146,6 +146,7 @@ const useStyles = makeStyles((colors) => ({
   intro: { fontFamily: fonts.regular, fontSize: 17, lineHeight: 26, color: colors.onSurfaceTertiary },
   mascotWrap: { width: "100%", alignItems: "center", justifyContent: "center" },
   mascot: { width: "100%", maxWidth: 420, aspectRatio: 1 },
+  mascotMobile: { maxWidth: 220 },
   demoWrap: { width: "100%" },
   block: { gap: spacing.lg, paddingVertical: spacing.md },
   blockMedia: { gap: spacing.sm },
