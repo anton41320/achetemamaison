@@ -1,7 +1,7 @@
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { ChartBarIcon, FolderOpenIcon, ImageIcon } from "phosphor-react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, Text, View, useWindowDimensions } from "react-native";
 
 import { MobileMenu } from "@/src/components/MobileMenu";
@@ -34,7 +34,11 @@ export function HeroMobile({ withHeader = false, paddingTop = 0, signedIn = fals
   const styles = useStyles();
   const { colors } = useTheme();
   const router = useRouter();
-  const { width } = useWindowDimensions();
+  const win = useWindowDimensions();
+  // Largeur fixée après montage : au pré-rendu statique (SSG) la fenêtre mesure 0 et React n'actualise pas
+  // les styles « 0px » à l'hydratation ; ce setState force un rendu client avec la vraie largeur.
+  const [width, setWidth] = useState(0);
+  useEffect(() => setWidth(win.width), [win.width]);
   const [menu, setMenu] = useState(false);
   const s = width / D;
   const px = (v: number) => Math.round(v * s);
